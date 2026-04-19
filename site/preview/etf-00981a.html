@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>00981A preview — Observable small multiples</title>
+<title>00981A preview — tabs</title>
 <style>
   :root {
     --ink: #1a1a1a;
@@ -13,48 +13,111 @@
     --accent: #0b6b3a;
     --accent-down: #8f2e2e;
     --paper: #fafaf7;
+    --panel-bg: #ffffff;
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); }
+  html, body { margin: 0; padding: 0; background: var(--paper); color: var(--ink); height: 100%; }
   body {
     font-family: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, "PingFang TC", "Noto Sans TC", sans-serif;
     font-size: 14px;
     line-height: 1.5;
   }
   .num, .mono { font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
-  main { max-width: 980px; margin: 0 auto; padding: 32px 24px 80px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 24px 24px 40px; }
 
   .crumb {
     font-size: 12px;
     color: var(--ink-soft);
-    margin-bottom: 24px;
+    margin-bottom: 16px;
     font-family: ui-monospace, monospace;
   }
   .crumb a { color: var(--ink-soft); text-decoration: none; }
   .crumb a:hover { color: var(--ink); }
 
-  h1 {
-    font-size: 28px;
+  header.etf-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--rule-strong);
+    margin-bottom: 0;
+  }
+  header.etf-head h1 {
+    font-size: 22px;
     font-weight: 600;
-    margin: 0 0 4px;
+    margin: 0;
     letter-spacing: -0.01em;
   }
-  .subtitle { color: var(--ink-soft); margin: 0 0 8px; font-size: 14px; }
-  .meta { color: var(--ink-soft); font-size: 12px; font-family: ui-monospace, monospace; margin-bottom: 40px; }
-  .meta .sep { margin: 0 8px; color: var(--rule-strong); }
-
-  h2 {
-    font-size: 15px;
-    font-weight: 600;
-    margin: 48px 0 16px;
-    padding-bottom: 8px;
-    border-bottom: 1px solid var(--rule-strong);
+  .meta {
+    color: var(--ink-soft);
+    font-size: 12px;
+    font-family: ui-monospace, monospace;
   }
-  h2 .counter { color: var(--ink-soft); font-weight: 400; margin-left: 8px; font-family: ui-monospace, monospace; font-size: 12px; }
+  .meta span.sep { margin: 0 6px; color: var(--rule-strong); }
 
-  /* Top 15 table */
+  /* Tab bar */
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--rule-strong);
+    position: sticky;
+    top: 0;
+    background: var(--paper);
+    z-index: 5;
+  }
+  .tabs button {
+    flex: 0 0 auto;
+    background: transparent;
+    border: none;
+    padding: 12px 18px;
+    font-family: ui-monospace, monospace;
+    font-size: 13px;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+  .tabs button:hover { color: var(--ink); }
+  .tabs button.active {
+    color: var(--ink);
+    border-bottom-color: var(--ink);
+    font-weight: 600;
+  }
+  .tabs button .count {
+    color: var(--ink-soft);
+    font-weight: 400;
+    margin-left: 6px;
+    font-size: 11px;
+  }
+
+  /* Panels */
+  .panel {
+    display: none;
+    background: var(--panel-bg);
+    border: 1px solid var(--rule);
+    border-top: none;
+    padding: 20px;
+    min-height: 520px;
+  }
+  .panel.active { display: block; }
+
+  .panel-title {
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin: 0 0 16px;
+    font-family: ui-monospace, monospace;
+    letter-spacing: 0.02em;
+  }
+
+  /* Top holdings table */
+  .holdings-wrap {
+    overflow-x: auto;
+  }
   table.holdings {
     width: 100%;
+    min-width: 700px;
     border-collapse: collapse;
     font-size: 13px;
   }
@@ -67,33 +130,39 @@
     text-transform: uppercase;
     padding: 8px 10px;
     border-bottom: 1px solid var(--rule-strong);
+    white-space: nowrap;
   }
   table.holdings td {
     padding: 10px;
     border-bottom: 1px solid var(--rule);
     vertical-align: middle;
   }
+  table.holdings tr { cursor: pointer; }
+  table.holdings tr:hover td { background: #f6f6f3; }
   table.holdings td.code { font-family: ui-monospace, monospace; color: var(--ink-soft); width: 60px; }
   table.holdings td.name { font-weight: 500; }
   table.holdings td.weight { font-family: ui-monospace, monospace; text-align: right; width: 70px; }
-  table.holdings td.spark { width: 140px; padding-right: 0; }
-  table.holdings td.since { font-family: ui-monospace, monospace; color: var(--ink-soft); font-size: 12px; width: 110px; }
+  table.holdings td.spark { width: 160px; padding-right: 0; }
+  table.holdings td.since { font-family: ui-monospace, monospace; color: var(--ink-soft); font-size: 12px; width: 110px; white-space: nowrap; }
   table.holdings td.delta { font-family: ui-monospace, monospace; text-align: right; width: 70px; font-size: 12px; }
   .delta.up { color: var(--accent); }
   .delta.down { color: var(--accent-down); }
 
-  /* Small multiples grid */
-  .sm-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 16px 20px;
-    margin-top: 12px;
+  /* Horizontal small multiples */
+  .sm-strip-wrap { overflow-x: auto; padding-bottom: 8px; }
+  .sm-strip {
+    display: flex;
+    gap: 16px;
+    min-width: min-content;
   }
   .sm-cell {
+    flex: 0 0 180px;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    cursor: pointer;
   }
+  .sm-cell:hover .sm-head .n { text-decoration: underline; }
   .sm-head {
     display: flex;
     justify-content: space-between;
@@ -103,35 +172,62 @@
   .sm-head .c { font-family: ui-monospace, monospace; color: var(--ink-soft); }
   .sm-head .n { font-weight: 500; }
   .sm-head .w { font-family: ui-monospace, monospace; color: var(--ink); }
-  .sm-cell svg { display: block; width: 100%; height: 40px; }
+  .sm-cell svg { display: block; width: 100%; height: 48px; }
   .sm-cell .peak { font-size: 10px; font-family: ui-monospace, monospace; color: var(--ink-soft); margin-top: 2px; }
 
-  /* Detail view */
-  .detail {
-    border: 1px solid var(--rule-strong);
-    padding: 20px;
-    background: #fff;
-    margin-top: 16px;
+  /* Detail panel */
+  .detail-layout { display: grid; grid-template-columns: 200px 1fr; gap: 20px; }
+  .picker-col {
+    max-height: 480px;
+    overflow-y: auto;
+    border-right: 1px solid var(--rule);
+    padding-right: 12px;
   }
+  .picker-col button {
+    display: block;
+    width: 100%;
+    background: transparent;
+    border: none;
+    text-align: left;
+    padding: 6px 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    cursor: pointer;
+    color: var(--ink);
+    border-left: 2px solid transparent;
+  }
+  .picker-col button:hover { background: #f0f0ed; }
+  .picker-col button.active {
+    background: #f0f0ed;
+    border-left-color: var(--ink);
+    font-weight: 600;
+  }
+  .picker-col button .c { color: var(--ink-soft); margin-right: 6px; }
+  .picker-col button .w { float: right; color: var(--ink-soft); }
+
   .detail-head {
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    margin-bottom: 12px;
+    margin-bottom: 8px;
   }
   .detail-head .title { font-weight: 600; font-size: 16px; }
   .detail-head .weight-now { font-family: ui-monospace, monospace; font-size: 20px; }
-  #detail-chart { width: 100%; height: 200px; }
+  .detail-subtitle { color: var(--ink-soft); font-size: 12px; font-family: ui-monospace, monospace; margin-bottom: 12px; }
+  #detail-chart { width: 100%; height: 220px; display: block; }
   .events {
     margin-top: 16px;
     font-family: ui-monospace, monospace;
     font-size: 12px;
+    max-height: 180px;
+    overflow-y: auto;
+    border: 1px solid var(--rule);
   }
   .events .ev {
     display: grid;
-    grid-template-columns: 110px 60px 110px 1fr;
+    grid-template-columns: 110px 70px 160px 1fr;
     gap: 12px;
-    padding: 4px 0;
+    padding: 6px 10px;
     border-top: 1px solid var(--rule);
   }
   .events .ev:first-child { border-top: none; }
@@ -141,128 +237,165 @@
   .dot.add { background: #6ab04c; }
   .dot.reduce { background: #e17055; }
   .dot.exit { background: var(--accent-down); }
+  .dot.peak { background: #2d3436; }
 
-  .stock-picker {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin: 12px 0 0;
-    padding-bottom: 0;
-  }
-  .stock-picker button {
-    background: transparent;
-    border: 1px solid var(--rule-strong);
-    color: var(--ink);
-    font-family: ui-monospace, monospace;
-    font-size: 11px;
-    padding: 4px 8px;
-    cursor: pointer;
-  }
-  .stock-picker button:hover { background: #f0f0ed; }
-  .stock-picker button.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
-
-  .exited-list {
+  /* Exited panel - horizontal scroll */
+  .exited-strip-wrap { overflow-x: auto; padding-bottom: 8px; }
+  .exited-strip {
+    display: grid;
+    grid-template-rows: repeat(3, auto);
+    grid-auto-flow: column;
+    grid-auto-columns: 160px;
+    gap: 10px 16px;
     font-family: ui-monospace, monospace;
     font-size: 12px;
-    color: var(--ink-soft);
-    line-height: 2;
   }
-  .exited-list .e { display: inline-block; margin-right: 16px; }
-  .exited-list .e .code { color: var(--ink); }
+  .exited-strip .e {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 8px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+  }
+  .exited-strip .e .code { color: var(--ink); }
+  .exited-strip .e .n { color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .exited-strip .e .d { color: var(--ink-soft); font-size: 10px; }
+
+  /* scroll bar */
+  ::-webkit-scrollbar { height: 8px; width: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--rule-strong); border-radius: 4px; }
 
   .footer {
-    margin-top: 72px;
+    margin-top: 32px;
     font-size: 11px;
     color: var(--ink-soft);
     font-family: ui-monospace, monospace;
-    padding-top: 16px;
-    border-top: 1px solid var(--rule);
   }
 </style>
 </head>
 <body>
 <main>
   <div class="crumb">
-    <a href="../">tw-active</a> / preview / observable small-multiples
+    <a href="../">tw-active</a> / preview / tabs
   </div>
 
-  <h1 id="title">—</h1>
-  <p class="subtitle" id="subtitle">—</p>
-  <div class="meta" id="meta">—</div>
-
-  <!-- Section 1: Top 15 現有持股 -->
-  <h2>目前持股 <span class="counter" id="cur-count"></span></h2>
-  <table class="holdings">
-    <thead>
-      <tr>
-        <th>code</th>
-        <th>name</th>
-        <th style="text-align:right">weight</th>
-        <th>30d trend</th>
-        <th style="text-align:right">Δ7d</th>
-        <th>since</th>
-      </tr>
-    </thead>
-    <tbody id="holdings-tbody"></tbody>
-  </table>
-
-  <!-- Section 2: Small multiples — 每檔股票一張小圖 -->
-  <h2>歷史軌跡（small multiples）<span class="counter">Top 30，全時期</span></h2>
-  <div class="sm-grid" id="sm-grid"></div>
-
-  <!-- Section 3: 單股 detail + 事件 -->
-  <h2>點股票看進出場 <span class="counter" id="detail-stock-label"></span></h2>
-  <div class="stock-picker" id="picker"></div>
-  <div class="detail">
-    <div class="detail-head">
-      <div><span class="title" id="detail-title">—</span></div>
-      <div class="weight-now" id="detail-weight">—</div>
+  <header class="etf-head">
+    <div>
+      <h1 id="title">—</h1>
+      <div class="meta" id="meta-line">—</div>
     </div>
-    <svg id="detail-chart"></svg>
-    <div class="events" id="events"></div>
-  </div>
+    <div class="meta" id="meta-summary">—</div>
+  </header>
 
-  <!-- Section 4: 已出清列表 -->
-  <h2>歷來曾持，目前 0 <span class="counter" id="exited-count"></span></h2>
-  <div class="exited-list" id="exited"></div>
+  <nav class="tabs" id="tabs">
+    <button data-tab="current" class="active">目前持股 <span class="count" id="count-current"></span></button>
+    <button data-tab="trace">歷史軌跡 <span class="count" id="count-trace"></span></button>
+    <button data-tab="stock">單股進出場</button>
+    <button data-tab="exited">已出清 <span class="count" id="count-exited"></span></button>
+  </nav>
 
-  <div class="footer">
-    00981A preview · data 00981a.json · 2026-04-17 as-of ·
-    style: observable small-multiples · SVG 細線 + monospace 數字
-  </div>
+  <!-- Tab: current holdings -->
+  <section class="panel active" data-panel="current">
+    <p class="panel-title">目前持股（點列切到「單股進出場」）</p>
+    <div class="holdings-wrap">
+      <table class="holdings">
+        <thead>
+          <tr>
+            <th>code</th>
+            <th>name</th>
+            <th style="text-align:right">weight</th>
+            <th>30d trend</th>
+            <th style="text-align:right">Δ7d</th>
+            <th>since</th>
+          </tr>
+        </thead>
+        <tbody id="holdings-tbody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Tab: small multiples strip -->
+  <section class="panel" data-panel="trace">
+    <p class="panel-title">每檔股票一張 全期軌跡 · 橫向 scroll 看更多 →</p>
+    <div class="sm-strip-wrap">
+      <div class="sm-strip" id="sm-strip"></div>
+    </div>
+  </section>
+
+  <!-- Tab: single stock detail -->
+  <section class="panel" data-panel="stock">
+    <p class="panel-title">左邊選股 · 右邊畫進出場時序 + 事件</p>
+    <div class="detail-layout">
+      <div class="picker-col" id="picker"></div>
+      <div>
+        <div class="detail-head">
+          <div><span class="title" id="detail-title">—</span></div>
+          <div class="weight-now" id="detail-weight">—</div>
+        </div>
+        <div class="detail-subtitle" id="detail-sub">—</div>
+        <svg id="detail-chart"></svg>
+        <div class="events" id="events"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Tab: exited -->
+  <section class="panel" data-panel="exited">
+    <p class="panel-title">歷來曾持有、目前權重 0 · 橫向 scroll 看更多 →</p>
+    <div class="exited-strip-wrap">
+      <div class="exited-strip" id="exited-strip"></div>
+    </div>
+  </section>
+
+  <div class="footer" id="footer">—</div>
 </main>
 
 <script type="module">
 const data = await fetch('./00981a.json').then(r => r.json());
-
-// Elements
 const $ = id => document.getElementById(id);
+const fmt = d => `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
 
 // Header
 $('title').textContent = `${data.etf.code}  ${data.etf.name}`;
-$('subtitle').textContent = `${data.etf.issuer} · 涵蓋 ${data.n_days} 個交易日（${fmt(data.first_date)} → ${fmt(data.as_of)}）`;
-$('meta').innerHTML = `
-  <span>as-of <span class="mono">${fmt(data.as_of)}</span></span>
+$('meta-line').textContent = `${data.etf.issuer} · ${data.n_days} 個交易日 · ${fmt(data.first_date)} → ${fmt(data.as_of)}`;
+$('meta-summary').innerHTML = `
+  目前持股 <span class="mono">${data.current.length}</span>
   <span class="sep">·</span>
-  <span>目前持股 <span class="mono">${data.current.length}</span></span>
+  歷來曾持 <span class="mono">${Object.keys(data.days_held).length}</span>
   <span class="sep">·</span>
-  <span>歷來曾持 <span class="mono">${Object.keys(data.days_held).length}</span></span>
-  <span class="sep">·</span>
-  <span>已出清 <span class="mono">${data.exited_codes.length}</span></span>
+  已出清 <span class="mono">${data.exited_codes.length}</span>
 `;
 
-function fmt(d) {
-  return `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
+$('count-current').textContent = data.current.length;
+$('count-trace').textContent = data.current.length;
+$('count-exited').textContent = data.exited_codes.length;
+$('footer').textContent = `style: tabs + horizontal scroll · data 00981a.json · as-of ${fmt(data.as_of)}`;
+
+// ============= Tabs =============
+const tabs = $('tabs');
+tabs.addEventListener('click', e => {
+  if (e.target.tagName !== 'BUTTON') return;
+  const target = e.target.dataset.tab;
+  for (const b of tabs.querySelectorAll('button')) b.classList.toggle('active', b.dataset.tab === target);
+  for (const p of document.querySelectorAll('.panel')) p.classList.toggle('active', p.dataset.panel === target);
+  location.hash = target;
+});
+const initHash = (location.hash || '#current').slice(1);
+const initBtn = tabs.querySelector(`button[data-tab="${initHash}"]`);
+if (initBtn) initBtn.click();
+
+function switchTab(name) {
+  tabs.querySelector(`button[data-tab="${name}"]`)?.click();
 }
 
 // ============= Top 15 holdings =============
 const top15 = data.current.slice(0, 15);
-$('cur-count').textContent = `Top 15 / 全 ${data.current.length}`;
-
 const tbody = $('holdings-tbody');
 for (const h of top15) {
   const s = data.series[h.code] || [];
-  const sparkSvg = renderSparkline(s, 130, 28);
+  const sparkSvg = renderSparkline(s.slice(-30), 150, 32);
   const delta7 = deltaDays(s, 7);
   const deltaCls = delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : '';
   const deltaStr = delta7 !== null ? `${delta7 > 0 ? '+' : ''}${delta7.toFixed(2)}pp` : '—';
@@ -277,13 +410,13 @@ for (const h of top15) {
     <td class="delta ${deltaCls}">${deltaStr}</td>
     <td class="since">${firstDate}</td>
   `;
+  tr.onclick = () => { selectStock(h.code); switchTab('stock'); };
   tbody.appendChild(tr);
 }
 
-// ============= Small multiples =============
-const smGrid = $('sm-grid');
-const top30 = data.current.slice(0, 30);
-for (const h of top30) {
+// ============= Small multiples horizontal strip =============
+const smStrip = $('sm-strip');
+for (const h of data.current) {
   const s = data.series[h.code] || [];
   const peak = s.length ? Math.max(...s.map(x => x.weight)) : 0;
   const cell = document.createElement('div');
@@ -293,42 +426,46 @@ for (const h of top30) {
       <span><span class="c">${h.code}</span> <span class="n">${h.name}</span></span>
       <span class="w">${h.weight.toFixed(2)}%</span>
     </div>
-    ${renderSparkline(s, 180, 40, { showAxis: true })}
-    <div class="peak">peak ${peak.toFixed(2)}% · ${s.length} 天持有</div>
+    ${renderSparkline(s, 180, 48, { showDot: true })}
+    <div class="peak">peak ${peak.toFixed(2)}% · ${s.length}d</div>
   `;
-  cell.addEventListener('click', () => selectStock(h.code));
-  smGrid.appendChild(cell);
+  cell.addEventListener('click', () => { selectStock(h.code); switchTab('stock'); });
+  smStrip.appendChild(cell);
 }
 
-// ============= Detail + events =============
-const topCodesForPicker = data.current.slice(0, 10).map(x => x.code);
+// ============= Detail picker =============
 const picker = $('picker');
-for (const code of topCodesForPicker) {
+// picker 顯示全部曾持（current + exited），用 days_held 排序
+const pickerItems = [
+  ...data.current.map(x => ({code: x.code, weight: x.weight, active: true})),
+  ...data.exited_codes.map(c => ({code: c, weight: 0, active: false})),
+];
+for (const it of pickerItems) {
   const btn = document.createElement('button');
-  btn.textContent = code;
-  btn.onclick = () => selectStock(code);
-  btn.dataset.code = code;
+  btn.dataset.code = it.code;
+  const name = data.name_of[it.code] || it.code;
+  btn.innerHTML = `<span class="c">${it.code}</span>${name}<span class="w">${it.weight.toFixed(2)}%</span>`;
+  btn.onclick = () => selectStock(it.code);
   picker.appendChild(btn);
 }
 
 function selectStock(code) {
-  // highlight button
   for (const b of picker.querySelectorAll('button')) {
     b.classList.toggle('active', b.dataset.code === code);
+    if (b.dataset.code === code) b.scrollIntoView({block: 'nearest'});
   }
-
   const s = data.series[code] || [];
   const name = data.name_of[code] || code;
   const cur = s.length ? s[s.length - 1].weight : 0;
+  const first = s.length ? s[0].date : null;
+  const last = s.length ? s[s.length - 1].date : null;
 
-  $('detail-stock-label').textContent = `${code} ${name}`;
   $('detail-title').textContent = `${code}  ${name}`;
-  $('detail-weight').textContent = cur.toFixed(2) + '%';
+  $('detail-weight').textContent = cur > 0 ? cur.toFixed(2) + '%' : 'exited';
+  $('detail-sub').textContent = first ? `first ${fmt(first)} · last ${fmt(last)} · ${s.length} 個交易日出現` : '—';
 
-  // chart
   drawDetailChart(s);
 
-  // events
   const events = detectEvents(s);
   const evDiv = $('events');
   evDiv.innerHTML = '';
@@ -349,10 +486,8 @@ function selectStock(code) {
 function detectEvents(s) {
   if (!s.length) return [];
   const events = [];
-  // Entry = 第一天
   events.push({ type: 'ENTRY', date: s[0].date, weight: s[0].weight, note: '首次建倉' });
 
-  // Add / Reduce：Δ ≥ 0.5pp
   for (let i = 1; i < s.length; i++) {
     const delta = s[i].weight - s[i - 1].weight;
     if (delta >= 0.5) {
@@ -362,7 +497,6 @@ function detectEvents(s) {
     }
   }
 
-  // Peak
   const maxW = Math.max(...s.map(x => x.weight));
   const peakIdx = s.findIndex(x => x.weight === maxW);
   events.push({ type: 'PEAK', date: s[peakIdx].date, weight: maxW, note: '歷史高' });
@@ -374,18 +508,17 @@ function drawDetailChart(s) {
   const svg = $('detail-chart');
   svg.innerHTML = '';
   if (!s.length) return;
-  const W = svg.clientWidth, H = 200;
-  const pad = { l: 40, r: 10, t: 12, b: 24 };
+  const W = svg.clientWidth || 800, H = 220;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const pad = { l: 44, r: 10, t: 12, b: 24 };
   const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
 
   const maxW = Math.max(...s.map(x => x.weight));
   const minW = 0;
   const n = s.length;
-
-  const x = i => pad.l + (i / (n - 1)) * w;
+  const x = i => pad.l + (i / Math.max(n - 1, 1)) * w;
   const y = v => pad.t + (1 - (v - minW) / (maxW - minW || 1)) * h;
 
-  // Y axis ticks
   const ticks = 4;
   for (let i = 0; i <= ticks; i++) {
     const v = (maxW / ticks) * i;
@@ -396,36 +529,34 @@ function drawDetailChart(s) {
     `);
   }
 
-  // Line path
-  const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(p.weight)}`).join(' ');
+  const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.weight).toFixed(1)}`).join(' ');
   svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.25"/>`);
 
-  // Event dots
   const events = detectEvents(s);
   for (const e of events) {
     const i = s.findIndex(x => x.date === e.date);
     if (i < 0) continue;
     const color = {ENTRY:'#0b6b3a', ADD:'#6ab04c', REDUCE:'#e17055', EXIT:'#8f2e2e', PEAK:'#2d3436'}[e.type] || '#999';
-    svg.insertAdjacentHTML('beforeend', `<circle cx="${x(i)}" cy="${y(e.weight)}" r="3" fill="${color}" stroke="white" stroke-width="1"/>`);
+    svg.insertAdjacentHTML('beforeend', `<circle cx="${x(i).toFixed(1)}" cy="${y(e.weight).toFixed(1)}" r="3.2" fill="${color}" stroke="white" stroke-width="1.2"/>`);
   }
 
-  // X ticks (first + last)
   svg.insertAdjacentHTML('beforeend', `
     <text x="${pad.l}" y="${H - 6}" font-size="10" fill="#888" font-family="ui-monospace, monospace">${fmt(s[0].date)}</text>
     <text x="${W - pad.r}" y="${H - 6}" font-size="10" fill="#888" font-family="ui-monospace, monospace" text-anchor="end">${fmt(s[s.length-1].date)}</text>
   `);
 }
 
-// ============= Exited =============
-const exitedDiv = $('exited');
-$('exited-count').textContent = `${data.exited_codes.length} 檔`;
-for (const code of data.exited_codes.slice(0, 60)) {
+// ============= Exited strip =============
+const exitedStrip = $('exited-strip');
+for (const code of data.exited_codes) {
   const name = data.name_of[code] || code;
   const days = data.days_held[code];
-  const span = document.createElement('span');
-  span.className = 'e';
-  span.innerHTML = `<span class="code">${code}</span> ${name} <span style="color:#aaa">· ${days}d</span>`;
-  exitedDiv.appendChild(span);
+  const div = document.createElement('div');
+  div.className = 'e';
+  div.style.cursor = 'pointer';
+  div.innerHTML = `<span class="code">${code}</span><span class="n">${name}</span><span class="d">${days} 天曾持</span>`;
+  div.onclick = () => { selectStock(code); switchTab('stock'); };
+  exitedStrip.appendChild(div);
 }
 
 // ============= Helpers =============
@@ -437,28 +568,28 @@ function renderSparkline(s, w, h, opts = {}) {
   const minW = Math.min(...weights);
   const range = maxW - minW || 1;
   const n = s.length;
-
-  const px = i => pad + (i / (n - 1)) * (w - pad * 2);
+  const px = i => pad + (i / Math.max(n - 1, 1)) * (w - pad * 2);
   const py = v => pad + (1 - (v - minW) / range) * (h - pad * 2);
-
   const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${px(i).toFixed(1)},${py(p.weight).toFixed(1)}`).join(' ');
   const lastX = px(n - 1), lastY = py(s[n - 1].weight);
-
+  const dot = opts.showDot !== false
+    ? `<circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="1.8" fill="#1a1a1a"/>`
+    : '';
   return `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
     <path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${lastX.toFixed(1)}" cy="${lastY.toFixed(1)}" r="1.8" fill="#1a1a1a"/>
+    ${dot}
   </svg>`;
 }
 
 function deltaDays(s, days) {
   if (s.length < 2) return null;
   const last = s[s.length - 1];
-  const target = s.find((x, i) => i >= s.length - days - 1);
+  const target = s[Math.max(0, s.length - 1 - days)];
   if (!target) return null;
   return last.weight - target.weight;
 }
 
-// Init with first stock
+// Init detail with first stock
 selectStock(top15[0].code);
 </script>
 </body>
