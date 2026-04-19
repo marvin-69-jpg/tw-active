@@ -83,6 +83,19 @@
     margin-left: auto;
   }
   .card .size-row .benefit .mono { font-family: ui-monospace, monospace; color: var(--ink); }
+  .card .price-row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 6px 0; border-top: 1px dashed var(--rule);
+    font-size: 11px; color: var(--ink-soft);
+  }
+  .card .price-row .label { font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
+  .card .price-row .price, .card .price-row .nav {
+    font-family: ui-monospace, monospace; color: var(--ink); font-weight: 500;
+  }
+  .card .price-row .prem { margin-left: auto; font-family: ui-monospace, monospace; font-weight: 500; }
+  .card .price-row .prem.pos { color: #b8860b; }
+  .card .price-row .prem.neg { color: #4a7c4a; }
+  .card .price-row .prem.na { color: var(--ink-soft); font-weight: normal; }
   .card .stats {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
     font-size: 10px; color: var(--ink-soft);
@@ -155,8 +168,9 @@
     <option value="n_current">持股數（多 → 少）</option>
     <option value="n_new">NEW 數（多 → 少）</option>
     <option value="n_exited">已出清（多 → 少）</option>
+    <option value="premium">溢折價 |絕對值大 → 小|</option>
   </select>
-  <span style="margin-left:auto;font-size:11px">規模 / 受益人數 資料源：FundClear 集保結算所</span>
+  <span style="margin-left:auto;font-size:11px">規模/收盤 FundClear · NAV 投信官網（5/21 檔揭露）</span>
 </div>
 
 <div class="grid" id="grid"></div>
@@ -199,6 +213,14 @@ function render(sortKey) {
     n_current: (a, b) => b.n_current - a.n_current || a.code.localeCompare(b.code),
     n_new:     (a, b) => b.n_new - a.n_new || a.code.localeCompare(b.code),
     n_exited:  (a, b) => b.n_exited - a.n_exited || a.code.localeCompare(b.code),
+    premium:   (a, b) => {
+      // NAV 未揭露 → 沉底
+      const pa = a.premium_pct, pb = b.premium_pct;
+      if (pa == null && pb == null) return a.code.localeCompare(b.code);
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      return Math.abs(pb) - Math.abs(pa) || a.code.localeCompare(b.code);
+    },
   };
   const sorted = [...etfs].sort(sorters[sortKey] || sorters.aum);
   grid.innerHTML = '';
@@ -218,6 +240,23 @@ function render(sortKey) {
       <span class="size">${fmtAum(aum)}<span class="size-unit"> 億 NT$</span></span>
       <span class="benefit">受益人 <span class="mono">${fmtNum(e.benefit)}</span></span>
     </div>`;
+    // 價格列：收盤（FundClear） + NAV（5/21 有）+ 溢折價 %
+    const close = e.close_price;
+    const nav = e.nav;
+    const prem = e.premium_pct;
+    let premCell;
+    if (prem == null) {
+      premCell = `<span class="prem na" title="NAV 未揭露（投信官網無公開 API）">—</span>`;
+    } else {
+      const cls = prem > 0 ? 'pos' : (prem < 0 ? 'neg' : '');
+      const sign = prem > 0 ? '+' : '';
+      premCell = `<span class="prem ${cls}" title="溢折價 = (收盤 − NAV) / NAV">${sign}${prem.toFixed(2)}%</span>`;
+    }
+    const priceRow = `<div class="price-row">
+      <span class="label">收盤</span><span class="price">${close != null ? close.toFixed(2) : '—'}</span>
+      <span class="label">NAV</span><span class="nav">${nav != null ? nav.toFixed(2) : '—'}</span>
+      ${premCell}
+    </div>`;
     a.innerHTML = `
       <div class="code-row">
         <span class="code">${e.code}</span>
@@ -225,6 +264,7 @@ function render(sortKey) {
       </div>
       <div class="name">${e.name}</div>
       ${sizeRow}
+      ${priceRow}
       <div class="stats">
         <div><span>主要持股</span><span class="v">${e.n_main}</span></div>
         <div><span>全倉</span><span class="v">${e.n_current}</span></div>
@@ -247,7 +287,8 @@ sortSel.addEventListener('change', () => {
 });
 render(sortSel.value);
 
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 from FundClear (集保結算所)`;
+const navCnt = etfs.filter(e => e.nav != null).length;
+$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/收盤 FundClear · NAV ${navCnt}/${etfs.length} 檔（僅群益+安聯投信官網有公開 API，其他需手動 scrape）`;
 </script>
 </body>
 </html>
