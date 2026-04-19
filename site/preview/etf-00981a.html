@@ -273,6 +273,100 @@
     color: var(--ink-soft);
     font-family: ui-monospace, monospace;
   }
+
+  /* ============= Mobile ≤ 640px ============= */
+  @media (max-width: 640px) {
+    main { padding: 14px 12px 32px; }
+
+    header.etf-head { gap: 8px; padding-bottom: 12px; }
+    header.etf-head h1 { font-size: 18px; }
+    .meta { font-size: 11px; }
+
+    /* Tab bar: 橫向 scroll，避免擠壓 */
+    .tabs { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; }
+    .tabs::-webkit-scrollbar { height: 0; }
+    .tabs button { padding: 10px 12px; font-size: 12px; white-space: nowrap; }
+    .tabs button .count { font-size: 10px; margin-left: 4px; }
+
+    .panel { padding: 14px 12px; min-height: 420px; }
+    .panel-title { font-size: 11px; margin-bottom: 12px; }
+
+    /* Top holdings: 容器已 overflow-x auto，保留 min-width 給橫向 scroll */
+    table.holdings { min-width: 640px; font-size: 12px; }
+    table.holdings th { font-size: 10px; padding: 6px 8px; }
+    table.holdings td { padding: 8px; }
+    table.holdings td.spark { width: 120px; }
+    table.holdings td.since { font-size: 11px; width: 90px; }
+
+    /* Small multiples: 縮小 cell 寬度 */
+    .sm-cell { flex: 0 0 148px; }
+    .sm-cell svg { height: 44px; }
+
+    /* Detail: 改成上下堆疊，picker 變成橫向 scroll 的 row */
+    .detail-layout { grid-template-columns: 1fr; gap: 12px; }
+    .picker-col {
+      max-height: none;
+      overflow-y: visible;
+      overflow-x: auto;
+      border-right: none;
+      border-bottom: 1px solid var(--rule);
+      padding-right: 0;
+      padding-bottom: 8px;
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .picker-col button {
+      display: inline-flex;
+      width: auto;
+      flex: 0 0 auto;
+      padding: 6px 10px;
+      border: 1px solid var(--rule);
+      border-left: 1px solid var(--rule);
+      white-space: nowrap;
+      font-size: 11px;
+    }
+    .picker-col button.active {
+      border-color: var(--ink);
+      border-left-color: var(--ink);
+      border-left-width: 1px;
+    }
+    .picker-col button .w { float: none; margin-left: 6px; }
+
+    .detail-head { flex-wrap: wrap; gap: 4px; }
+    .detail-head .title { font-size: 14px; }
+    .detail-head .weight-now { font-size: 16px; }
+    .detail-subtitle { font-size: 11px; }
+    #detail-chart { height: 180px; }
+
+    /* Events: 改兩行 grid，避免 4-col 炸開 */
+    .events { font-size: 11px; max-height: 200px; }
+    .events .ev {
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 2px 8px;
+      padding: 6px 8px;
+    }
+    .events .ev > span:nth-child(1) { grid-column: 1; grid-row: 1; }
+    .events .ev > span:nth-child(2) { grid-column: 2; grid-row: 1; text-align: right; }
+    .events .ev > span:nth-child(3) { grid-column: 1 / 3; grid-row: 2; color: var(--ink); }
+    .events .ev > span:nth-child(4) { grid-column: 1 / 3; grid-row: 3; font-size: 10px; }
+
+    /* Exited: 縮 column 寬度 */
+    .exited-strip { grid-auto-columns: 130px; gap: 8px 12px; font-size: 11px; }
+    .exited-strip .e { padding: 5px 6px; }
+    .exited-strip .e .d { font-size: 9px; }
+  }
+
+  /* ============= Narrow mobile ≤ 380px (iPhone SE) ============= */
+  @media (max-width: 380px) {
+    main { padding: 10px 8px 24px; }
+    header.etf-head h1 { font-size: 16px; }
+    .panel { padding: 12px 10px; }
+    .sm-cell { flex: 0 0 132px; }
+    .exited-strip { grid-auto-columns: 118px; }
+  }
 </style>
 </head>
 <body>
