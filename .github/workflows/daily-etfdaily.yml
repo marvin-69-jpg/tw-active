@@ -1,6 +1,6 @@
 name: daily-etfdaily-update
 
-# 每日 T+1 抓投信官網當日持股（ground truth）
+# 每日 T 當天晚上抓投信官網當日持股（ground truth）
 # 5 家投信 API / 10 檔 ETF，細節見 docs/tools/etfdaily.md
 #
 # 另一條歷史持股管線（21 檔深度回溯）走外部專用 CI；raw 資料
@@ -8,8 +8,9 @@ name: daily-etfdaily-update
 
 on:
   schedule:
-    # 每個台股交易日 T+1 早上 09:30 TPE（= 01:30 UTC）
-    - cron: '30 1 * * 2-6'
+    # 每個台股交易日 T 當天晚上 20:00 TPE（= 12:00 UTC），週一到週五
+    # 投信官網 PCF 大約 17:00-18:00 TPE 齊全，20:00 預留 2-3 小時緩衝
+    - cron: '0 12 * * 1-5'
   workflow_dispatch:
 
 permissions:
