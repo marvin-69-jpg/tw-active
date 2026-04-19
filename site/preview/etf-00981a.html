@@ -215,6 +215,23 @@
   .detail-head .weight-now { font-family: ui-monospace, monospace; font-size: 20px; }
   .detail-subtitle { color: var(--ink-soft); font-size: 12px; font-family: ui-monospace, monospace; margin-bottom: 12px; }
   #detail-chart { width: 100%; height: 220px; display: block; }
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .chart-legend .swatch {
+    display: inline-block;
+    width: 14px;
+    height: 2px;
+    vertical-align: middle;
+    margin-right: 4px;
+  }
+  .chart-legend .swatch.weight { background: #1a1a1a; height: 2px; }
+  .chart-legend .swatch.price { background: #b08968; height: 1px; border-top: 1px solid #b08968; }
   .events {
     margin-top: 16px;
     font-family: ui-monospace, monospace;
@@ -429,6 +446,10 @@
           <div class="weight-now" id="detail-weight">—</div>
         </div>
         <div class="detail-subtitle" id="detail-sub">—</div>
+        <div class="chart-legend">
+          <span><span class="swatch weight"></span>ETF 權重 %（左軸）</span>
+          <span><span class="swatch price"></span>收盤價 NT$（右軸）</span>
+        </div>
         <svg id="detail-chart"></svg>
         <div class="events" id="events"></div>
       </div>
@@ -448,6 +469,8 @@
 
 <script type="module">
 const data = await fetch('./00981a.json').then(r => r.json());
+const pricesJson = await fetch('./00981a-prices.json').then(r => r.ok ? r.json() : null).catch(() => null);
+const prices = pricesJson?.prices || {};
 const $ = id => document.getElementById(id);
 const fmt = d => `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`;
 
@@ -558,7 +581,7 @@ function selectStock(code) {
   $('detail-weight').textContent = cur > 0 ? cur.toFixed(2) + '%' : 'exited';
   $('detail-sub').textContent = first ? `first ${fmt(first)} · last ${fmt(last)} · ${s.length} 個交易日出現` : '—';
 
-  drawDetailChart(s);
+  drawDetailChart(s, code);
 
   const events = detectEvents(s);
   const evDiv = $('events');
@@ -598,13 +621,14 @@ function detectEvents(s) {
   return events.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-function drawDetailChart(s) {
+function drawDetailChart(s, code) {
   const svg = $('detail-chart');
   svg.innerHTML = '';
   if (!s.length) return;
   const W = svg.clientWidth || 800, H = 220;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  const pad = { l: 44, r: 10, t: 12, b: 24 };
+  // Right padding bigger to make room for price axis label
+  const pad = { l: 44, r: 44, t: 12, b: 24 };
   const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
 
   const maxW = Math.max(...s.map(x => x.weight));
@@ -623,6 +647,40 @@ function drawDetailChart(s) {
     `);
   }
 
+  // ===== Price overlay (right axis) =====
+  const priceSeries = prices[code] || [];
+  // Map weight series dates to price by date lookup
+  const priceByDate = new Map(priceSeries.map(p => [p.date, p.close]));
+  const pricePts = s.map((p, i) => ({ i, price: priceByDate.get(p.date) ?? null }))
+                    .filter(pt => pt.price !== null);
+
+  if (pricePts.length >= 2) {
+    const prs = pricePts.map(p => p.price);
+    const pMax = Math.max(...prs), pMin = Math.min(...prs);
+    const pRange = pMax - pMin || 1;
+    const py = v => pad.t + (1 - (v - pMin) / pRange) * h;
+    // Price path (thin gray)
+    let d = '';
+    for (let k = 0; k < pricePts.length; k++) {
+      const pt = pricePts[k];
+      d += `${k === 0 ? 'M' : 'L'}${x(pt.i).toFixed(1)},${py(pt.price).toFixed(1)} `;
+    }
+    svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#b08968" stroke-width="1" stroke-dasharray="0" opacity="0.85"/>`);
+    // Right-axis labels (min / max)
+    svg.insertAdjacentHTML('beforeend', `
+      <text x="${W - pad.r + 4}" y="${py(pMax) + 3}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace">${pMax.toFixed(pMax >= 100 ? 0 : 1)}</text>
+      <text x="${W - pad.r + 4}" y="${py(pMin) + 3}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace">${pMin.toFixed(pMin >= 100 ? 0 : 1)}</text>
+      <text x="${W - pad.r + 4}" y="${pad.t - 2}" fill="#b08968" font-size="9" font-family="ui-monospace, monospace">NT$</text>
+    `);
+  } else if (!pricesJson) {
+    // prices JSON not loaded at all — silently skip
+  } else {
+    svg.insertAdjacentHTML('beforeend', `
+      <text x="${W - pad.r}" y="${pad.t + 10}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace" text-anchor="end">股價無資料</text>
+    `);
+  }
+
+  // ===== Weight line (primary, on top) =====
   const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.weight).toFixed(1)}`).join(' ');
   svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.25"/>`);
 

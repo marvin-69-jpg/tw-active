@@ -156,6 +156,15 @@ dedup-check       寫入時 gate
 (no args)         從 raw/cmoney/ 產出 site/data/consensus.json（預設 top 150）
 ```
 
+#### `preview_prices` — 批次抓股價供 preview overlay
+```
+<preview.json>         抓所有持過的股票每日收盤 → <preview>-prices.json
+  --sleep 0.25         call 間 sleep 秒數
+  --codes 2330,6488    只抓部分（debug）
+  --out <path>         覆寫輸出位置
+```
+TWSE STOCK_DAY + TPEx tradingStock fallback，支援中斷續跑。
+
 #### `threads` — Threads 發文
 ```
 whoami            驗證 token 與帳號
