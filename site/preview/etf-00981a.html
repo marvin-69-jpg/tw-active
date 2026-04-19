@@ -266,15 +266,52 @@
   }
   .picker-col button.new .w { display: none; }
   .new-note {
-    padding: 24px;
-    text-align: center;
-    color: var(--ink-soft);
+    padding: 20px 20px 16px;
     font-family: ui-monospace, monospace;
     font-size: 12px;
-    border: 1px dashed var(--rule-strong);
+    border: 1px solid #e0b84a;
     background: #fffaec;
+    color: var(--ink);
   }
-  .new-note strong { color: var(--ink); font-size: 13px; }
+  .new-note .hd {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #e0b84a;
+    margin-bottom: 12px;
+  }
+  .new-note .hd .badge {
+    background: #f2b705;
+    color: #1a1a1a;
+    padding: 2px 8px;
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+  }
+  .new-note .hd .code-name { font-weight: 600; font-size: 14px; }
+  .new-note .hd .rank { color: var(--ink-soft); margin-left: auto; font-size: 11px; }
+  .new-note .stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .new-note .stat { text-align: left; }
+  .new-note .stat .k { color: var(--ink-soft); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .new-note .stat .v { font-size: 20px; font-weight: 600; margin-top: 2px; }
+  .new-note .desc {
+    color: var(--ink-soft);
+    font-size: 11px;
+    line-height: 1.6;
+    padding-top: 10px;
+    border-top: 1px dashed #e0b84a;
+  }
+  @media (max-width: 640px) {
+    .new-note { padding: 14px; }
+    .new-note .stats { grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .new-note .stat .v { font-size: 16px; }
+  }
   .events {
     margin-top: 16px;
     font-family: ui-monospace, monospace;
@@ -658,7 +695,7 @@ function selectStock(code) {
   const legend = document.querySelector('.chart-legend');
 
   if (isNewPos && s.length < 5) {
-    // 軌跡太短，不畫 chart，顯示研究訊號提示
+    // 軌跡太短，不畫 chart，顯示研究訊號卡（資料 + 文案）
     svg.innerHTML = '';
     svg.style.display = 'none';
     if (legend) legend.style.display = 'none';
@@ -671,10 +708,63 @@ function selectStock(code) {
       svg.parentElement.appendChild(note);
     }
     note.style.display = 'block';
+
+    // 算這檔在 NEW 倉位裡面的 rank / 總數（by weight desc）
+    const newList = Object.keys(isNew).filter(c => isNew[c]);
+    newList.sort((a, b) => {
+      const wa = (data.series[a] || [{weight: 0}]).slice(-1)[0].weight;
+      const wb = (data.series[b] || [{weight: 0}]).slice(-1)[0].weight;
+      return wb - wa;
+    });
+    const rankInNew = newList.indexOf(code) + 1;
+
+    // 看 ETF 當日總權重裡面排第幾
+    const sortedCurrent = [...data.current].sort((a, b) => b.weight - a.weight);
+    const rankOverall = sortedCurrent.findIndex(h => h.code === code) + 1;
+
+    // 若有價格資料，展示該日收盤
+    const px = (prices[code] || []).find(p => p.date === first);
+    const priceCell = px
+      ? `<div class="stat"><div class="k">當日收盤</div><div class="v">NT$${px.close.toFixed(2)}</div></div>`
+      : `<div class="stat"><div class="k">當日收盤</div><div class="v" style="color:#8f2e2e;font-size:12px;font-weight:400;">暫缺（TWSE rate limit）</div></div>`;
+
     note.innerHTML = `
-      <strong>新建倉訊號</strong><br>
-      ${code} ${name} 首次出現於 <span class="mono">${fmt(first)}</span>，目前權重 <span class="mono">${cur.toFixed(2)}%</span>，僅 ${s.length} 個交易日。<br>
-      經理人剛開始布局 —— 軌跡、加減碼事件、擇時品質還需時間累積才能評估。
+      <div class="hd">
+        <span class="badge">NEW · 新建倉</span>
+        <span class="code-name">${code} ${name}</span>
+        <span class="rank">00981A 新建倉第 ${rankInNew}／${newList.length} 檔</span>
+      </div>
+      <div class="stats">
+        <div class="stat">
+          <div class="k">建倉日</div>
+          <div class="v">${fmt(first)}</div>
+        </div>
+        <div class="stat">
+          <div class="k">權重</div>
+          <div class="v">${cur.toFixed(2)}%</div>
+        </div>
+        <div class="stat">
+          <div class="k">當日持股排序</div>
+          <div class="v">#${rankOverall}／${data.current.length}</div>
+        </div>
+      </div>
+      <div class="stats">
+        ${priceCell}
+        <div class="stat">
+          <div class="k">已持有</div>
+          <div class="v">${s.length} 個交易日</div>
+        </div>
+        <div class="stat">
+          <div class="k">軌跡長度</div>
+          <div class="v" style="font-size:14px;">${s.length < 5 ? '尚不足繪圖' : '可繪'}</div>
+        </div>
+      </div>
+      <div class="desc">
+        ${code} ${name} 是 00981A 最近才放進去的股票。在研究上這是**新建倉訊號**——
+        經理人決定從今天開始布局這檔，但目前只有 ${s.length} 天資料，軌跡、加減碼事件、
+        擇時品質（買在相對高點還是低點）都還不夠累積樣本可判斷。
+        等到這檔持有超過 30 個交易日後，會自動進入主要軌跡統計，NEW 標記會移除。
+      </div>
     `;
     return;
   }
