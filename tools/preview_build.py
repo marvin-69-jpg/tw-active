@@ -130,6 +130,11 @@ def build(etf: str, min_days: int = 30) -> dict:
     # Exited codes: only long-held (days_held >= min_days) positions that are no longer held.
     # 短期已出清（days_held < min_days）= 試水溫/停損雜訊，跟 current side 的 filter 對齊，一併丟掉。
     # 這層 filter 保證 exited_codes 都在 series_out 裡 → 有 name/chart data 可點看歷史。
+    #
+    # Raw 資料源（CMoney）對「出清」有兩種表示法：
+    #   (a) 出清後補 weight=0 rows 一路到 as_of（e.g. 2357 華碩）
+    #   (b) 出清後直接不再出現（e.g. 1326 台化）
+    # 為了前端 chart 一致呈現「權重一路降到 0%」，(b) 類要在 last_date 之後補一筆 weight=0 synthetic row。
     exited_codes = []
     exit_date: dict[str, str] = {}   # code -> last date with weight > 0（真正出清日）
     active_days: dict[str, int] = {} # code -> 非零權重的天數（真正持有天數）
@@ -142,6 +147,11 @@ def build(etf: str, min_days: int = 30) -> dict:
             nz = [p for p in s if p["weight"] > 0]
             exit_date[code] = nz[-1]["date"] if nz else s[-1]["date"]
             active_days[code] = len(nz)
+            # 補 synthetic zero row 讓 chart 視覺化出「降到 0」
+            if last["weight"] > 0:
+                # 找 last_date 後的下一個交易日（優先），否則放 as_of
+                next_day = next((d for d in all_dates if d > last["date"]), as_of)
+                s.append({"date": next_day, "weight": 0.0})
     # 按實際出清日倒序（最近出清的排前面）
     exited_codes.sort(key=lambda c: exit_date.get(c, ""), reverse=True)
 
