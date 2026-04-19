@@ -96,6 +96,23 @@
   .card .price-row .prem.pos { color: #b8860b; }
   .card .price-row .prem.neg { color: #4a7c4a; }
   .card .price-row .prem.na { color: var(--ink-soft); font-weight: normal; }
+  .card .spark {
+    display: block; width: 100%; height: 36px;
+    margin: 6px 0 4px;
+  }
+  .card .spark polyline { fill: none; stroke-width: 1.2; }
+  .card .spark.up polyline { stroke: #b8860b; }
+  .card .spark.down polyline { stroke: #4a7c4a; }
+  .card .spark.flat polyline { stroke: var(--ink-soft); }
+  .card .spark .base { stroke: var(--rule); stroke-width: 0.5; stroke-dasharray: 2 2; }
+  .card .spark-meta {
+    display: flex; justify-content: space-between;
+    font-size: 10px; color: var(--ink-soft);
+    font-family: ui-monospace, monospace;
+    margin-bottom: 6px;
+  }
+  .card .spark-meta .delta.pos { color: #b8860b; }
+  .card .spark-meta .delta.neg { color: #4a7c4a; }
   .card .stats {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
     font-size: 10px; color: var(--ink-soft);
@@ -169,8 +186,9 @@
     <option value="n_new">NEW 數（多 → 少）</option>
     <option value="n_exited">已出清（多 → 少）</option>
     <option value="premium">溢折價 |絕對值大 → 小|</option>
+    <option value="price_chg">近期漲跌幅（漲 → 跌）</option>
   </select>
-  <span style="margin-left:auto;font-size:11px">規模/收盤 FundClear · NAV 投信官網（5/21 檔揭露）</span>
+  <span style="margin-left:auto;font-size:11px">規模/收盤 FundClear · NAV 投信官網（5/21 檔） · 走勢 TWSE/TPEx 近 ~3M</span>
 </div>
 
 <div class="grid" id="grid"></div>
@@ -221,6 +239,19 @@ function render(sortKey) {
       if (pb == null) return -1;
       return Math.abs(pb) - Math.abs(pa) || a.code.localeCompare(b.code);
     },
+    price_chg: (a, b) => {
+      // 近 ~3M 漲跌幅（起→末）
+      const pct = e => {
+        const s = e.price_series || [];
+        if (s.length < 2) return null;
+        return (s[s.length - 1].c - s[0].c) / s[0].c * 100;
+      };
+      const pa = pct(a), pb = pct(b);
+      if (pa == null && pb == null) return a.code.localeCompare(b.code);
+      if (pa == null) return 1;
+      if (pb == null) return -1;
+      return pb - pa || a.code.localeCompare(b.code);
+    },
   };
   const sorted = [...etfs].sort(sorters[sortKey] || sorters.aum);
   grid.innerHTML = '';
@@ -240,6 +271,39 @@ function render(sortKey) {
       <span class="size">${fmtAum(aum)}<span class="size-unit"> 億 NT$</span></span>
       <span class="benefit">受益人 <span class="mono">${fmtNum(e.benefit)}</span></span>
     </div>`;
+    // Sparkline：近 ~3 個月日收盤
+    const sp = (e.price_series || []).map(p => p.c);
+    let sparkHtml = '';
+    if (sp.length >= 2) {
+      const w = 240, h = 36, pad = 2;
+      const min = Math.min(...sp), max = Math.max(...sp);
+      const range = max - min || 1;
+      const startY = sp[0], endY = sp[sp.length - 1];
+      const deltaPct = ((endY - startY) / startY) * 100;
+      const dir = deltaPct > 0.2 ? 'up' : (deltaPct < -0.2 ? 'down' : 'flat');
+      const pts = sp.map((v, i) => {
+        const x = pad + (i / (sp.length - 1)) * (w - 2 * pad);
+        const y = pad + (1 - (v - min) / range) * (h - 2 * pad);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      }).join(' ');
+      // 起點水平基準線
+      const baseY = pad + (1 - (startY - min) / range) * (h - 2 * pad);
+      const d1 = e.price_series[0].d, d2 = e.price_series[e.price_series.length - 1].d;
+      const fmtShort = d => d ? `${d.slice(4,6)}/${d.slice(6,8)}` : '';
+      const deltaCls = deltaPct > 0.2 ? 'pos' : (deltaPct < -0.2 ? 'neg' : '');
+      const sign = deltaPct > 0 ? '+' : '';
+      sparkHtml = `
+        <svg class="spark ${dir}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+          <line class="base" x1="0" y1="${baseY.toFixed(1)}" x2="${w}" y2="${baseY.toFixed(1)}"/>
+          <polyline points="${pts}"/>
+        </svg>
+        <div class="spark-meta">
+          <span>${fmtShort(d1)} → ${fmtShort(d2)} · ${sp.length}d</span>
+          <span class="delta ${deltaCls}">${sign}${deltaPct.toFixed(1)}%</span>
+        </div>`;
+    } else {
+      sparkHtml = `<div class="spark-meta"><span>走勢資料不足</span></div>`;
+    }
     // 價格列：收盤（FundClear） + NAV（5/21 有）+ 溢折價 %
     const close = e.close_price;
     const nav = e.nav;
@@ -264,6 +328,7 @@ function render(sortKey) {
       </div>
       <div class="name">${e.name}</div>
       ${sizeRow}
+      ${sparkHtml}
       ${priceRow}
       <div class="stats">
         <div><span>主要持股</span><span class="v">${e.n_main}</span></div>

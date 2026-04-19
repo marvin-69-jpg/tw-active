@@ -19,6 +19,7 @@ import sys
 from pathlib import Path
 
 import preview_build  # same dir
+import preview_prices  # same dir — TWSE STOCK_DAY 月抓，共用於 ETF 本身價格
 import fundclear       # same dir — 規模 / 受益人數 primary source
 import etfdaily        # same dir — 每日 NAV（7/21 檔投信有公開 API）
 
@@ -36,6 +37,58 @@ def _load_fundclear_map() -> dict[str, dict]:
         if code:
             out[code] = r
     return out
+
+
+def _last_n_months(n: int) -> list[str]:
+    """回 YYYYMM list，含今天往前 n 個月（含今月）"""
+    from datetime import date
+    today = date.today()
+    y, m = today.year, today.month
+    out = []
+    for _ in range(n):
+        out.append(f"{y:04d}{m:02d}")
+        m -= 1
+        if m == 0:
+            m = 12
+            y -= 1
+    return list(reversed(out))
+
+
+def _fetch_etf_price_series(code: str, months: int = 4) -> list[dict]:
+    """抓 ETF 本身最近 months 月的日收盤；跟個股共用 preview_prices 模組。
+    第一個月用 TWSE 試，失敗改打 TPEx（幾檔主動 ETF 在 TPEx 上櫃，如 00998A）。
+    回 [{date, close}, ...] 依日期遞增。"""
+    import time
+    series: list[dict] = []
+    src = None  # "twse" | "tpex"
+    for ym in _last_n_months(months):
+        rows = None
+        if src in (None, "twse"):
+            try:
+                rows = preview_prices.fetch_twse_month(code, ym)
+            except Exception:
+                rows = None
+            if rows:
+                src = "twse"
+        if not rows and src in (None, "tpex"):
+            try:
+                rows = preview_prices.fetch_tpex_month(code, ym)
+            except Exception:
+                rows = None
+            if rows:
+                src = "tpex"
+        if rows:
+            series.extend(rows)
+        time.sleep(0.25)  # 友善間隔
+    # dedupe + sort
+    seen = set()
+    uniq = []
+    for p in sorted(series, key=lambda x: x["date"]):
+        if p["date"] in seen:
+            continue
+        seen.add(p["date"])
+        uniq.append(p)
+    return uniq
 
 
 def _fetch_nav(code: str) -> tuple[float | None, str | None]:
@@ -92,6 +145,13 @@ def build_all(codes: list[str]) -> list[dict]:
         else:
             premium_pct = None
 
+        # ETF 自己的近 ~4 個月日收盤，供卡片 sparkline
+        try:
+            etf_prices = _fetch_etf_price_series(code.upper(), months=4)
+        except Exception as e:
+            print(f"[warn] etf price {code}: {e}", file=sys.stderr)
+            etf_prices = []
+
         summaries.append({
             "code": d["etf"]["code"],
             "name": d["etf"]["name"],
@@ -116,11 +176,14 @@ def build_all(codes: list[str]) -> list[dict]:
             "nav": nav,
             "nav_date": nav_date,
             "premium_pct": round(premium_pct, 3) if premium_pct is not None else None,
+            # ETF 自身價格序列（最近 ~4 個月交易日日收盤）供 sparkline
+            "price_series": [{"d": p["date"], "c": p["close"]} for p in etf_prices],
         })
         nav_str = f"NAV={nav:.2f} prem={premium_pct:+.2f}%" if nav else "NAV=-"
         print(
             f"[done] {code}  n_days={d['n_days']:<4} current={len(d['current']):<4} "
-            f"main>1%={n_main:<3} new={n_new:<3} exited={len(d['exited_codes']):<3} {nav_str}",
+            f"main>1%={n_main:<3} new={n_new:<3} exited={len(d['exited_codes']):<3} "
+            f"spark={len(etf_prices):<3} {nav_str}",
             file=sys.stderr,
         )
     return summaries
