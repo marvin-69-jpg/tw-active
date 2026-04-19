@@ -469,7 +469,7 @@
 <body>
 <main>
   <div class="crumb">
-    <a href="../">tw-active</a> / preview / tabs
+    <a href="../">tw-active</a> / preview
   </div>
 
   <header class="etf-head">
@@ -477,7 +477,6 @@
       <h1 id="title">—</h1>
       <div class="meta" id="meta-line">—</div>
     </div>
-    <div class="meta" id="meta-summary">—</div>
   </header>
 
   <nav class="tabs" id="tabs">
@@ -558,15 +557,7 @@ const newCount = Object.values(isNew).filter(Boolean).length;
 
 // Header
 $('title').textContent = `${data.etf.code}  ${data.etf.name}`;
-$('meta-line').textContent = `${data.etf.issuer} · ${data.n_days} 個交易日 · ${fmt(data.first_date)} → ${fmt(data.as_of)}`;
-$('meta-summary').innerHTML = `
-  目前持股 <span class="mono">${data.current.length}</span>
-  <span class="sep">·</span>
-  歷來曾持 <span class="mono">${Object.keys(data.days_held).length}</span>
-  <span class="sep">·</span>
-  已出清 <span class="mono">${data.exited_codes.length}</span>
-  ${newCount > 0 ? `<span class="sep">·</span>新建倉 <span class="mono">${newCount}</span>` : ''}
-`;
+$('meta-line').innerHTML = `${data.etf.issuer} · ${data.n_days} 個交易日 · ${fmt(data.first_date)} → ${fmt(data.as_of)}${newCount > 0 ? ` · 新建倉 <span class="mono">${newCount}</span>` : ''}`;
 
 $('count-current').textContent = data.current.filter(h => h.weight > 1).length;
 $('count-trace').textContent = data.current.length;
