@@ -894,13 +894,17 @@ function drawDetailChart(s, code) {
 
 // ============= Exited strip =============
 const exitedStrip = $('exited-strip');
+const exitDate = data.exit_date || {};
+const activeDays = data.active_days || {};
 for (const code of data.exited_codes) {
   const name = data.name_of[code] || code;
-  const days = data.days_held[code];
+  const ed = exitDate[code];
+  const ad = activeDays[code];
+  const meta = ed ? `${fmt(ed)} 出清 · ${ad} 天` : `${data.days_held[code]} 天曾持`;
   const div = document.createElement('div');
   div.className = 'e';
   div.style.cursor = 'pointer';
-  div.innerHTML = `<span class="code">${code}</span><span class="n">${name}</span><span class="d">${days} 天曾持</span>`;
+  div.innerHTML = `<span class="code">${code}</span><span class="n">${name}</span><span class="d">${meta}</span>`;
   div.onclick = () => { selectStock(code); switchTab('stock'); };
   exitedStrip.appendChild(div);
 }

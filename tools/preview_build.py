@@ -113,6 +113,9 @@ def build(etf: str, min_days: int = 30) -> dict:
     series_out: dict[str, list[dict]] = {}
     is_new: dict[str, bool] = {}
     for code, s in by_code.items():
+        # 跳過從未持有（weight 全 0）的 cash-like 條目（PFUR_NTD 等）
+        if not any(p["weight"] > 0 for p in s):
+            continue
         n = days_held[code]
         last_date = s[-1]["date"]
         held_now = last_date == as_of and s[-1]["weight"] > 0
@@ -124,23 +127,23 @@ def build(etf: str, min_days: int = 30) -> dict:
             is_new[code] = True
         # else: 短期已出清，丟掉（noise）
 
-    # Exited codes: ever-held but weight=0 on as_of, and at least 2 days of history
+    # Exited codes: only long-held (days_held >= min_days) positions that are no longer held.
+    # 短期已出清（days_held < min_days）= 試水溫/停損雜訊，跟 current side 的 filter 對齊，一併丟掉。
+    # 這層 filter 保證 exited_codes 都在 series_out 裡 → 有 name/chart data 可點看歷史。
     exited_codes = []
-    for code, s in by_code.items():
-        if code in series_out:
-            continue  # already in
-        # exited considered = ever held (n >= 2) and last entry is before as_of OR last weight == 0
-        if days_held[code] < 2:
-            continue
+    exit_date: dict[str, str] = {}   # code -> last date with weight > 0（真正出清日）
+    active_days: dict[str, int] = {} # code -> 非零權重的天數（真正持有天數）
+    for code, s in series_out.items():
+        if is_new.get(code):
+            continue  # NEW 倉位本來就還在場上，不算 exited
         last = s[-1]
         if last["date"] != as_of or last["weight"] == 0:
             exited_codes.append(code)
-    # also codes in series with last weight 0 or last_date != as_of → exited but historically long
-    for code, s in list(series_out.items()):
-        last = s[-1]
-        if last["date"] != as_of or last["weight"] == 0:
-            if code not in exited_codes:
-                exited_codes.append(code)
+            nz = [p for p in s if p["weight"] > 0]
+            exit_date[code] = nz[-1]["date"] if nz else s[-1]["date"]
+            active_days[code] = len(nz)
+    # 按實際出清日倒序（最近出清的排前面）
+    exited_codes.sort(key=lambda c: exit_date.get(c, ""), reverse=True)
 
     name, issuer = ISSUER_OF.get(etf, (etf, ""))
     out = {
@@ -150,6 +153,8 @@ def build(etf: str, min_days: int = 30) -> dict:
         "n_days": n_days,
         "current": current,
         "exited_codes": exited_codes,
+        "exit_date": exit_date,
+        "active_days": active_days,
         "series": series_out,
         "name_of": {k: name_of[k] for k in series_out},
         "days_held": {k: days_held[k] for k in series_out},
