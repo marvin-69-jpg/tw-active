@@ -199,7 +199,8 @@
 const fmt = d => d ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : '—';
 const $ = id => document.getElementById(id);
 
-const idx = await fetch('./etfs.json').then(r => r.json());
+// cache-buster：每次 build 換 URL，避免瀏覽器拿到沒 price_series 的舊 JSON
+const idx = await fetch(`./etfs.json?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
 const etfs = idx.etfs || [];
 
 // 規模合計（億）
