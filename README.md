@@ -35,29 +35,136 @@ docs/tools/<name>.md         研究筆記（破解過程、穩定度、已知陷
 
 完整工具清單見 [`docs/tools/README.md`](docs/tools/README.md)。
 
-## 工具
+## CLI 能力
 
-**資料抓取**
+本 repo 的特點是**每條 primary source 都有對應的 CLI**，不仰賴第三方 scraper / Yahoo / MoneyDJ。所有工具採 PEP 723 inline dependencies，直接 `uv run tools/<name>.py ...` 即可跑。
 
-- `fundclear` — FundClear 公開說明書 PDF 下載
-- `twquote` — TWSE / TPEx OpenAPI 盤後資料與三大法人
-- `etfdaily` — 五家投信官網主動 ETF 當日持股
-- `managerwatch` — SITCA 基金月/季報
-- `mopsetf` — MOPS 主動 ETF 歷史月報
+### 一、資料抓取（primary source）
 
-> 主動 ETF 全歷史持股的抓取實作獨立於另一 repo，跑完把 raw JSON 推回本 repo 的 `raw/cmoney/` 供下游消費。
+#### `fundclear` — 公開說明書 PDF
+> MOPS 沒放 ETF 公開說明書，這條是唯一可批量抓的官方來源。
+```
+list         列出 21+ 檔主動 ETF 代號與名稱
+info <code>  顯示單檔 ETF 的公開說明書欄位
+fetch <code> 下載 PDF 到 raw/prospectus/
+extract      下載 + 抽文字（後續餵入 LLM/grep）
+```
 
-**分析與儲存**
+#### `twquote` — TWSE + TPEx OpenAPI
+> 封裝官方三條線（OpenAPI 143 / 225 path + T86 legacy），無 CAPTCHA、純 curl 可打。
+```
+daily <code>       個股日成交（開高低收、量、漲跌）
+insti <code>       三大法人個股買賣超
+qfii               外資持股比率 Top 20
+etfrank            定期定額交易戶數排行
+active             主動 ETF 盤後快照（日成交 + 三大法人合併）
+paths / schema     列 OpenAPI path 與欄位定義
+```
 
-- `datastore` — SQLite 時序儲存，跨來源合流 query
-- `signals` — 共識、加碼、出場等經理人策略訊號偵測
-- `peoplefuse` — 將 signals 結果渲染進 `wiki/people/` AUTO 區塊
+#### `etfdaily` — 投信官網當日持股
+> 主動 ETF **法規強制每日揭露完整持股**（vs 基金只需月報 Top 10）是本研究最重要的機制切入點。這條直取六家投信官方 API：統一、野村、復華、安聯、群益、富邦。
+```
+catalog              10+ 檔主動 ETF × 六家投信 endpoint 對照
+holdings <code>      抓單檔完整持股（不只 Top N）
+fetch <code> <date>  下載原始 xlsx/json 到 raw/etfdaily/
+list <issuer>        列投信全產品 ID（群益可用）
+```
 
-**發佈**
+#### `managerwatch` — SITCA 月報 / 季報
+> 投信投顧公會（SITCA）是月報 Top 10 + 季報 ≥1% 持股的**唯一官方彙整源**。
+```
+companies           SITCA 投信代碼清單（A0001~）
+classes             基金分類代碼（AL11 國內股票型等）
+catalog             本研究 19 檔基金觀測清單
+sitca monthly       IN2629 月報 Top 10
+sitca quarterly     IN2630 季報 ≥1% 持股
+```
 
-- `site_build` — 從 `raw/cmoney/` 產出 Pages 用的 `site/data/*.json`
-- `threads` — Threads 發文
-- `wiki` / `memory` — wiki ingest 與記憶維護
+#### `mopsetf` — MOPS 主動 ETF 歷史月報
+> 補 SITCA server bug 的洞：非最新期 filter 失效時走這條。
+```
+monthly <code> <year> <month>  基金每月前五大個股（MOPS t78sb39_q3）
+parse                          本地 HTML 解析（test only）
+```
+
+> **主動 ETF 全歷史持股**（21 檔回溯至 2025-05）的抓取實作獨立於另一 repo，跑完 push 回本 repo 的 `raw/cmoney/` 供下游消費。
+
+### 二、儲存與 query
+
+#### `datastore` — SQLite 時序儲存
+> 把上面所有 primary source 正規化進 `raw/store.db`，支援跨來源合流 query。
+```
+init                              建表
+ingest holdings-fund <path>       寫入基金月報
+ingest holdings-etf-daily <path>  寫入 ETF 日持股
+ingest top5-mops <path>           寫入 MOPS 歷史月報
+backfill months <from> <to>       批次月範圍 ingest
+query manager <name>              經理人管的所有基金與 ETF
+query holding <code>              某檔股票被誰持有
+stats                             coverage / 筆數 / 日期範圍
+migrate                           schema drift 修復
+whitelist                         active_etf_* view 基金白名單
+```
+
+#### `signals` — 經理人策略訊號偵測
+> 9 種訊號的機器化實作，跑在 `datastore` 之上。
+```
+detect <n>      偵測單一訊號（4/5/7/8/9）
+all             跑全部可機器化的訊號
+explain <n>     印訊號邏輯與 SQL
+stats           coverage 與訊號清單
+```
+訊號範例：`#4 多基金共識`、`#5 單檔重壓`、`#7 經理人跨產品加碼`、`#8 雙軌落差`、`#9 季度出場`。
+
+### 三、Wiki 維護
+
+#### `wiki` — Obsidian wiki 管理
+```
+lint            雙向連結 / orphan / staleness 檢查
+match <query>   關鍵字比對 wiki pages
+status          wiki 概覽（頁數、tag、last updated）
+gaps            找研究缺口（single-source、open questions、tag gaps）
+research-log    列過去日報（dedup 用）
+arxiv <query>   arxiv 搜尋（跨題材參考）
+```
+
+#### `peoplefuse` — 經理人頁自動渲染
+```
+list             列 wiki/people/ 與 frontmatter
+init <slug>      建空 frontmatter 樣板
+render <slug>    把 signals 結果渲染進 AUTO 區塊
+diff <slug>      印 ETF vs 基金雙軌差距表
+```
+
+#### `memory` — Auto-memory 管理
+```
+lint              格式與結構完整性檢查
+consolidate       重複、過時、promotion 候選分析
+improve           lint + consolidate（session 開頭跑）
+stats             記憶分佈速覽
+recall <query>    搜 memory/ + wiki/
+brief             session 開機簡報
+reconsolidate     讀過的記憶檢查 staleness 訊號
+link              跨記憶 graph 連結建議
+dedup-check       寫入時 gate
+```
+
+### 四、發佈
+
+#### `site_build` — 產出 Pages 資料
+```
+(no args)         從 raw/cmoney/ 產出 site/data/consensus.json（預設 top 150）
+```
+
+#### `threads` — Threads 發文
+```
+whoami            驗證 token 與帳號
+post <text>       發單則（≤500 字元）
+thread <text>     自動分段發串
+preview <text>    印預覽，不實發
+```
+
+詳細破解思路與穩定度評估見 [`docs/tools/README.md`](docs/tools/README.md)。
 
 ## 自動化
 
