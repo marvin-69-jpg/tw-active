@@ -91,9 +91,35 @@ def _fetch_etf_price_series(code: str, months: int = 4) -> list[dict]:
     return uniq
 
 
+def _load_premium_raw(code: str) -> dict | None:
+    """讀 raw/cmoney/premium/<code>.json 取最新一筆 NAV/折溢價。
+    21 檔全覆蓋的 primary source；由私有 CI 每日 push raw JSON 到此。
+    回 {date: YYYYMMDD, close, nav, premium_pct} or None。"""
+    path = Path(f"raw/cmoney/premium/{code}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return None
+    rows = data.get("Data") or []
+    if not rows:
+        return None
+    # Title: [日期, 收盤價, 淨值, 折溢價(%)]，Data 降冪（最新 [0]）
+    latest = rows[0]
+    try:
+        return {
+            "date": latest[0],
+            "close": float(latest[1]),
+            "nav": float(latest[2]),
+            "premium_pct": float(latest[3]),
+        }
+    except Exception:
+        return None
+
+
 def _fetch_nav(code: str) -> tuple[float | None, str | None]:
-    """跑 etfdaily.fetch_holdings 取 NAV。只有 5 檔（群益3/安聯2）會回 nav；
-    其他 issuer 的 API 目前沒揭露 NAV → (None, None)。"""
+    """保留作為 secondary source（pocket.tw 下線時 fallback）。"""
     if code not in etfdaily.CATALOG:
         return None, None
     try:
@@ -138,12 +164,20 @@ def build_all(codes: list[str]) -> list[dict]:
         except Exception:
             close_f = None
 
-        # 每日 NAV：只對 etfdaily 支援的 10 檔嘗試，其中 5 檔（群益3+安聯2）會回 nav
-        nav, nav_date = _fetch_nav(code.upper())
-        if nav and close_f:
-            premium_pct = (close_f - nav) / nav * 100.0
+        # 每日 NAV / 折溢價：primary 從 raw/cmoney/premium/<code>.json 讀（21 檔全覆蓋）
+        # raw 由私有 CI 維護、每日 push；此處只是 consumer
+        # fallback：etfdaily（投信官網直取、5 檔）當 raw 缺檔時備援
+        pd = _load_premium_raw(code.upper())
+        if pd:
+            nav = pd["nav"]
+            nav_date = pd["date"]
+            premium_pct = pd["premium_pct"]
         else:
-            premium_pct = None
+            nav, nav_date = _fetch_nav(code.upper())
+            if nav and close_f:
+                premium_pct = (close_f - nav) / nav * 100.0
+            else:
+                premium_pct = None
 
         # ETF 自己的近 ~4 個月日收盤，供卡片 sparkline
         try:
@@ -197,7 +231,11 @@ def main() -> int:
     if args.codes:
         codes = [c.upper() for c in args.codes]
     else:
-        codes = sorted(p.name for p in Path("raw/cmoney").iterdir() if p.is_dir())
+        # ETF code = 5 digits + 1 letter（如 00981A）；過濾 premium/ 等 subdir
+        codes = sorted(
+            p.name for p in Path("raw/cmoney").iterdir()
+            if p.is_dir() and len(p.name) == 6 and p.name[:5].isdigit() and p.name[5].isalpha()
+        )
 
     summaries = build_all(codes)
     # 預設按規模 desc（總資產 億 NT$），null 排最後

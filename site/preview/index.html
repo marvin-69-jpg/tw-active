@@ -188,7 +188,7 @@
     <option value="premium">溢折價 |絕對值大 → 小|</option>
     <option value="price_chg">近期漲跌幅（漲 → 跌）</option>
   </select>
-  <span style="margin-left:auto;font-size:11px">規模/收盤 FundClear · NAV 投信官網（5/21 檔） · 走勢 TWSE/TPEx 近 ~3M</span>
+  <span style="margin-left:auto;font-size:11px">規模/受益人數 FundClear · NAV/折溢價 CMoney · 走勢 TWSE/TPEx 近 ~3M</span>
 </div>
 
 <div class="grid" id="grid"></div>
@@ -354,7 +354,7 @@ sortSel.addEventListener('change', () => {
 render(sortSel.value);
 
 const navCnt = etfs.filter(e => e.nav != null).length;
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/收盤 FundClear · NAV ${navCnt}/${etfs.length} 檔（僅群益+安聯投信官網有公開 API，其他需手動 scrape）`;
+$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔（CMoney 合流）· 走勢 TWSE/TPEx 近 ~3M`;
 </script>
 </body>
 </html>
