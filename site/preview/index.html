@@ -67,6 +67,22 @@
     font-size: 13px; font-weight: 500; margin-bottom: 10px;
     white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
+  .card .size-row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 8px 0; border-top: 1px dashed var(--rule);
+    margin-bottom: 0;
+  }
+  .card .size-row .size {
+    font-family: ui-monospace, monospace;
+    font-size: 18px; font-weight: 600; color: var(--ink);
+  }
+  .card .size-row .size-unit { font-size: 11px; color: var(--ink-soft); margin-left: 2px; }
+  .card .size-row .benefit {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    font-size: 11px; color: var(--ink-soft);
+    margin-left: auto;
+  }
+  .card .size-row .benefit .mono { font-family: ui-monospace, monospace; color: var(--ink); }
   .card .stats {
     display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
     font-size: 10px; color: var(--ink-soft);
@@ -78,6 +94,20 @@
     font-size: 14px; color: var(--ink); font-weight: 500; display: block; margin-top: 1px;
   }
   .card .stats .new .v { color: #b8860b; }
+
+  .sort-bar {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin: 16px 0 20px;
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  .sort-bar label { font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
+  .sort-bar select {
+    font-family: ui-monospace, monospace; font-size: 12px;
+    background: var(--panel); border: 1px solid var(--rule);
+    padding: 4px 8px; color: var(--ink); cursor: pointer;
+  }
+  .sort-bar select:focus { outline: 1px solid var(--rule-strong); }
   .card .top3 {
     font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
     font-size: 11px; color: var(--ink-soft);
@@ -115,6 +145,20 @@
 <h1>主動型 ETF · 持股軌跡</h1>
 <div class="sub" id="sub">—</div>
 
+<div class="sort-bar">
+  <label for="sort">排序：</label>
+  <select id="sort">
+    <option value="aum">規模（大 → 小）</option>
+    <option value="benefit">受益人數（多 → 少）</option>
+    <option value="code">代號</option>
+    <option value="n_days">資料長度（長 → 短）</option>
+    <option value="n_current">持股數（多 → 少）</option>
+    <option value="n_new">NEW 數（多 → 少）</option>
+    <option value="n_exited">已出清（多 → 少）</option>
+  </select>
+  <span style="margin-left:auto;font-size:11px">規模 / 受益人數 資料源：FundClear 集保結算所</span>
+</div>
+
 <div class="grid" id="grid"></div>
 
 <footer id="footer">—</footer>
@@ -126,19 +170,40 @@ const $ = id => document.getElementById(id);
 const idx = await fetch('./etfs.json').then(r => r.json());
 const etfs = idx.etfs || [];
 
+// 規模合計（億）
+const totalAum = etfs.reduce((s, e) => s + (e.total_av_yi || 0), 0);
+const totalBenefit = etfs.reduce((s, e) => s + (e.benefit || 0), 0);
 $('sub').innerHTML = `
   <span class="mono">${idx.n_etfs}</span> 檔主動 ETF
   <span class="sep">·</span>
-  as-of <span class="mono">${fmt(idx.as_of)}</span>
+  合計規模 <span class="mono">${totalAum.toFixed(0)}</span> 億 NT$
   <span class="sep">·</span>
-  每檔點入看目前持股 / 歷史軌跡 / 單股進出場 / 已出清
+  合計受益人 <span class="mono">${totalBenefit.toLocaleString()}</span>
+  <span class="sep">·</span>
+  as-of <span class="mono">${fmt(idx.as_of)}</span>
 `;
 
+const fmtNum = n => n == null ? '—' : n.toLocaleString();
+const fmtAum = v => {
+  if (v == null) return '—';
+  return v >= 1000 ? v.toFixed(0) : v.toFixed(1);
+};
+
 const grid = $('grid');
-if (!etfs.length) {
-  grid.innerHTML = '<div class="empty">尚無資料</div>';
-} else {
-  for (const e of etfs) {
+function render(sortKey) {
+  const sorters = {
+    aum:       (a, b) => (b.total_av_yi || 0) - (a.total_av_yi || 0) || a.code.localeCompare(b.code),
+    benefit:   (a, b) => (b.benefit || 0) - (a.benefit || 0) || a.code.localeCompare(b.code),
+    code:      (a, b) => a.code.localeCompare(b.code),
+    n_days:    (a, b) => b.n_days - a.n_days || a.code.localeCompare(b.code),
+    n_current: (a, b) => b.n_current - a.n_current || a.code.localeCompare(b.code),
+    n_new:     (a, b) => b.n_new - a.n_new || a.code.localeCompare(b.code),
+    n_exited:  (a, b) => b.n_exited - a.n_exited || a.code.localeCompare(b.code),
+  };
+  const sorted = [...etfs].sort(sorters[sortKey] || sorters.aum);
+  grid.innerHTML = '';
+  if (!sorted.length) { grid.innerHTML = '<div class="empty">尚無資料</div>'; return; }
+  for (const e of sorted) {
     const a = document.createElement('a');
     a.className = 'card';
     a.href = `./etf.html?code=${e.code}`;
@@ -148,12 +213,18 @@ if (!etfs.length) {
     const newCell = e.n_new > 0
       ? `<div class="new"><span>NEW</span><span class="v">${e.n_new}</span></div>`
       : `<div><span>NEW</span><span class="v">—</span></div>`;
+    const aum = e.total_av_yi;
+    const sizeRow = `<div class="size-row">
+      <span class="size">${fmtAum(aum)}<span class="size-unit"> 億 NT$</span></span>
+      <span class="benefit">受益人 <span class="mono">${fmtNum(e.benefit)}</span></span>
+    </div>`;
     a.innerHTML = `
       <div class="code-row">
         <span class="code">${e.code}</span>
         <span class="issuer">${e.issuer || ''}</span>
       </div>
       <div class="name">${e.name}</div>
+      ${sizeRow}
       <div class="stats">
         <div><span>主要持股</span><span class="v">${e.n_main}</span></div>
         <div><span>全倉</span><span class="v">${e.n_current}</span></div>
@@ -167,7 +238,16 @@ if (!etfs.length) {
   }
 }
 
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 每檔持股單獨 <code>.json</code>`;
+const sortSel = $('sort');
+const initSort = (location.hash || '#aum').slice(1);
+if (sortSel.querySelector(`option[value="${initSort}"]`)) sortSel.value = initSort;
+sortSel.addEventListener('change', () => {
+  location.hash = sortSel.value;
+  render(sortSel.value);
+});
+render(sortSel.value);
+
+$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 from FundClear (集保結算所)`;
 </script>
 </body>
 </html>

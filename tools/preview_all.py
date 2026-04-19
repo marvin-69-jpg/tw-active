@@ -19,9 +19,26 @@ import sys
 from pathlib import Path
 
 import preview_build  # same dir
+import fundclear       # same dir — 規模 / 受益人數 primary source
+
+
+def _load_fundclear_map() -> dict[str, dict]:
+    """一次打 FundClear /api/etf/product/list，回 {code: {totalAv, benefit, ...}}"""
+    try:
+        rows = fundclear.query_all()
+    except Exception as e:
+        print(f"[warn] fundclear fetch failed: {e}", file=sys.stderr)
+        return {}
+    out = {}
+    for r in rows:
+        code = (r.get("stockNo") or "").upper()
+        if code:
+            out[code] = r
+    return out
 
 
 def build_all(codes: list[str]) -> list[dict]:
+    fc_map = _load_fundclear_map()
     summaries: list[dict] = []
     for code in codes:
         try:
@@ -36,6 +53,10 @@ def build_all(codes: list[str]) -> list[dict]:
         n_main = sum(1 for h in d["current"] if h["weight"] > 1.0)
         n_new = sum(1 for v in d["is_new"].values() if v)
         top3 = sorted(d["current"], key=lambda h: -h["weight"])[:3]
+        fc = fc_map.get(code.upper(), {})
+        total_av_yi = fc.get("totalAv")   # 單位：億 NT$
+        benefit = fc.get("benefit")       # 受益人數
+        listing_date = fc.get("listingDate")
         summaries.append({
             "code": d["etf"]["code"],
             "name": d["etf"]["name"],
@@ -51,6 +72,10 @@ def build_all(codes: list[str]) -> list[dict]:
                 {"code": h["code"], "name": h["name"], "weight": round(h["weight"], 2)}
                 for h in top3
             ],
+            # FundClear：規模（億 NT$）、受益人數、上市日。未揭露 → null
+            "total_av_yi": float(total_av_yi) if total_av_yi not in (None, "") else None,
+            "benefit": int(benefit) if benefit not in (None, "") else None,
+            "listing_date": listing_date or None,
         })
         print(
             f"[done] {code}  n_days={d['n_days']:<4} current={len(d['current']):<4} "
@@ -71,7 +96,10 @@ def main() -> int:
         codes = sorted(p.name for p in Path("raw/cmoney").iterdir() if p.is_dir())
 
     summaries = build_all(codes)
-    summaries.sort(key=lambda s: s["code"])
+    # 預設按規模 desc（總資產 億 NT$），null 排最後
+    summaries.sort(
+        key=lambda s: (s.get("total_av_yi") is None, -(s.get("total_av_yi") or 0), s["code"])
+    )
 
     idx_path = Path("site/preview/etfs.json")
     idx_path.write_text(json.dumps({
