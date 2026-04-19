@@ -1,0 +1,4907 @@
+{
+  "as_of": "20260417",
+  "n_etfs": 21,
+  "etfs": [
+    {
+      "code": "00400A",
+      "name": "主動國泰動能高息",
+      "issuer": "cathay"
+    },
+    {
+      "code": "00401A",
+      "name": "主動摩根台灣鑫收（JPMorgan Taiwan Premium Income Active ETF）",
+      "issuer": "jpmorgan-taiwan"
+    },
+    {
+      "code": "00980A",
+      "name": "主動野村臺灣優選",
+      "issuer": "nomura"
+    },
+    {
+      "code": "00981A",
+      "name": "主動統一台股增長",
+      "issuer": "uni-president"
+    },
+    {
+      "code": "00982A",
+      "name": "主動群益台灣強棒",
+      "issuer": "capital-sitc"
+    },
+    {
+      "code": "00983A",
+      "name": "00983A 主動中信 ARK 創新",
+      "issuer": "ctbc"
+    },
+    {
+      "code": "00984A",
+      "name": "主動安聯台灣高息成長",
+      "issuer": "allianz"
+    },
+    {
+      "code": "00985A",
+      "name": "主動野村台灣 50（增強指數型）",
+      "issuer": "nomura"
+    },
+    {
+      "code": "00986A",
+      "name": "主動台新龍頭成長（台新全球龍頭成長）",
+      "issuer": "taishin"
+    },
+    {
+      "code": "00987A",
+      "name": "主動台新優勢成長",
+      "issuer": "taishin"
+    },
+    {
+      "code": "00988A",
+      "name": "主動統一全球創新",
+      "issuer": "uni-president"
+    },
+    {
+      "code": "00989A",
+      "name": "主動摩根美國科技（JPMorgan US Leading Tech Active ETF）",
+      "issuer": "jpmorgan-taiwan"
+    },
+    {
+      "code": "00990A",
+      "name": "主動元大 AI 新經濟",
+      "issuer": "yuanta"
+    },
+    {
+      "code": "00991A",
+      "name": "主動復華未來 50",
+      "issuer": "fuhwa"
+    },
+    {
+      "code": "00992A",
+      "name": "主動群益科技創新",
+      "issuer": "capital-sitc"
+    },
+    {
+      "code": "00993A",
+      "name": "主動安聯台灣（Allianz Taiwan Active ETF）",
+      "issuer": "allianz"
+    },
+    {
+      "code": "00994A",
+      "name": "主動第一金台股優",
+      "issuer": "first-financial"
+    },
+    {
+      "code": "00995A",
+      "name": "主動中信台灣卓越",
+      "issuer": "ctbc"
+    },
+    {
+      "code": "00996A",
+      "name": "主動兆豐台灣豐收（Mega Taiwan Harvest Active ETF）",
+      "issuer": "megabank-itim"
+    },
+    {
+      "code": "00997A",
+      "name": "主動群益美國增長",
+      "issuer": "capital-sitc"
+    },
+    {
+      "code": "00998A",
+      "name": "主動復華金融股息",
+      "issuer": "fuhwa"
+    }
+  ],
+  "kpi": {
+    "n_etfs": 21,
+    "all_in_count": 0,
+    "majority_count": 19,
+    "solo_count": 253,
+    "distinct_stocks": 424,
+    "top10_avg_weight_share": 37.84
+  },
+  "consensus": [
+    {
+      "code": "2330",
+      "name": "TAIWAN SEMICONDUCTOR MANUFAC",
+      "held_by": 18,
+      "avg_weight": 8.693,
+      "max_weight": 24.92,
+      "min_weight": 1.74,
+      "total_weight": 156.466,
+      "etfs": [
+        {
+          "etf": "00985A",
+          "weight": 24.92
+        },
+        {
+          "etf": "00991A",
+          "weight": 16.567
+        },
+        {
+          "etf": "00994A",
+          "weight": 14.37
+        },
+        {
+          "etf": "00986A",
+          "weight": 9.126
+        },
+        {
+          "etf": "00995A",
+          "weight": 8.98
+        },
+        {
+          "etf": "00980A",
+          "weight": 8.74
+        },
+        {
+          "etf": "00981A",
+          "weight": 8.67
+        },
+        {
+          "etf": "00996A",
+          "weight": 8.59
+        },
+        {
+          "etf": "00982A",
+          "weight": 8.23
+        },
+        {
+          "etf": "00401A",
+          "weight": 8.21
+        },
+        {
+          "etf": "00993A",
+          "weight": 7.87
+        },
+        {
+          "etf": "00400A",
+          "weight": 6.99
+        },
+        {
+          "etf": "00992A",
+          "weight": 6.098
+        },
+        {
+          "etf": "00987A",
+          "weight": 5.933
+        },
+        {
+          "etf": "00984A",
+          "weight": 4.66
+        },
+        {
+          "etf": "00990A",
+          "weight": 4.08
+        },
+        {
+          "etf": "00997A",
+          "weight": 2.692
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.74
+        }
+      ]
+    },
+    {
+      "code": "2383",
+      "name": "ELITE MATERIAL CO LTD",
+      "held_by": 17,
+      "avg_weight": 4.124,
+      "max_weight": 9.676,
+      "min_weight": 1.21,
+      "total_weight": 70.108,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 9.676
+        },
+        {
+          "etf": "00981A",
+          "weight": 7.46
+        },
+        {
+          "etf": "00995A",
+          "weight": 6.1
+        },
+        {
+          "etf": "00996A",
+          "weight": 5.57
+        },
+        {
+          "etf": "00994A",
+          "weight": 5.56
+        },
+        {
+          "etf": "00982A",
+          "weight": 4.796
+        },
+        {
+          "etf": "00400A",
+          "weight": 4.53
+        },
+        {
+          "etf": "00992A",
+          "weight": 4.095
+        },
+        {
+          "etf": "00401A",
+          "weight": 3.94
+        },
+        {
+          "etf": "00987A",
+          "weight": 3.911
+        },
+        {
+          "etf": "00980A",
+          "weight": 3.37
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.6
+        },
+        {
+          "etf": "00997A",
+          "weight": 2.201
+        },
+        {
+          "etf": "00990A",
+          "weight": 2.17
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.51
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.41
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.21
+        }
+      ]
+    },
+    {
+      "code": "2308",
+      "name": "DELTA ELECTRONICS INC",
+      "held_by": 17,
+      "avg_weight": 3.957,
+      "max_weight": 6.787,
+      "min_weight": 0.826,
+      "total_weight": 67.261,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 6.787
+        },
+        {
+          "etf": "00401A",
+          "weight": 6.19
+        },
+        {
+          "etf": "00981A",
+          "weight": 6.12
+        },
+        {
+          "etf": "00996A",
+          "weight": 5.75
+        },
+        {
+          "etf": "00995A",
+          "weight": 5.62
+        },
+        {
+          "etf": "00980A",
+          "weight": 5.12
+        },
+        {
+          "etf": "00990A",
+          "weight": 4.56
+        },
+        {
+          "etf": "00400A",
+          "weight": 4.53
+        },
+        {
+          "etf": "00994A",
+          "weight": 4.16
+        },
+        {
+          "etf": "00987A",
+          "weight": 3.863
+        },
+        {
+          "etf": "00982A",
+          "weight": 3.506
+        },
+        {
+          "etf": "00985A",
+          "weight": 3.16
+        },
+        {
+          "etf": "00997A",
+          "weight": 2.629
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.24
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.07
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.826
+        }
+      ]
+    },
+    {
+      "code": "2345",
+      "name": "ACCTON TECHNOLOGY CORP",
+      "held_by": 16,
+      "avg_weight": 3.162,
+      "max_weight": 5.73,
+      "min_weight": 0.48,
+      "total_weight": 50.589,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 5.73
+        },
+        {
+          "etf": "00995A",
+          "weight": 5.3
+        },
+        {
+          "etf": "00991A",
+          "weight": 4.73
+        },
+        {
+          "etf": "00994A",
+          "weight": 4.51
+        },
+        {
+          "etf": "00982A",
+          "weight": 4.11
+        },
+        {
+          "etf": "00992A",
+          "weight": 3.672
+        },
+        {
+          "etf": "00987A",
+          "weight": 3.579
+        },
+        {
+          "etf": "00980A",
+          "weight": 3.18
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.06
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.56
+        },
+        {
+          "etf": "00985A",
+          "weight": 2.38
+        },
+        {
+          "etf": "00997A",
+          "weight": 2.238
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.15
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.77
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.14
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.48
+        }
+      ]
+    },
+    {
+      "code": "3017",
+      "name": "奇鋐科技",
+      "held_by": 15,
+      "avg_weight": 3.155,
+      "max_weight": 5.32,
+      "min_weight": 0.92,
+      "total_weight": 47.319,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 5.32
+        },
+        {
+          "etf": "00987A",
+          "weight": 5.236
+        },
+        {
+          "etf": "00991A",
+          "weight": 4.309
+        },
+        {
+          "etf": "00995A",
+          "weight": 4.17
+        },
+        {
+          "etf": "00996A",
+          "weight": 3.59
+        },
+        {
+          "etf": "00982A",
+          "weight": 3.566
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.49
+        },
+        {
+          "etf": "00994A",
+          "weight": 3.32
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.967
+        },
+        {
+          "etf": "00985A",
+          "weight": 2.94
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.78
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.47
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.25
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.99
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.92
+        }
+      ]
+    },
+    {
+      "code": "2368",
+      "name": "GOLD CIRCUIT ELECTRONICS LTD",
+      "held_by": 15,
+      "avg_weight": 2.555,
+      "max_weight": 5.43,
+      "min_weight": 0.45,
+      "total_weight": 38.322,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 5.43
+        },
+        {
+          "etf": "00995A",
+          "weight": 5.11
+        },
+        {
+          "etf": "00994A",
+          "weight": 4.24
+        },
+        {
+          "etf": "00991A",
+          "weight": 3.836
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.57
+        },
+        {
+          "etf": "00987A",
+          "weight": 2.854
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.59
+        },
+        {
+          "etf": "00985A",
+          "weight": 2.21
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.18
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.7
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.6
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.16
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.89
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.503
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.45
+        }
+      ]
+    },
+    {
+      "code": "2360",
+      "name": "CHROMA ATE INC",
+      "held_by": 15,
+      "avg_weight": 2.547,
+      "max_weight": 5.324,
+      "min_weight": 0.9,
+      "total_weight": 38.202,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 5.324
+        },
+        {
+          "etf": "00987A",
+          "weight": 4.363
+        },
+        {
+          "etf": "00994A",
+          "weight": 3.6
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.49
+        },
+        {
+          "etf": "00991A",
+          "weight": 3.386
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.81
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.74
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.678
+        },
+        {
+          "etf": "00985A",
+          "weight": 2.42
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.82
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.25
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.16
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.15
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.11
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.9
+        }
+      ]
+    },
+    {
+      "code": "6223",
+      "name": "MPI CORP",
+      "held_by": 14,
+      "avg_weight": 3.488,
+      "max_weight": 5.774,
+      "min_weight": 1.28,
+      "total_weight": 48.827,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 5.774
+        },
+        {
+          "etf": "00995A",
+          "weight": 5.67
+        },
+        {
+          "etf": "00981A",
+          "weight": 5.35
+        },
+        {
+          "etf": "00991A",
+          "weight": 4.579
+        },
+        {
+          "etf": "00994A",
+          "weight": 4.4
+        },
+        {
+          "etf": "00982A",
+          "weight": 3.96
+        },
+        {
+          "etf": "00992A",
+          "weight": 3.394
+        },
+        {
+          "etf": "00985A",
+          "weight": 3.07
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.87
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.72
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.23
+        },
+        {
+          "etf": "00400A",
+          "weight": 2.17
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.36
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.28
+        }
+      ]
+    },
+    {
+      "code": "3037",
+      "name": "UNIMICRON TECHNOLOGY CORP",
+      "held_by": 14,
+      "avg_weight": 3.196,
+      "max_weight": 9.24,
+      "min_weight": 0.37,
+      "total_weight": 44.738,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 9.24
+        },
+        {
+          "etf": "00991A",
+          "weight": 6.717
+        },
+        {
+          "etf": "00981A",
+          "weight": 3.89
+        },
+        {
+          "etf": "00995A",
+          "weight": 3.72
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.59
+        },
+        {
+          "etf": "00992A",
+          "weight": 3.502
+        },
+        {
+          "etf": "00994A",
+          "weight": 2.97
+        },
+        {
+          "etf": "00987A",
+          "weight": 2.859
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.28
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.9
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.8
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.21
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.69
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.37
+        }
+      ]
+    },
+    {
+      "code": "3665",
+      "name": "貿聯控股（BizLink Holding In",
+      "held_by": 14,
+      "avg_weight": 2.958,
+      "max_weight": 5.53,
+      "min_weight": 0.38,
+      "total_weight": 41.412,
+      "etfs": [
+        {
+          "etf": "00995A",
+          "weight": 5.53
+        },
+        {
+          "etf": "00981A",
+          "weight": 5.34
+        },
+        {
+          "etf": "00987A",
+          "weight": 4.673
+        },
+        {
+          "etf": "00985A",
+          "weight": 3.91
+        },
+        {
+          "etf": "00996A",
+          "weight": 3.23
+        },
+        {
+          "etf": "00994A",
+          "weight": 3.16
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.08
+        },
+        {
+          "etf": "00992A",
+          "weight": 3.032
+        },
+        {
+          "etf": "00991A",
+          "weight": 2.857
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.28
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.03
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.11
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.8
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.38
+        }
+      ]
+    },
+    {
+      "code": "3653",
+      "name": "JENTECH PRECISION INDUSTRIAL",
+      "held_by": 13,
+      "avg_weight": 2.892,
+      "max_weight": 5.91,
+      "min_weight": 1.06,
+      "total_weight": 37.596,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 5.91
+        },
+        {
+          "etf": "00994A",
+          "weight": 4.38
+        },
+        {
+          "etf": "00985A",
+          "weight": 4.16
+        },
+        {
+          "etf": "00400A",
+          "weight": 3.5
+        },
+        {
+          "etf": "00987A",
+          "weight": 3.383
+        },
+        {
+          "etf": "00991A",
+          "weight": 2.98
+        },
+        {
+          "etf": "00995A",
+          "weight": 2.85
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.23
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.08
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.9
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.63
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.533
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.06
+        }
+      ]
+    },
+    {
+      "code": "5274",
+      "name": "ASPEED TECHNOLOGY INC",
+      "held_by": 13,
+      "avg_weight": 2.055,
+      "max_weight": 4.506,
+      "min_weight": 0.229,
+      "total_weight": 26.71,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 4.506
+        },
+        {
+          "etf": "00995A",
+          "weight": 3.69
+        },
+        {
+          "etf": "00981A",
+          "weight": 3.16
+        },
+        {
+          "etf": "00400A",
+          "weight": 2.83
+        },
+        {
+          "etf": "00994A",
+          "weight": 2.79
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.05
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.04
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.475
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.28
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.1
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.99
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.57
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.229
+        }
+      ]
+    },
+    {
+      "code": "6515",
+      "name": "WINWAY TECHNOLOGY CO LTD",
+      "held_by": 12,
+      "avg_weight": 2.69,
+      "max_weight": 8.45,
+      "min_weight": 0.034,
+      "total_weight": 32.284,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 8.45
+        },
+        {
+          "etf": "00994A",
+          "weight": 4.73
+        },
+        {
+          "etf": "00992A",
+          "weight": 3.807
+        },
+        {
+          "etf": "00995A",
+          "weight": 2.98
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.82
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.78
+        },
+        {
+          "etf": "00981A",
+          "weight": 2.22
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.84
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.11
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.95
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.564
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.034
+        }
+      ]
+    },
+    {
+      "code": "2454",
+      "name": "MEDIATEK INC",
+      "held_by": 12,
+      "avg_weight": 2.465,
+      "max_weight": 4.34,
+      "min_weight": 0.18,
+      "total_weight": 29.578,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 4.34
+        },
+        {
+          "etf": "00996A",
+          "weight": 4.2
+        },
+        {
+          "etf": "00994A",
+          "weight": 3.57
+        },
+        {
+          "etf": "00991A",
+          "weight": 2.953
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.67
+        },
+        {
+          "etf": "00400A",
+          "weight": 2.57
+        },
+        {
+          "etf": "00985A",
+          "weight": 2.44
+        },
+        {
+          "etf": "00982A",
+          "weight": 2.355
+        },
+        {
+          "etf": "00981A",
+          "weight": 2.34
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.07
+        },
+        {
+          "etf": "00988A",
+          "weight": 0.89
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.18
+        }
+      ]
+    },
+    {
+      "code": "6805",
+      "name": "富世達股份有限公司",
+      "held_by": 12,
+      "avg_weight": 1.442,
+      "max_weight": 3.11,
+      "min_weight": 0.2,
+      "total_weight": 17.302,
+      "etfs": [
+        {
+          "etf": "00985A",
+          "weight": 3.11
+        },
+        {
+          "etf": "00982A",
+          "weight": 2.587
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.07
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.8
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.53
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.37
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.155
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.96
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.96
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.95
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.61
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.2
+        }
+      ]
+    },
+    {
+      "code": "3711",
+      "name": "ASE TECHNOLOGY HOLDING CO LTD",
+      "held_by": 12,
+      "avg_weight": 1.167,
+      "max_weight": 2.57,
+      "min_weight": 0.013,
+      "total_weight": 14.007,
+      "etfs": [
+        {
+          "etf": "00994A",
+          "weight": 2.57
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.29
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.98
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.75
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.21
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.18
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.07
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.75
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.426
+        },
+        {
+          "etf": "00988A",
+          "weight": 0.42
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.348
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.013
+        }
+      ]
+    },
+    {
+      "code": "6274",
+      "name": "台  燿",
+      "held_by": 11,
+      "avg_weight": 1.664,
+      "max_weight": 5.841,
+      "min_weight": 0.003,
+      "total_weight": 18.3,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 5.841
+        },
+        {
+          "etf": "00994A",
+          "weight": 3.23
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.86
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.55
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.473
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.43
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.01
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.84
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.583
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.48
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.003
+        }
+      ]
+    },
+    {
+      "code": "6510",
+      "name": "中華精測科技",
+      "held_by": 11,
+      "avg_weight": 1.137,
+      "max_weight": 2.56,
+      "min_weight": 0.01,
+      "total_weight": 12.507,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 2.56
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.01
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.66
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.5
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.386
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.98
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.97
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.81
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.61
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.012
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.01
+        }
+      ]
+    },
+    {
+      "code": "2313",
+      "name": "COMPEQ MANUFACTURING CO LTD",
+      "held_by": 11,
+      "avg_weight": 1.111,
+      "max_weight": 6.92,
+      "min_weight": 0.008,
+      "total_weight": 12.224,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 6.92
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.91
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.86
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.84
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.746
+        },
+        {
+          "etf": "00987A",
+          "weight": 0.7
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.47
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.38
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.37
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.02
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.008
+        }
+      ]
+    },
+    {
+      "code": "8046",
+      "name": "南亞電路板",
+      "held_by": 9,
+      "avg_weight": 2.388,
+      "max_weight": 4.06,
+      "min_weight": 0.206,
+      "total_weight": 21.489,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 4.06
+        },
+        {
+          "etf": "00985A",
+          "weight": 3.98
+        },
+        {
+          "etf": "00991A",
+          "weight": 3.9
+        },
+        {
+          "etf": "00995A",
+          "weight": 2.45
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.26
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.073
+        },
+        {
+          "etf": "00994A",
+          "weight": 2.07
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.49
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.206
+        }
+      ]
+    },
+    {
+      "code": "6669",
+      "name": "WIWYNN CORP",
+      "held_by": 9,
+      "avg_weight": 1.815,
+      "max_weight": 4.844,
+      "min_weight": 0.78,
+      "total_weight": 16.332,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 4.844
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.428
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.33
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.18
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.11
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.93
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.87
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.86
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.78
+        }
+      ]
+    },
+    {
+      "code": "3443",
+      "name": "創意電子",
+      "held_by": 9,
+      "avg_weight": 1.424,
+      "max_weight": 3.886,
+      "min_weight": 0.009,
+      "total_weight": 12.814,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 3.886
+        },
+        {
+          "etf": "00996A",
+          "weight": 2.75
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.669
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.2
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.06
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.87
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.8
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.57
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.009
+        }
+      ]
+    },
+    {
+      "code": "8210",
+      "name": "CHENBRO MICOM CO LTD",
+      "held_by": 9,
+      "avg_weight": 0.928,
+      "max_weight": 2.02,
+      "min_weight": 0.003,
+      "total_weight": 8.348,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 2.02
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.806
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.36
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.85
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.76
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.64
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.47
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.44
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.003
+        }
+      ]
+    },
+    {
+      "code": "7769",
+      "name": "HON PRECISION INC",
+      "held_by": 8,
+      "avg_weight": 2.042,
+      "max_weight": 4.407,
+      "min_weight": 0.27,
+      "total_weight": 16.336,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 4.407
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.86
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.26
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.129
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.6
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.46
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.35
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.27
+        }
+      ]
+    },
+    {
+      "code": "6442",
+      "name": "光  聖",
+      "held_by": 8,
+      "avg_weight": 1.608,
+      "max_weight": 3.566,
+      "min_weight": 0.43,
+      "total_weight": 12.862,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 3.566
+        },
+        {
+          "etf": "00991A",
+          "weight": 2.673
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.82
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.48
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.153
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.61
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.43
+        }
+      ]
+    },
+    {
+      "code": "2382",
+      "name": "QUANTA COMPUTER INC",
+      "held_by": 8,
+      "avg_weight": 1.459,
+      "max_weight": 4.77,
+      "min_weight": 0.009,
+      "total_weight": 11.669,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 4.77
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.89
+        },
+        {
+          "etf": "00400A",
+          "weight": 2.52
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.14
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.18
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.1
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.06
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.009
+        }
+      ]
+    },
+    {
+      "code": "3533",
+      "name": "嘉澤端子工業",
+      "held_by": 8,
+      "avg_weight": 1.435,
+      "max_weight": 3.0,
+      "min_weight": 0.39,
+      "total_weight": 11.484,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 3.0
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.851
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.76
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.01
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.99
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.763
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.72
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.39
+        }
+      ]
+    },
+    {
+      "code": "8996",
+      "name": "高力熱處理工業",
+      "held_by": 8,
+      "avg_weight": 1.384,
+      "max_weight": 3.836,
+      "min_weight": 0.35,
+      "total_weight": 11.073,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 3.836
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.49
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.26
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.26
+        },
+        {
+          "etf": "00982A",
+          "weight": 1.257
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.19
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.43
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.35
+        }
+      ]
+    },
+    {
+      "code": "2327",
+      "name": "國巨股份",
+      "held_by": 8,
+      "avg_weight": 1.194,
+      "max_weight": 2.8,
+      "min_weight": 0.009,
+      "total_weight": 9.549,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 2.8
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.98
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.81
+        },
+        {
+          "etf": "00400A",
+          "weight": 1.12
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.0
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.7
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.13
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.009
+        }
+      ]
+    },
+    {
+      "code": "2344",
+      "name": "華邦電子",
+      "held_by": 8,
+      "avg_weight": 1.022,
+      "max_weight": 1.88,
+      "min_weight": 0.003,
+      "total_weight": 8.177,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 1.88
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.51
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.49
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.21
+        },
+        {
+          "etf": "00400A",
+          "weight": 1.06
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.83
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.194
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.003
+        }
+      ]
+    },
+    {
+      "code": "2881",
+      "name": "FUBON FINANCIAL HOLDING CO",
+      "held_by": 8,
+      "avg_weight": 0.83,
+      "max_weight": 3.19,
+      "min_weight": 0.0,
+      "total_weight": 6.643,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 3.19
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.34
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.29
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.44
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.32
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.06
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.003
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "2449",
+      "name": "京元電子",
+      "held_by": 8,
+      "avg_weight": 0.781,
+      "max_weight": 1.84,
+      "min_weight": 0.008,
+      "total_weight": 6.248,
+      "etfs": [
+        {
+          "etf": "00995A",
+          "weight": 1.84
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.71
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.69
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.47
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.35
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.13
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.05
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.008
+        }
+      ]
+    },
+    {
+      "code": "3105",
+      "name": "穩懋半導體",
+      "held_by": 7,
+      "avg_weight": 3.418,
+      "max_weight": 7.87,
+      "min_weight": 0.43,
+      "total_weight": 23.926,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 7.87
+        },
+        {
+          "etf": "00982A",
+          "weight": 5.874
+        },
+        {
+          "etf": "00992A",
+          "weight": 3.962
+        },
+        {
+          "etf": "00985A",
+          "weight": 3.23
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.4
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.16
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.43
+        }
+      ]
+    },
+    {
+      "code": "2059",
+      "name": "川湖科技",
+      "held_by": 7,
+      "avg_weight": 1.436,
+      "max_weight": 2.64,
+      "min_weight": 0.012,
+      "total_weight": 10.049,
+      "etfs": [
+        {
+          "etf": "00400A",
+          "weight": 2.64
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.311
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.2
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.33
+        },
+        {
+          "etf": "00982A",
+          "weight": 1.065
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.49
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.012
+        }
+      ]
+    },
+    {
+      "code": "2891",
+      "name": "CTBC FINANCIAL HOLDING CO LT",
+      "held_by": 7,
+      "avg_weight": 1.177,
+      "max_weight": 2.78,
+      "min_weight": 0.002,
+      "total_weight": 8.242,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 2.78
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.31
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.53
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.88
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.59
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.15
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.002
+        }
+      ]
+    },
+    {
+      "code": "3264",
+      "name": "欣銓科技",
+      "held_by": 7,
+      "avg_weight": 1.007,
+      "max_weight": 3.362,
+      "min_weight": 0.3,
+      "total_weight": 7.052,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 3.362
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.96
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.88
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.81
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.38
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.36
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.3
+        }
+      ]
+    },
+    {
+      "code": "2885",
+      "name": "YUANTA FINANCIAL HOLDING CO",
+      "held_by": 7,
+      "avg_weight": 0.989,
+      "max_weight": 2.84,
+      "min_weight": 0.001,
+      "total_weight": 6.924,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 2.84
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.57
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.97
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.7
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.69
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.153
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.001
+        }
+      ]
+    },
+    {
+      "code": "3036",
+      "name": "文曄科技",
+      "held_by": 7,
+      "avg_weight": 0.874,
+      "max_weight": 2.41,
+      "min_weight": 0.007,
+      "total_weight": 6.118,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 2.41
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.18
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.87
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.75
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.701
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.2
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.007
+        }
+      ]
+    },
+    {
+      "code": "1303",
+      "name": "南亞塑膠工業",
+      "held_by": 7,
+      "avg_weight": 0.563,
+      "max_weight": 0.99,
+      "min_weight": 0.0,
+      "total_weight": 3.94,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.99
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.98
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.63
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.48
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.46
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.4
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "8299",
+      "name": "群聯電子",
+      "held_by": 6,
+      "avg_weight": 2.668,
+      "max_weight": 6.663,
+      "min_weight": 0.31,
+      "total_weight": 16.006,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 6.663
+        },
+        {
+          "etf": "00987A",
+          "weight": 2.973
+        },
+        {
+          "etf": "00992A",
+          "weight": 2.77
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.74
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.55
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.31
+        }
+      ]
+    },
+    {
+      "code": "2467",
+      "name": "C SUN MANUFACTURING LTD",
+      "held_by": 6,
+      "avg_weight": 1.403,
+      "max_weight": 3.4,
+      "min_weight": 0.5,
+      "total_weight": 8.421,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 3.4
+        },
+        {
+          "etf": "00982A",
+          "weight": 1.791
+        },
+        {
+          "etf": "00994A",
+          "weight": 1.18
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.98
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.57
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "code": "3189",
+      "name": "景碩科技",
+      "held_by": 6,
+      "avg_weight": 1.375,
+      "max_weight": 2.812,
+      "min_weight": 0.45,
+      "total_weight": 8.251,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 2.812
+        },
+        {
+          "etf": "00985A",
+          "weight": 2.77
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.92
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.72
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.579
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.45
+        }
+      ]
+    },
+    {
+      "code": "3491",
+      "name": "UNIVERSAL MICROWAVE TECH",
+      "held_by": 6,
+      "avg_weight": 1.366,
+      "max_weight": 3.162,
+      "min_weight": 0.27,
+      "total_weight": 8.196,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 3.162
+        },
+        {
+          "etf": "00982A",
+          "weight": 2.486
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.43
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.45
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.398
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.27
+        }
+      ]
+    },
+    {
+      "code": "8358",
+      "name": "金居開發",
+      "held_by": 6,
+      "avg_weight": 1.157,
+      "max_weight": 3.041,
+      "min_weight": 0.001,
+      "total_weight": 6.939,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 3.041
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.488
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.32
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.79
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.3
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.001
+        }
+      ]
+    },
+    {
+      "code": "3044",
+      "name": "TRIPOD TECHNOLOGY CORP",
+      "held_by": 6,
+      "avg_weight": 1.095,
+      "max_weight": 2.17,
+      "min_weight": 0.001,
+      "total_weight": 6.571,
+      "etfs": [
+        {
+          "etf": "00400A",
+          "weight": 2.17
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.9
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.01
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.77
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.72
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.001
+        }
+      ]
+    },
+    {
+      "code": "3131",
+      "name": "GRAND PROCESS TECHNOLOGY COR",
+      "held_by": 6,
+      "avg_weight": 1.039,
+      "max_weight": 1.51,
+      "min_weight": 0.4,
+      "total_weight": 6.232,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.51
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.38
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.232
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.91
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.8
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.4
+        }
+      ]
+    },
+    {
+      "code": "2404",
+      "name": "漢唐集成",
+      "held_by": 6,
+      "avg_weight": 0.762,
+      "max_weight": 1.41,
+      "min_weight": 0.003,
+      "total_weight": 4.575,
+      "etfs": [
+        {
+          "etf": "00400A",
+          "weight": 1.41
+        },
+        {
+          "etf": "00982A",
+          "weight": 1.042
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.03
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.68
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.41
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.003
+        }
+      ]
+    },
+    {
+      "code": "2412",
+      "name": "CHUNGHWA TELECOM CO LTD",
+      "held_by": 6,
+      "avg_weight": 0.563,
+      "max_weight": 1.42,
+      "min_weight": 0.0,
+      "total_weight": 3.38,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.42
+        },
+        {
+          "etf": "00985A",
+          "weight": 1.01
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.91
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.04
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.0
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "1519",
+      "name": "FORTUNE ELECTRIC CO LTD",
+      "held_by": 6,
+      "avg_weight": 0.339,
+      "max_weight": 1.13,
+      "min_weight": 0.001,
+      "total_weight": 2.034,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.44
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.39
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.07
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.003
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.001
+        }
+      ]
+    },
+    {
+      "code": "TER US",
+      "name": "TERADYNE INC",
+      "held_by": 5,
+      "avg_weight": 3.966,
+      "max_weight": 6.03,
+      "min_weight": 1.9,
+      "total_weight": 19.829,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 6.03
+        },
+        {
+          "etf": "00986A",
+          "weight": 4.486
+        },
+        {
+          "etf": "00997A",
+          "weight": 4.453
+        },
+        {
+          "etf": "00990A",
+          "weight": 2.96
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.9
+        }
+      ]
+    },
+    {
+      "code": "GOOGL US",
+      "name": "ALPHABET INC-CL A(Alphabet公司)",
+      "held_by": 5,
+      "avg_weight": 3.299,
+      "max_weight": 7.728,
+      "min_weight": 0.84,
+      "total_weight": 16.495,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 7.728
+        },
+        {
+          "etf": "00997A",
+          "weight": 4.757
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.2
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.97
+        },
+        {
+          "etf": "00983A",
+          "weight": 0.84
+        }
+      ]
+    },
+    {
+      "code": "NVDA US",
+      "name": "NVIDIA CORP(輝達公司)",
+      "held_by": 5,
+      "avg_weight": 3.012,
+      "max_weight": 7.096,
+      "min_weight": 0.88,
+      "total_weight": 15.059,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 7.096
+        },
+        {
+          "etf": "00997A",
+          "weight": 3.273
+        },
+        {
+          "etf": "00983A",
+          "weight": 2.28
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.53
+        },
+        {
+          "etf": "00988A",
+          "weight": 0.88
+        }
+      ]
+    },
+    {
+      "code": "AVGO US",
+      "name": "BROADCOM LTD",
+      "held_by": 5,
+      "avg_weight": 2.802,
+      "max_weight": 7.942,
+      "min_weight": 1.17,
+      "total_weight": 14.011,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 7.942
+        },
+        {
+          "etf": "00997A",
+          "weight": 1.889
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.53
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.48
+        },
+        {
+          "etf": "00983A",
+          "weight": 1.17
+        }
+      ]
+    },
+    {
+      "code": "4958",
+      "name": "臻鼎科技控股",
+      "held_by": 5,
+      "avg_weight": 2.053,
+      "max_weight": 6.2,
+      "min_weight": 0.23,
+      "total_weight": 10.267,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 6.2
+        },
+        {
+          "etf": "00982A",
+          "weight": 2.067
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.1
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.67
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.23
+        }
+      ]
+    },
+    {
+      "code": "2408",
+      "name": "南亞科技",
+      "held_by": 5,
+      "avg_weight": 1.937,
+      "max_weight": 4.25,
+      "min_weight": 0.6,
+      "total_weight": 9.683,
+      "etfs": [
+        {
+          "etf": "00991A",
+          "weight": 4.25
+        },
+        {
+          "etf": "00980A",
+          "weight": 2.34
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.703
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.79
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.6
+        }
+      ]
+    },
+    {
+      "code": "2303",
+      "name": "UNITED MICROELECTRONICS CORP",
+      "held_by": 5,
+      "avg_weight": 1.701,
+      "max_weight": 3.55,
+      "min_weight": 0.493,
+      "total_weight": 8.503,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 3.55
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.88
+        },
+        {
+          "etf": "00981A",
+          "weight": 1.33
+        },
+        {
+          "etf": "00400A",
+          "weight": 1.25
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.493
+        }
+      ]
+    },
+    {
+      "code": "2882",
+      "name": "CATHAY FINANCIAL HOLDING CO",
+      "held_by": 5,
+      "avg_weight": 1.244,
+      "max_weight": 2.97,
+      "min_weight": 0.002,
+      "total_weight": 6.222,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 2.97
+        },
+        {
+          "etf": "00401A",
+          "weight": 2.25
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.94
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.06
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.002
+        }
+      ]
+    },
+    {
+      "code": "3529",
+      "name": "EMEMORY TECHNOLOGY INC",
+      "held_by": 5,
+      "avg_weight": 1.095,
+      "max_weight": 2.14,
+      "min_weight": 0.259,
+      "total_weight": 5.476,
+      "etfs": [
+        {
+          "etf": "00985A",
+          "weight": 2.14
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.17
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.107
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.8
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.259
+        }
+      ]
+    },
+    {
+      "code": "4904",
+      "name": "FAR EASTONE TELECOMM CO LTD",
+      "held_by": 5,
+      "avg_weight": 0.876,
+      "max_weight": 1.86,
+      "min_weight": 0.0,
+      "total_weight": 4.38,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 1.86
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.35
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.93
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.24
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "2317",
+      "name": "HON HAI PRECISION INDUSTRY",
+      "held_by": 5,
+      "avg_weight": 0.673,
+      "max_weight": 2.9,
+      "min_weight": 0.006,
+      "total_weight": 3.366,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 2.9
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.32
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.08
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.06
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.006
+        }
+      ]
+    },
+    {
+      "code": "3211",
+      "name": "順  達",
+      "held_by": 5,
+      "avg_weight": 0.553,
+      "max_weight": 0.87,
+      "min_weight": 0.04,
+      "total_weight": 2.763,
+      "etfs": [
+        {
+          "etf": "00981A",
+          "weight": 0.87
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.79
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.773
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.29
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.04
+        }
+      ]
+    },
+    {
+      "code": "LITE US",
+      "name": "LUMENTUM HOLDINGS INC.lite us",
+      "held_by": 4,
+      "avg_weight": 7.682,
+      "max_weight": 9.109,
+      "min_weight": 6.25,
+      "total_weight": 30.729,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 9.109
+        },
+        {
+          "etf": "00990A",
+          "weight": 8.35
+        },
+        {
+          "etf": "00988A",
+          "weight": 7.02
+        },
+        {
+          "etf": "00997A",
+          "weight": 6.25
+        }
+      ]
+    },
+    {
+      "code": "MU US",
+      "name": "MICRON TECHNOLOGY INC",
+      "held_by": 4,
+      "avg_weight": 4.541,
+      "max_weight": 5.842,
+      "min_weight": 3.74,
+      "total_weight": 18.165,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 5.842
+        },
+        {
+          "etf": "00990A",
+          "weight": 4.74
+        },
+        {
+          "etf": "00997A",
+          "weight": 3.843
+        },
+        {
+          "etf": "00988A",
+          "weight": 3.74
+        }
+      ]
+    },
+    {
+      "code": "2337",
+      "name": "旺宏電子",
+      "held_by": 4,
+      "avg_weight": 2.366,
+      "max_weight": 7.33,
+      "min_weight": 0.004,
+      "total_weight": 9.463,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 7.33
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.833
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.295
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.004
+        }
+      ]
+    },
+    {
+      "code": "AMZN US",
+      "name": "AMAZON. COM INC",
+      "held_by": 4,
+      "avg_weight": 2.206,
+      "max_weight": 3.828,
+      "min_weight": 1.0,
+      "total_weight": 8.822,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 3.828
+        },
+        {
+          "etf": "00983A",
+          "weight": 2.4
+        },
+        {
+          "etf": "00997A",
+          "weight": 1.594
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.0
+        }
+      ]
+    },
+    {
+      "code": "6187",
+      "name": "ALL RING TECH CO LTD",
+      "held_by": 4,
+      "avg_weight": 1.7,
+      "max_weight": 4.852,
+      "min_weight": 0.33,
+      "total_weight": 6.802,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 4.852
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.49
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.33
+        }
+      ]
+    },
+    {
+      "code": "202605TX",
+      "name": "TAIEX FUTURES 20MAY26 FTK6",
+      "held_by": 4,
+      "avg_weight": 1.695,
+      "max_weight": 2.74,
+      "min_weight": 0.26,
+      "total_weight": 6.78,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 2.74
+        },
+        {
+          "etf": "00984A",
+          "weight": 2.64
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.14
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.26
+        }
+      ]
+    },
+    {
+      "code": "6285",
+      "name": "WISTRON NEWEB CORP",
+      "held_by": 4,
+      "avg_weight": 1.523,
+      "max_weight": 2.76,
+      "min_weight": 0.74,
+      "total_weight": 6.094,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 2.76
+        },
+        {
+          "etf": "00982A",
+          "weight": 1.824
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.77
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.74
+        }
+      ]
+    },
+    {
+      "code": "2455",
+      "name": "全新光電科技",
+      "held_by": 4,
+      "avg_weight": 1.411,
+      "max_weight": 2.93,
+      "min_weight": 0.39,
+      "total_weight": 5.643,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 2.93
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.623
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.7
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.39
+        }
+      ]
+    },
+    {
+      "code": "3163",
+      "name": "波若威科技",
+      "held_by": 4,
+      "avg_weight": 1.321,
+      "max_weight": 2.76,
+      "min_weight": 0.49,
+      "total_weight": 5.285,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 2.76
+        },
+        {
+          "etf": "00997A",
+          "weight": 1.085
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.95
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.49
+        }
+      ]
+    },
+    {
+      "code": "3081",
+      "name": "聯  亞",
+      "held_by": 4,
+      "avg_weight": 1.142,
+      "max_weight": 1.548,
+      "min_weight": 0.59,
+      "total_weight": 4.568,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 1.548
+        },
+        {
+          "etf": "00400A",
+          "weight": 1.23
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.2
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.59
+        }
+      ]
+    },
+    {
+      "code": "7751",
+      "name": "竑騰",
+      "held_by": 4,
+      "avg_weight": 1.091,
+      "max_weight": 1.799,
+      "min_weight": 0.53,
+      "total_weight": 4.363,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 1.799
+        },
+        {
+          "etf": "00987A",
+          "weight": 1.404
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.63
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.53
+        }
+      ]
+    },
+    {
+      "code": "3661",
+      "name": "世芯-KY",
+      "held_by": 4,
+      "avg_weight": 1.027,
+      "max_weight": 1.47,
+      "min_weight": 0.698,
+      "total_weight": 4.107,
+      "etfs": [
+        {
+          "etf": "00985A",
+          "weight": 1.47
+        },
+        {
+          "etf": "00995A",
+          "weight": 1.17
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.77
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.698
+        }
+      ]
+    },
+    {
+      "code": "2603",
+      "name": "EVERGREEN MARINE CORP LTD",
+      "held_by": 4,
+      "avg_weight": 0.862,
+      "max_weight": 1.59,
+      "min_weight": 0.006,
+      "total_weight": 3.446,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.59
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.97
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.88
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.006
+        }
+      ]
+    },
+    {
+      "code": "2357",
+      "name": "ASUSTEK COMPUTER INC",
+      "held_by": 4,
+      "avg_weight": 0.833,
+      "max_weight": 1.27,
+      "min_weight": 0.0,
+      "total_weight": 3.33,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.27
+        },
+        {
+          "etf": "00400A",
+          "weight": 1.09
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.97
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "4749",
+      "name": "新應材",
+      "held_by": 4,
+      "avg_weight": 0.753,
+      "max_weight": 1.571,
+      "min_weight": 0.15,
+      "total_weight": 3.011,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 1.571
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.73
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.56
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.15
+        }
+      ]
+    },
+    {
+      "code": "3045",
+      "name": "台灣大哥",
+      "held_by": 4,
+      "avg_weight": 0.7,
+      "max_weight": 2.8,
+      "min_weight": 0.0,
+      "total_weight": 2.8,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 2.8
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.0
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.0
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "6488",
+      "name": "環球晶圓",
+      "held_by": 4,
+      "avg_weight": 0.666,
+      "max_weight": 1.07,
+      "min_weight": 0.29,
+      "total_weight": 2.663,
+      "etfs": [
+        {
+          "etf": "00400A",
+          "weight": 1.07
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.953
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.35
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.29
+        }
+      ]
+    },
+    {
+      "code": "3293",
+      "name": "鈊  象",
+      "held_by": 4,
+      "avg_weight": 0.642,
+      "max_weight": 0.85,
+      "min_weight": 0.35,
+      "total_weight": 2.57,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.85
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.74
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.63
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.35
+        }
+      ]
+    },
+    {
+      "code": "5347",
+      "name": "VANGUARD INTERNATIONAL SEMI",
+      "held_by": 4,
+      "avg_weight": 0.533,
+      "max_weight": 1.16,
+      "min_weight": 0.0,
+      "total_weight": 2.131,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.16
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.968
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.004
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.0
+        }
+      ]
+    },
+    {
+      "code": "SNDK US",
+      "name": "SANDISK CORP",
+      "held_by": 3,
+      "avg_weight": 4.942,
+      "max_weight": 6.38,
+      "min_weight": 3.746,
+      "total_weight": 14.826,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 6.38
+        },
+        {
+          "etf": "00988A",
+          "weight": 4.7
+        },
+        {
+          "etf": "00997A",
+          "weight": 3.746
+        }
+      ]
+    },
+    {
+      "code": "WDC US",
+      "name": "WESTERN DIGITAL CORP",
+      "held_by": 3,
+      "avg_weight": 3.21,
+      "max_weight": 5.889,
+      "min_weight": 1.86,
+      "total_weight": 9.629,
+      "etfs": [
+        {
+          "etf": "00997A",
+          "weight": 5.889
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.88
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.86
+        }
+      ]
+    },
+    {
+      "code": "CIEN US",
+      "name": "CIENA CORP",
+      "held_by": 3,
+      "avg_weight": 3.01,
+      "max_weight": 3.341,
+      "min_weight": 2.6,
+      "total_weight": 9.031,
+      "etfs": [
+        {
+          "etf": "00997A",
+          "weight": 3.341
+        },
+        {
+          "etf": "00988A",
+          "weight": 3.09
+        },
+        {
+          "etf": "00990A",
+          "weight": 2.6
+        }
+      ]
+    },
+    {
+      "code": "AMD US",
+      "name": "ADVANCED MICRO DEVICES.amd us(超微半導體公司)",
+      "held_by": 3,
+      "avg_weight": 2.837,
+      "max_weight": 4.77,
+      "min_weight": 1.03,
+      "total_weight": 8.51,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 4.77
+        },
+        {
+          "etf": "00997A",
+          "weight": 2.71
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.03
+        }
+      ]
+    },
+    {
+      "code": "GEV US",
+      "name": "GE VERNOVA INC",
+      "held_by": 3,
+      "avg_weight": 2.613,
+      "max_weight": 3.75,
+      "min_weight": 1.711,
+      "total_weight": 7.84,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 3.75
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.38
+        },
+        {
+          "etf": "00997A",
+          "weight": 1.711
+        }
+      ]
+    },
+    {
+      "code": "GLW US",
+      "name": "CORNING INC",
+      "held_by": 3,
+      "avg_weight": 2.536,
+      "max_weight": 3.01,
+      "min_weight": 1.617,
+      "total_weight": 7.607,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 3.01
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.98
+        },
+        {
+          "etf": "00997A",
+          "weight": 1.617
+        }
+      ]
+    },
+    {
+      "code": "PLTR US",
+      "name": "PALANTIR TECHNOLOGIES INC-A",
+      "held_by": 3,
+      "avg_weight": 2.525,
+      "max_weight": 6.27,
+      "min_weight": 0.59,
+      "total_weight": 7.574,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 6.27
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.714
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.59
+        }
+      ]
+    },
+    {
+      "code": "5801 JP",
+      "name": "FURUKAWA ELECTRIC CO LTD",
+      "held_by": 3,
+      "avg_weight": 2.31,
+      "max_weight": 3.12,
+      "min_weight": 0.729,
+      "total_weight": 6.929,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 3.12
+        },
+        {
+          "etf": "00988A",
+          "weight": 3.08
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.729
+        }
+      ]
+    },
+    {
+      "code": "3110 JP",
+      "name": "NITTO BOSEKI CO LTD",
+      "held_by": 3,
+      "avg_weight": 2.065,
+      "max_weight": 2.865,
+      "min_weight": 1.13,
+      "total_weight": 6.195,
+      "etfs": [
+        {
+          "etf": "00997A",
+          "weight": 2.865
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.2
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.13
+        }
+      ]
+    },
+    {
+      "code": "COHR US",
+      "name": "COHERENT CORP",
+      "held_by": 3,
+      "avg_weight": 1.896,
+      "max_weight": 2.44,
+      "min_weight": 1.07,
+      "total_weight": 5.689,
+      "etfs": [
+        {
+          "etf": "00988A",
+          "weight": 2.44
+        },
+        {
+          "etf": "00986A",
+          "weight": 2.179
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.07
+        }
+      ]
+    },
+    {
+      "code": "6139",
+      "name": "亞翔工程",
+      "held_by": 3,
+      "avg_weight": 1.699,
+      "max_weight": 4.548,
+      "min_weight": 0.12,
+      "total_weight": 5.098,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 4.548
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.43
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.12
+        }
+      ]
+    },
+    {
+      "code": "6683",
+      "name": "雍智科技",
+      "held_by": 3,
+      "avg_weight": 1.594,
+      "max_weight": 4.003,
+      "min_weight": 0.35,
+      "total_weight": 4.783,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 4.003
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.43
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.35
+        }
+      ]
+    },
+    {
+      "code": "2883",
+      "name": "CHINA DEVELOPMENT FINANCIAL",
+      "held_by": 3,
+      "avg_weight": 1.39,
+      "max_weight": 1.77,
+      "min_weight": 0.93,
+      "total_weight": 4.17,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 1.77
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.47
+        },
+        {
+          "etf": "00993A",
+          "weight": 0.93
+        }
+      ]
+    },
+    {
+      "code": "6257",
+      "name": "矽格",
+      "held_by": 3,
+      "avg_weight": 1.362,
+      "max_weight": 3.107,
+      "min_weight": 0.43,
+      "total_weight": 4.087,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 3.107
+        },
+        {
+          "etf": "00994A",
+          "weight": 0.55
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.43
+        }
+      ]
+    },
+    {
+      "code": "6531",
+      "name": "愛普科技",
+      "held_by": 3,
+      "avg_weight": 1.268,
+      "max_weight": 2.12,
+      "min_weight": 0.57,
+      "total_weight": 3.805,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 2.12
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.115
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.57
+        }
+      ]
+    },
+    {
+      "code": "2379",
+      "name": "REALTEK SEMICONDUCTOR CORP",
+      "held_by": 3,
+      "avg_weight": 1.207,
+      "max_weight": 1.53,
+      "min_weight": 0.57,
+      "total_weight": 3.62,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 1.53
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.52
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.57
+        }
+      ]
+    },
+    {
+      "code": "META US",
+      "name": "META PLATFORMS INC-CLASS A",
+      "held_by": 3,
+      "avg_weight": 1.13,
+      "max_weight": 1.7,
+      "min_weight": 0.81,
+      "total_weight": 3.391,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 1.7
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.881
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.81
+        }
+      ]
+    },
+    {
+      "code": "6147",
+      "name": "頎邦",
+      "held_by": 3,
+      "avg_weight": 1.093,
+      "max_weight": 2.079,
+      "min_weight": 0.59,
+      "total_weight": 3.279,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 2.079
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.61
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.59
+        }
+      ]
+    },
+    {
+      "code": "8021",
+      "name": "TOPOINT TECHNOLOGY CO LTD",
+      "held_by": 3,
+      "avg_weight": 0.925,
+      "max_weight": 1.13,
+      "min_weight": 0.696,
+      "total_weight": 2.776,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.95
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.696
+        }
+      ]
+    },
+    {
+      "code": "2376",
+      "name": "技嘉科技",
+      "held_by": 3,
+      "avg_weight": 0.79,
+      "max_weight": 1.02,
+      "min_weight": 0.47,
+      "total_weight": 2.37,
+      "etfs": [
+        {
+          "etf": "00400A",
+          "weight": 1.02
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.88
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.47
+        }
+      ]
+    },
+    {
+      "code": "3583",
+      "name": "辛耘",
+      "held_by": 3,
+      "avg_weight": 0.785,
+      "max_weight": 1.32,
+      "min_weight": 0.26,
+      "total_weight": 2.357,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 1.32
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.776
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.26
+        }
+      ]
+    },
+    {
+      "code": "1590",
+      "name": "亞德客國際集團",
+      "held_by": 3,
+      "avg_weight": 0.658,
+      "max_weight": 1.13,
+      "min_weight": 0.004,
+      "total_weight": 1.974,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.84
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.004
+        }
+      ]
+    },
+    {
+      "code": "3023",
+      "name": "信邦電子",
+      "held_by": 3,
+      "avg_weight": 0.657,
+      "max_weight": 0.94,
+      "min_weight": 0.32,
+      "total_weight": 1.97,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.94
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.71
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.32
+        }
+      ]
+    },
+    {
+      "code": "3231",
+      "name": "WISTRON CORP",
+      "held_by": 3,
+      "avg_weight": 0.648,
+      "max_weight": 1.48,
+      "min_weight": 0.004,
+      "total_weight": 1.944,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 1.48
+        },
+        {
+          "etf": "00401A",
+          "weight": 0.46
+        },
+        {
+          "etf": "00991A",
+          "weight": 0.004
+        }
+      ]
+    },
+    {
+      "code": "1477",
+      "name": "聚  陽",
+      "held_by": 3,
+      "avg_weight": 0.633,
+      "max_weight": 1.0,
+      "min_weight": 0.31,
+      "total_weight": 1.9,
+      "etfs": [
+        {
+          "etf": "00985A",
+          "weight": 1.0
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.59
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.31
+        }
+      ]
+    },
+    {
+      "code": "4979",
+      "name": "華星光通科技",
+      "held_by": 3,
+      "avg_weight": 0.59,
+      "max_weight": 0.75,
+      "min_weight": 0.43,
+      "total_weight": 1.77,
+      "etfs": [
+        {
+          "etf": "00994A",
+          "weight": 0.75
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.59
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.43
+        }
+      ]
+    },
+    {
+      "code": "5289",
+      "name": "宜鼎國際",
+      "held_by": 3,
+      "avg_weight": 0.517,
+      "max_weight": 0.76,
+      "min_weight": 0.301,
+      "total_weight": 1.551,
+      "etfs": [
+        {
+          "etf": "00982A",
+          "weight": 0.76
+        },
+        {
+          "etf": "00995A",
+          "weight": 0.49
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.301
+        }
+      ]
+    },
+    {
+      "code": "6781",
+      "name": "AES Holding Co Ltd",
+      "held_by": 3,
+      "avg_weight": 0.378,
+      "max_weight": 0.77,
+      "min_weight": 0.13,
+      "total_weight": 1.135,
+      "etfs": [
+        {
+          "etf": "00985A",
+          "weight": 0.77
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.235
+        },
+        {
+          "etf": "00996A",
+          "weight": 0.13
+        }
+      ]
+    },
+    {
+      "code": "3324",
+      "name": "雙鴻科技",
+      "held_by": 3,
+      "avg_weight": 0.318,
+      "max_weight": 0.53,
+      "min_weight": 0.11,
+      "total_weight": 0.953,
+      "etfs": [
+        {
+          "etf": "00995A",
+          "weight": 0.53
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.313
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.11
+        }
+      ]
+    },
+    {
+      "code": "TSLA US",
+      "name": "特斯拉公司",
+      "held_by": 2,
+      "avg_weight": 4.369,
+      "max_weight": 8.24,
+      "min_weight": 0.499,
+      "total_weight": 8.739,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 8.24
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.499
+        }
+      ]
+    },
+    {
+      "code": "3702",
+      "name": "大聯大",
+      "held_by": 2,
+      "avg_weight": 4.2,
+      "max_weight": 7.23,
+      "min_weight": 1.17,
+      "total_weight": 8.4,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 7.23
+        },
+        {
+          "etf": "00984A",
+          "weight": 1.17
+        }
+      ]
+    },
+    {
+      "code": "6787 JP",
+      "name": "MEIKO ELECTRONICS CO LTD",
+      "held_by": 2,
+      "avg_weight": 2.8,
+      "max_weight": 3.62,
+      "min_weight": 1.98,
+      "total_weight": 5.6,
+      "etfs": [
+        {
+          "etf": "00988A",
+          "weight": 3.62
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.98
+        }
+      ]
+    },
+    {
+      "code": "6831",
+      "name": "邁科科技",
+      "held_by": 2,
+      "avg_weight": 2.79,
+      "max_weight": 4.48,
+      "min_weight": 1.1,
+      "total_weight": 5.58,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 4.48
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.1
+        }
+      ]
+    },
+    {
+      "code": "BE US",
+      "name": "BLOOM ENERGY CORP- A",
+      "held_by": 2,
+      "avg_weight": 2.675,
+      "max_weight": 2.81,
+      "min_weight": 2.54,
+      "total_weight": 5.35,
+      "etfs": [
+        {
+          "etf": "00988A",
+          "weight": 2.81
+        },
+        {
+          "etf": "00990A",
+          "weight": 2.54
+        }
+      ]
+    },
+    {
+      "code": "LRCX US",
+      "name": "科林研發股份有限公司",
+      "held_by": 2,
+      "avg_weight": 2.643,
+      "max_weight": 2.695,
+      "min_weight": 2.59,
+      "total_weight": 5.286,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 2.695
+        },
+        {
+          "etf": "00997A",
+          "weight": 2.59
+        }
+      ]
+    },
+    {
+      "code": "285A JP",
+      "name": "KIOXIA HOLDINGS CORP",
+      "held_by": 2,
+      "avg_weight": 2.57,
+      "max_weight": 2.72,
+      "min_weight": 2.42,
+      "total_weight": 5.14,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 2.72
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.42
+        }
+      ]
+    },
+    {
+      "code": "5706 JP",
+      "name": "Mitsui Mining ＆ Smelting Co",
+      "held_by": 2,
+      "avg_weight": 2.42,
+      "max_weight": 2.72,
+      "min_weight": 2.12,
+      "total_weight": 4.84,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 2.72
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.12
+        }
+      ]
+    },
+    {
+      "code": "3363",
+      "name": "上詮",
+      "held_by": 2,
+      "avg_weight": 2.256,
+      "max_weight": 3.432,
+      "min_weight": 1.08,
+      "total_weight": 4.512,
+      "etfs": [
+        {
+          "etf": "00987A",
+          "weight": 3.432
+        },
+        {
+          "etf": "00996A",
+          "weight": 1.08
+        }
+      ]
+    },
+    {
+      "code": "ENR GY",
+      "name": "Siemens Energy AG",
+      "held_by": 2,
+      "avg_weight": 2.208,
+      "max_weight": 2.216,
+      "min_weight": 2.2,
+      "total_weight": 4.415,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 2.216
+        },
+        {
+          "etf": "00988A",
+          "weight": 2.2
+        }
+      ]
+    },
+    {
+      "code": "6213",
+      "name": "聯茂",
+      "held_by": 2,
+      "avg_weight": 2.01,
+      "max_weight": 2.44,
+      "min_weight": 1.58,
+      "total_weight": 4.02,
+      "etfs": [
+        {
+          "etf": "00996A",
+          "weight": 2.44
+        },
+        {
+          "etf": "00993A",
+          "weight": 1.58
+        }
+      ]
+    },
+    {
+      "code": "BWXT US",
+      "name": "BWX科技股份有限公司",
+      "held_by": 2,
+      "avg_weight": 1.824,
+      "max_weight": 2.35,
+      "min_weight": 1.298,
+      "total_weight": 3.647,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 2.35
+        },
+        {
+          "etf": "00986A",
+          "weight": 1.298
+        }
+      ]
+    },
+    {
+      "code": "MRVL US",
+      "name": "MARVELL TECHNOLOGY INC",
+      "held_by": 2,
+      "avg_weight": 1.801,
+      "max_weight": 1.98,
+      "min_weight": 1.621,
+      "total_weight": 3.601,
+      "etfs": [
+        {
+          "etf": "00988A",
+          "weight": 1.98
+        },
+        {
+          "etf": "00997A",
+          "weight": 1.621
+        }
+      ]
+    },
+    {
+      "code": "SOFI US",
+      "name": "SoFi Technologies Inc",
+      "held_by": 2,
+      "avg_weight": 1.748,
+      "max_weight": 1.986,
+      "min_weight": 1.51,
+      "total_weight": 3.496,
+      "etfs": [
+        {
+          "etf": "00998A",
+          "weight": 1.986
+        },
+        {
+          "etf": "00983A",
+          "weight": 1.51
+        }
+      ]
+    },
+    {
+      "code": "2887",
+      "name": "TAISHIN FINANCIAL HOLDING",
+      "held_by": 2,
+      "avg_weight": 1.71,
+      "max_weight": 2.28,
+      "min_weight": 1.14,
+      "total_weight": 3.42,
+      "etfs": [
+        {
+          "etf": "00984A",
+          "weight": 2.28
+        },
+        {
+          "etf": "00401A",
+          "weight": 1.14
+        }
+      ]
+    },
+    {
+      "code": "INTC US",
+      "name": "INTEL CORP",
+      "held_by": 2,
+      "avg_weight": 1.559,
+      "max_weight": 1.988,
+      "min_weight": 1.13,
+      "total_weight": 3.118,
+      "etfs": [
+        {
+          "etf": "00997A",
+          "weight": 1.988
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.13
+        }
+      ]
+    },
+    {
+      "code": "HWM US",
+      "name": "Howmet航太公司",
+      "held_by": 2,
+      "avg_weight": 1.511,
+      "max_weight": 2.151,
+      "min_weight": 0.871,
+      "total_weight": 3.022,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 2.151
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.871
+        }
+      ]
+    },
+    {
+      "code": "2884",
+      "name": "E.SUN FINANCIAL HOLDING CO",
+      "held_by": 2,
+      "avg_weight": 1.51,
+      "max_weight": 1.67,
+      "min_weight": 1.35,
+      "total_weight": 3.02,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.67
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.35
+        }
+      ]
+    },
+    {
+      "code": "CRWV US",
+      "name": "COREWEAVE INC-CL A",
+      "held_by": 2,
+      "avg_weight": 1.505,
+      "max_weight": 1.84,
+      "min_weight": 1.17,
+      "total_weight": 3.01,
+      "etfs": [
+        {
+          "etf": "00983A",
+          "weight": 1.84
+        },
+        {
+          "etf": "00990A",
+          "weight": 1.17
+        }
+      ]
+    },
+    {
+      "code": "5803 JP",
+      "name": "FUJIKURA LTD",
+      "held_by": 2,
+      "avg_weight": 1.41,
+      "max_weight": 1.65,
+      "min_weight": 1.17,
+      "total_weight": 2.82,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 1.65
+        },
+        {
+          "etf": "00988A",
+          "weight": 1.17
+        }
+      ]
+    },
+    {
+      "code": "MSFT US",
+      "name": "Microsoft Corp",
+      "held_by": 2,
+      "avg_weight": 1.364,
+      "max_weight": 2.148,
+      "min_weight": 0.581,
+      "total_weight": 2.729,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 2.148
+        },
+        {
+          "etf": "00997A",
+          "weight": 0.581
+        }
+      ]
+    },
+    {
+      "code": "6584",
+      "name": "南俊國際",
+      "held_by": 2,
+      "avg_weight": 1.313,
+      "max_weight": 1.346,
+      "min_weight": 1.28,
+      "total_weight": 2.626,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 1.346
+        },
+        {
+          "etf": "00980A",
+          "weight": 1.28
+        }
+      ]
+    },
+    {
+      "code": "CRWD US",
+      "name": "CROWDSTRIKE HOLDINGS INC - A",
+      "held_by": 2,
+      "avg_weight": 1.302,
+      "max_weight": 2.005,
+      "min_weight": 0.6,
+      "total_weight": 2.605,
+      "etfs": [
+        {
+          "etf": "00986A",
+          "weight": 2.005
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.6
+        }
+      ]
+    },
+    {
+      "code": "3167",
+      "name": "TA LIANG TECHNOLOGY CO LTD",
+      "held_by": 2,
+      "avg_weight": 1.2,
+      "max_weight": 2.35,
+      "min_weight": 0.05,
+      "total_weight": 2.4,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 2.35
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.05
+        }
+      ]
+    },
+    {
+      "code": "4991",
+      "name": "GCS HOLDINGS INC",
+      "held_by": 2,
+      "avg_weight": 1.136,
+      "max_weight": 1.16,
+      "min_weight": 1.112,
+      "total_weight": 2.272,
+      "etfs": [
+        {
+          "etf": "00401A",
+          "weight": 1.16
+        },
+        {
+          "etf": "00992A",
+          "weight": 1.112
+        }
+      ]
+    },
+    {
+      "code": "6271",
+      "name": "同欣電",
+      "held_by": 2,
+      "avg_weight": 1.055,
+      "max_weight": 1.15,
+      "min_weight": 0.96,
+      "total_weight": 2.11,
+      "etfs": [
+        {
+          "etf": "00400A",
+          "weight": 1.15
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.96
+        }
+      ]
+    },
+    {
+      "code": "SOI FP",
+      "name": "S.O.I.T.E.C.",
+      "held_by": 2,
+      "avg_weight": 1.05,
+      "max_weight": 1.13,
+      "min_weight": 0.97,
+      "total_weight": 2.1,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 1.13
+        },
+        {
+          "etf": "00988A",
+          "weight": 0.97
+        }
+      ]
+    },
+    {
+      "code": "2347",
+      "name": "聯強",
+      "held_by": 2,
+      "avg_weight": 1.003,
+      "max_weight": 1.15,
+      "min_weight": 0.856,
+      "total_weight": 2.006,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 1.15
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.856
+        }
+      ]
+    },
+    {
+      "code": "APP US",
+      "name": "APPLOVIN CORP-CLASS A",
+      "held_by": 2,
+      "avg_weight": 0.853,
+      "max_weight": 1.015,
+      "min_weight": 0.69,
+      "total_weight": 1.705,
+      "etfs": [
+        {
+          "etf": "00997A",
+          "weight": 1.015
+        },
+        {
+          "etf": "00990A",
+          "weight": 0.69
+        }
+      ]
+    },
+    {
+      "code": "268A JP",
+      "name": "RIGAKU HOLDINGS CORP",
+      "held_by": 2,
+      "avg_weight": 0.79,
+      "max_weight": 0.92,
+      "min_weight": 0.66,
+      "total_weight": 1.58,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 0.92
+        },
+        {
+          "etf": "00988A",
+          "weight": 0.66
+        }
+      ]
+    },
+    {
+      "code": "5904",
+      "name": "寶雅國際",
+      "held_by": 2,
+      "avg_weight": 0.78,
+      "max_weight": 0.88,
+      "min_weight": 0.68,
+      "total_weight": 1.56,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.88
+        },
+        {
+          "etf": "00980A",
+          "weight": 0.68
+        }
+      ]
+    },
+    {
+      "code": "2395",
+      "name": "研華",
+      "held_by": 2,
+      "avg_weight": 0.745,
+      "max_weight": 0.99,
+      "min_weight": 0.5,
+      "total_weight": 1.49,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.99
+        },
+        {
+          "etf": "00985A",
+          "weight": 0.5
+        }
+      ]
+    },
+    {
+      "code": "5434",
+      "name": "崇越科技",
+      "held_by": 2,
+      "avg_weight": 0.71,
+      "max_weight": 0.91,
+      "min_weight": 0.51,
+      "total_weight": 1.42,
+      "etfs": [
+        {
+          "etf": "00980A",
+          "weight": 0.91
+        },
+        {
+          "etf": "00400A",
+          "weight": 0.51
+        }
+      ]
+    },
+    {
+      "code": "3481",
+      "name": "群創光電",
+      "held_by": 2,
+      "avg_weight": 0.675,
+      "max_weight": 0.91,
+      "min_weight": 0.44,
+      "total_weight": 1.35,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.91
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.44
+        }
+      ]
+    },
+    {
+      "code": "2481",
+      "name": "強茂",
+      "held_by": 2,
+      "avg_weight": 0.67,
+      "max_weight": 1.06,
+      "min_weight": 0.28,
+      "total_weight": 1.34,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 1.06
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.28
+        }
+      ]
+    },
+    {
+      "code": "2472",
+      "name": "立隆電子工業",
+      "held_by": 2,
+      "avg_weight": 0.643,
+      "max_weight": 0.67,
+      "min_weight": 0.617,
+      "total_weight": 1.287,
+      "etfs": [
+        {
+          "etf": "00995A",
+          "weight": 0.67
+        },
+        {
+          "etf": "00982A",
+          "weight": 0.617
+        }
+      ]
+    },
+    {
+      "code": "NBIS US",
+      "name": "NEBIUS GROUP NV",
+      "held_by": 2,
+      "avg_weight": 0.64,
+      "max_weight": 0.79,
+      "min_weight": 0.49,
+      "total_weight": 1.28,
+      "etfs": [
+        {
+          "etf": "00990A",
+          "weight": 0.79
+        },
+        {
+          "etf": "00988A",
+          "weight": 0.49
+        }
+      ]
+    },
+    {
+      "code": "2486",
+      "name": "一詮精密",
+      "held_by": 2,
+      "avg_weight": 0.621,
+      "max_weight": 0.733,
+      "min_weight": 0.51,
+      "total_weight": 1.243,
+      "etfs": [
+        {
+          "etf": "00992A",
+          "weight": 0.733
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.51
+        }
+      ]
+    },
+    {
+      "code": "1560",
+      "name": "中砂",
+      "held_by": 2,
+      "avg_weight": 0.61,
+      "max_weight": 1.01,
+      "min_weight": 0.21,
+      "total_weight": 1.22,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 1.01
+        },
+        {
+          "etf": "00984A",
+          "weight": 0.21
+        }
+      ]
+    },
+    {
+      "code": "3260",
+      "name": "威剛科技",
+      "held_by": 2,
+      "avg_weight": 0.571,
+      "max_weight": 0.84,
+      "min_weight": 0.301,
+      "total_weight": 1.141,
+      "etfs": [
+        {
+          "etf": "00993A",
+          "weight": 0.84
+        },
+        {
+          "etf": "00992A",
+          "weight": 0.301
+        }
+      ]
+    },
+    {
+      "code": "5439",
+      "name": "高技企業",
+      "held_by": 2,
+      "avg_weight": 0.57,
+      "max_weight": 0.58,
+      "min_weight": 0.56,
+      "total_weight": 1.14,
+      "etfs": [
+        {
+          "etf": "00995A",
+          "weight": 0.58
+        },
+        {
+          "etf": "00981A",
+          "weight": 0.56
+        }
+      ]
+    }
+  ]
+}

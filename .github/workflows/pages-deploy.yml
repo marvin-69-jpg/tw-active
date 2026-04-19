@@ -1,0 +1,67 @@
+name: pages-deploy
+
+# 建置並部署 site/ 到 GitHub Pages。
+# 觸發條件：
+#   - 推到 main、且 site/** / tools/site_build.py / raw/cmoney/** 有變動
+#   - 外部每日 workflow 把 raw/cmoney/ 推進來時間接觸發
+#   - 手動 workflow_dispatch
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'site/**'
+      - 'tools/site_build.py'
+      - 'raw/cmoney/**'
+      - 'wiki/etfs/*.md'
+      - '.github/workflows/pages-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Build site data
+        run: |
+          set -eo pipefail
+          uv run tools/site_build.py
+          echo "---"
+          ls -la site/data/
+          du -sh site/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

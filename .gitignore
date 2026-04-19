@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+.DS_Store
+.env
+*.token
+.tmp/
+/tmp/
+
+# FundClear 公開說明書快取（大量 PDF、可重現、不入 repo）
+raw/prospectus/*.pdf
+raw/prospectus/*.txt
+
+# datastore SQLite（可從 managerwatch + etfdaily 重 ingest）
+raw/store.db
+raw/store.db-journal
+raw/store.db-wal
+raw/store.db-shm

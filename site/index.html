@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>主動 ETF 的共識圈 — tw-active</title>
+<meta name="description" content="21 檔台灣主動型 ETF 的共識持股排行：誰都在押台積電？誰是孤股？" />
+<link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body>
+<header class="site-header">
+  <div class="brand">
+    <span class="dot"></span>
+    <a href="./">tw-active</a>
+    <span class="sep">/</span>
+    <span class="crumb">共識圈</span>
+  </div>
+  <nav class="site-nav">
+    <a href="https://github.com/marvin-69-jpg/tw-active" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://threads.net/@opus_666999" target="_blank" rel="noopener">Threads</a>
+  </nav>
+</header>
+
+<main>
+<section class="hero">
+  <h1>主動 ETF 的<span class="hl">共識圈</span></h1>
+  <p class="lede">
+    台灣 21 檔主動型 ETF 在最新交易日都壓在哪些股票？
+    <strong>共識越深，「主動」越接近「大家一起賭」</strong>——
+    這張圖把這件事直接攤出來。
+  </p>
+  <div class="meta-line">
+    <span>資料日 <time id="as-of">—</time></span>
+    <span class="sep">·</span>
+    <span>來源：投信官網 + 第三方資料彙整服務</span>
+  </div>
+</section>
+
+<section class="kpi-grid">
+  <div class="kpi">
+    <div class="kpi-value" id="kpi-n"></div>
+    <div class="kpi-label">追蹤 ETF 檔數</div>
+    <div class="kpi-hint">全市場主動股票型 ETF</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value" id="kpi-all-in"></div>
+    <div class="kpi-label">「全員押注」股數</div>
+    <div class="kpi-hint">21 檔全部都持有的股票</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value" id="kpi-majority"></div>
+    <div class="kpi-label">「過半共識」股數</div>
+    <div class="kpi-hint">被 ≥11 檔持有</div>
+  </div>
+  <div class="kpi">
+    <div class="kpi-value" id="kpi-solo"></div>
+    <div class="kpi-label">「唯一信仰」股數</div>
+    <div class="kpi-hint">只有 1 檔押注的孤股</div>
+  </div>
+</section>
+
+<section class="glossary">
+  <h3>怎麼讀這張圖</h3>
+  <dl>
+    <dt>權重</dt>
+    <dd>一支股票佔一檔 ETF 資產的百分比。比方說 00981A 買了 9.5% 的台積電，就是說這檔 ETF 每 100 元裡有 9.5 元是台積電。</dd>
+    <dt>平均權重</dt>
+    <dd>21 檔 ETF 裡，<b>有買這支股票的那些</b>每檔平均配了多少百分比（沒買的不算進來）。數字越大代表買的人下手越重。</dd>
+    <dt>總權重</dt>
+    <dd>所有持有這支股票的 ETF 權重加起來。可以想成「主動經理人對這支股的集體火力」。</dd>
+    <dt>被幾檔 ETF 持有</dt>
+    <dd>這支股票出現在幾檔主動 ETF 的持股名單裡。21 / 21 = 全員押注。</dd>
+    <dt>顯示前 N 名</dt>
+    <dd>依照你選的排序方式，從最高開始列 N 支股票。N 是 30 / 50 / 100 選一個。</dd>
+  </dl>
+</section>
+
+<section class="controls">
+  <label class="control">
+    <span>排序方式</span>
+    <select id="sort-by">
+      <option value="held_by">被最多檔 ETF 買到</option>
+      <option value="avg_weight">平均權重（下手最重）</option>
+      <option value="total_weight">總權重（集體火力最強）</option>
+    </select>
+  </label>
+  <label class="control">
+    <span>只看至少被 <b id="min-held-label">2</b> 檔持有的股票</span>
+    <input type="range" id="min-held" min="1" max="21" value="2" />
+  </label>
+  <label class="control">
+    <span>看前</span>
+    <select id="top-n">
+      <option value="30">30 名</option>
+      <option value="50" selected>50 名</option>
+      <option value="100">100 名</option>
+    </select>
+  </label>
+</section>
+
+<section class="chart-wrap">
+  <div id="chart" aria-label="主動 ETF 共識股排行圖"></div>
+  <aside id="panel" class="panel empty">
+    <div class="panel-empty">點任一橫條，看哪幾檔 ETF 持有這支股票</div>
+  </aside>
+</section>
+
+<section class="footnote">
+  <p>
+    <b>橫條怎麼看</b>：每一條代表一支股票。<b>橫條長度</b>是被幾檔主動 ETF 持有（越長代表共識越廣），
+    <b>顏色深淺</b>是平均權重（越深代表每檔買的人下手越重）。越上面、越深紅，代表「主動經理人共識最深」——
+    但也意味著這些標的的 alpha 可能被搶完了。
+  </p>
+  <p>
+    <b>限制</b>：資料為最新一日揭露快照，不包含股數、現金部位、期貨與債券。
+    跨國 ETF（美股 / 全球 AI / 美國科技）拉低「全員押注」數字 —— 21 檔裡有
+    4 檔是跨境主動 ETF，不在台股宇宙。
+  </p>
+</section>
+</main>
+
+<footer class="site-footer">
+  <p>
+    由 AI agent <a href="https://github.com/marvin-69-jpg/tw-active">openab-bot</a> 維護
+    · 每個交易日 T+1 自動更新
+    · <a href="https://github.com/marvin-69-jpg/tw-active/blob/main/README.md">repo 說明</a>
+  </p>
+  <p class="disclaimer">本站研究機制、不構成投資建議。</p>
+</footer>
+
+<script type="module" src="./assets/app.js"></script>
+</body>
+</html>
