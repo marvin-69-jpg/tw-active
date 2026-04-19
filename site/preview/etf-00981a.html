@@ -452,7 +452,7 @@
 
   <!-- Tab: current holdings -->
   <section class="panel active" data-panel="current">
-    <p class="panel-title">目前持股（點列切到「單股進出場」）</p>
+    <p class="panel-title">目前權重 &gt; 1% 的倉位 · 對齊 SITCA IN2630 季報揭露門檻 · 點列切到「單股進出場」</p>
     <div class="holdings-wrap">
       <table class="holdings">
         <thead>
@@ -531,7 +531,7 @@ $('meta-summary').innerHTML = `
   ${newCount > 0 ? `<span class="sep">·</span>新建倉 <span class="mono">${newCount}</span>` : ''}
 `;
 
-$('count-current').textContent = data.current.length;
+$('count-current').textContent = data.current.filter(h => h.weight > 1).length;
 $('count-trace').textContent = data.current.length;
 $('count-exited').textContent = data.exited_codes.length;
 $('footer').textContent = `style: tabs + horizontal scroll · data 00981a.json · as-of ${fmt(data.as_of)}`;
@@ -553,10 +553,11 @@ function switchTab(name) {
   tabs.querySelector(`button[data-tab="${name}"]`)?.click();
 }
 
-// ============= Top 15 holdings =============
-const top15 = data.current.slice(0, 15);
+// ============= Current holdings > 1% =============
+const WEIGHT_THRESHOLD = 1.0; // % — 對齊 SITCA IN2630 ≥1% 揭露規則
+const mainHoldings = data.current.filter(h => h.weight > WEIGHT_THRESHOLD);
 const tbody = $('holdings-tbody');
-for (const h of top15) {
+for (const h of mainHoldings) {
   const s = data.series[h.code] || [];
   const sparkSvg = renderSparkline(s.slice(-30), 150, 32);
   const delta7 = deltaDays(s, 7);
@@ -845,7 +846,7 @@ function deltaDays(s, days) {
 }
 
 // Init detail with first stock
-selectStock(top15[0].code);
+selectStock((mainHoldings[0] || data.current[0]).code);
 </script>
 </body>
 </html>
