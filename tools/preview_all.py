@@ -91,6 +91,135 @@ def _fetch_etf_price_series(code: str, months: int = 4) -> list[dict]:
     return uniq
 
 
+def _load_meta_raw(code: str) -> dict | None:
+    """讀 raw/cmoney/meta/<code>.json 取 ETF 基本資料（含費率原文、規模）。
+    raw 由私有 CI push；欄位順序見 dump tool。
+    回 {mgmt_fee_raw, custody_fee_raw, total_fee_raw, fee_tiered, fee_rates,
+        issuer, listing_date, dividend_policy, aum_yi, shares_k} or None。"""
+    import re
+    path = Path(f"raw/cmoney/meta/{code}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return None
+    rows = data.get("Data") or []
+    if not rows:
+        return None
+    r = rows[0]
+    # Title: [年度, 股票代號, 股票名稱, 追蹤指數, 指數追蹤方式, ETF類型, 槓桿/反向,
+    #        資產規模(億), 資產種類, 流通單位數(千), 發行商, 發行日期,
+    #        管理費, 保管費, 總費用, 配息制度, 計價幣別]
+    def _get(i):
+        try:
+            return r[i]
+        except Exception:
+            return None
+
+    mgmt_raw = (_get(12) or "").strip()
+    cust_raw = (_get(13) or "").strip()
+
+    # 抽出所有 X.X% 當 fee_rates；>1 個不同值 → 階梯式
+    def _rates(txt: str) -> list[float]:
+        if not txt:
+            return []
+        found = re.findall(r"(\d+(?:\.\d+)?)\s*[％%]", txt)
+        # 把「百分之零點柒」這種中文也補抓（rough）
+        rates = []
+        for x in found:
+            try:
+                rates.append(float(x))
+            except Exception:
+                pass
+        return rates
+
+    m_rates = _rates(mgmt_raw)
+    c_rates = _rates(cust_raw)
+    tiered = len(set(m_rates)) > 1  # 同一欄位有多個不同 % → 階梯
+
+    try:
+        aum = float(_get(7)) if _get(7) not in (None, "") else None
+    except Exception:
+        aum = None
+    try:
+        shares_k = float(_get(9)) if _get(9) not in (None, "") else None
+    except Exception:
+        shares_k = None
+
+    listing = _get(11) or ""
+    if isinstance(listing, str) and listing:
+        # "2025/5/27 上午 12:00:00" → "2025-05-27"
+        try:
+            head = listing.split()[0]
+            y, m, d = head.split("/")
+            listing = f"{int(y):04d}-{int(m):02d}-{int(d):02d}"
+        except Exception:
+            pass
+
+    return {
+        "mgmt_fee_raw": mgmt_raw,
+        "custody_fee_raw": cust_raw,
+        "total_fee_raw": (_get(14) or "").strip(),
+        "mgmt_fee_rates": m_rates,
+        "custody_fee_rates": c_rates,
+        "fee_tiered": tiered,
+        "issuer_full": _get(10),
+        "listing_date_cmoney": listing or None,
+        "dividend_policy": _get(15),
+        "aum_yi_cmoney": aum,
+        "shares_k": shares_k,
+    }
+
+
+def _effective_fee(meta: dict, aum_yi: float | None) -> dict | None:
+    """從階梯文字 + 當前規模推估實付費率。
+
+    很多主動 ETF 公開說明書寫「200 億以下 X%、逾 200 億 Y%」。Yahoo 只顯示最低階
+    當作「當前費率」造成散戶低估實付。這個函數抽出階梯門檻 + 費率，計算 blended。
+
+    限制：只處理單一門檻（大多數階梯）；多段階梯直接回 None 讓前端顯示原文。
+    """
+    import re
+    if not meta or aum_yi is None:
+        return None
+    txt = meta.get("mgmt_fee_raw") or ""
+    if not meta.get("fee_tiered"):
+        # 固定費率：直接取第一個 rate
+        rates = meta.get("mgmt_fee_rates") or []
+        if rates:
+            return {"mgmt_effective": rates[0], "tiered": False,
+                    "threshold_yi": None, "high_rate": rates[0],
+                    "low_rate": rates[0]}
+        return None
+
+    # 階梯：抽「XXX 億」門檻 + 兩個費率
+    # 取第一個數字 + 億 當門檻
+    thr_match = re.search(r"(\d+)\s*億", txt)
+    rates = meta.get("mgmt_fee_rates") or []
+    if not thr_match or len(rates) < 2:
+        return None
+    try:
+        threshold = float(thr_match.group(1))
+    except Exception:
+        return None
+    # 費率高低：通常前面寫門檻以下高、之後低
+    high = max(rates[0], rates[1])
+    low = min(rates[0], rates[1])
+    if aum_yi <= threshold:
+        effective = high
+    else:
+        # blended: threshold 額度按高費率、超出部分按低費率
+        effective = (threshold * high + (aum_yi - threshold) * low) / aum_yi
+    return {
+        "mgmt_effective": round(effective, 3),
+        "tiered": True,
+        "threshold_yi": threshold,
+        "high_rate": high,
+        "low_rate": low,
+    }
+
+
 def _load_premium_raw(code: str) -> dict | None:
     """讀 raw/cmoney/premium/<code>.json 取最新一筆 NAV/折溢價。
     21 檔全覆蓋的 primary source；由私有 CI 每日 push raw JSON 到此。
@@ -164,6 +293,18 @@ def build_all(codes: list[str]) -> list[dict]:
         except Exception:
             close_f = None
 
+        # ETF 基本資料（費率、發行商、配息制度、規模、上市日）— CMoney M326
+        # raw 由私有 CI push；公開 repo 只消費
+        meta = _load_meta_raw(code.upper())
+        # FundClear 有些規模欄位會缺；CMoney meta 的 aum_yi 可當備援
+        aum_for_fee = total_av_yi if total_av_yi not in (None, "") else (
+            meta.get("aum_yi_cmoney") if meta else None)
+        try:
+            aum_for_fee_f = float(aum_for_fee) if aum_for_fee not in (None, "") else None
+        except Exception:
+            aum_for_fee_f = None
+        fee_effective = _effective_fee(meta, aum_for_fee_f) if meta else None
+
         # 每日 NAV / 折溢價：primary 從 raw/cmoney/premium/<code>.json 讀（21 檔全覆蓋）
         # raw 由私有 CI 維護、每日 push；此處只是 consumer
         # fallback：etfdaily（投信官網直取、5 檔）當 raw 缺檔時備援
@@ -212,6 +353,15 @@ def build_all(codes: list[str]) -> list[dict]:
             "premium_pct": round(premium_pct, 3) if premium_pct is not None else None,
             # ETF 自身價格序列（最近 ~4 個月交易日日收盤）供 sparkline
             "price_series": [{"d": p["date"], "c": p["close"]} for p in etf_prices],
+            # 費率 / 基本資料（M326）— 研究主題核心：階梯費率拆解，反 Yahoo 誤讀
+            "mgmt_fee_raw": meta.get("mgmt_fee_raw") if meta else None,
+            "custody_fee_raw": meta.get("custody_fee_raw") if meta else None,
+            "fee_tiered": meta.get("fee_tiered") if meta else None,
+            "fee_effective": fee_effective,  # {mgmt_effective, tiered, threshold_yi, high_rate, low_rate}
+            "dividend_policy": meta.get("dividend_policy") if meta else None,
+            "listing_date_cmoney": meta.get("listing_date_cmoney") if meta else None,
+            "issuer_full": meta.get("issuer_full") if meta else None,
+            "shares_k": meta.get("shares_k") if meta else None,
         })
         nav_str = f"NAV={nav:.2f} prem={premium_pct:+.2f}%" if nav else "NAV=-"
         print(

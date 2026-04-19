@@ -96,6 +96,33 @@
   .card .price-row .prem.pos { color: #b8860b; }
   .card .price-row .prem.neg { color: #4a7c4a; }
   .card .price-row .prem.na { color: var(--ink-soft); font-weight: normal; }
+  .card .fee-row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 6px 0; border-top: 1px dashed var(--rule);
+    font-size: 11px; color: var(--ink-soft);
+  }
+  .card .fee-row .label { font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
+  .card .fee-row .fee {
+    font-family: ui-monospace, monospace; color: var(--ink); font-weight: 500;
+  }
+  .card .fee-row .fee.tiered {
+    text-decoration: underline dotted;
+    cursor: help;
+  }
+  .card .fee-row .tier-badge {
+    font-size: 9px; padding: 1px 4px; border: 1px solid var(--rule);
+    border-radius: 2px; color: var(--ink-soft); margin-left: 2px;
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  .card .fee-row .yahoo-gap {
+    margin-left: auto; font-family: ui-monospace, monospace;
+    color: #b8860b; font-size: 10px;
+  }
+  .card .fee-row .yahoo-gap.zero { color: var(--ink-soft); }
+  .card .fee-row .div-pol {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    color: var(--ink-soft); font-size: 10px;
+  }
   .card .spark {
     display: block; width: 100%; height: 36px;
     margin: 6px 0 4px;
@@ -187,6 +214,8 @@
     <option value="n_exited">已出清（多 → 少）</option>
     <option value="premium">溢折價 |絕對值大 → 小|</option>
     <option value="price_chg">近期漲跌幅（漲 → 跌）</option>
+    <option value="fee">實付管理費（高 → 低）</option>
+    <option value="fee_gap">階梯差（Yahoo 低階誤讀 bps）</option>
   </select>
   <span style="margin-left:auto;font-size:11px">規模/受益人數 FundClear · NAV/折溢價 CMoney · 走勢 TWSE/TPEx 近 ~3M</span>
 </div>
@@ -252,6 +281,24 @@ function render(sortKey) {
       if (pa == null) return 1;
       if (pb == null) return -1;
       return pb - pa || a.code.localeCompare(b.code);
+    },
+    fee: (a, b) => {
+      const fa = a.fee_effective?.mgmt_effective;
+      const fb = b.fee_effective?.mgmt_effective;
+      if (fa == null && fb == null) return a.code.localeCompare(b.code);
+      if (fa == null) return 1;
+      if (fb == null) return -1;
+      return fb - fa || a.code.localeCompare(b.code);
+    },
+    fee_gap: (a, b) => {
+      // 只對階梯式 ETF 有意義；非階梯 → 0 bps 沉底
+      const gap = e => {
+        const fe = e.fee_effective;
+        if (!fe || !fe.tiered) return 0;
+        return (fe.mgmt_effective - fe.low_rate) * 100; // bps
+      };
+      const ga = gap(a), gb = gap(b);
+      return gb - ga || a.code.localeCompare(b.code);
     },
   };
   const sorted = [...etfs].sort(sorters[sortKey] || sorters.aum);
@@ -322,6 +369,39 @@ function render(sortKey) {
       <span class="label">NAV</span><span class="nav">${nav != null ? nav.toFixed(2) : '—'}</span>
       ${premCell}
     </div>`;
+    // 費率列：實付管理費 + 階梯警示 + 配息制度
+    // 研究意圖：Yahoo 只顯示最低階當「當前費率」，這裡秀實付 + 差距讓散戶看到誤讀
+    const fe = e.fee_effective;
+    let feeRow = '';
+    if (fe) {
+      const eff = fe.mgmt_effective;
+      const tieredCls = fe.tiered ? 'tiered' : '';
+      let tip = '';
+      let tierBadge = '';
+      let yahooGap = '';
+      if (fe.tiered) {
+        tip = `階梯：≤${fe.threshold_yi}億 ${fe.high_rate}%、逾 ${fe.threshold_yi}億 ${fe.low_rate}%；` +
+              `當前規模下實付 ${eff.toFixed(3)}%`;
+        tierBadge = `<span class="tier-badge" title="${tip}">階</span>`;
+        const gap = eff - fe.low_rate;
+        if (gap > 0.01) {
+          yahooGap = `<span class="yahoo-gap" title="Yahoo 常只秀最低階 ${fe.low_rate}%，實付較高 +${(gap*100).toFixed(0)} bps">` +
+                     `vs 低階 +${(gap*100).toFixed(0)}bps</span>`;
+        } else {
+          yahooGap = `<span class="yahoo-gap zero" title="規模大到幾乎全在低階">已趨近低階</span>`;
+        }
+      }
+      const divPol = e.dividend_policy
+        ? `<span class="div-pol" title="配息制度">${e.dividend_policy}</span>`
+        : '';
+      feeRow = `<div class="fee-row">
+        <span class="label">管理費</span>
+        <span class="fee ${tieredCls}" title="${tip || ('公開說明書：' + (e.mgmt_fee_raw || '—'))}">${eff.toFixed(2)}%</span>
+        ${tierBadge}
+        ${divPol}
+        ${yahooGap}
+      </div>`;
+    }
     a.innerHTML = `
       <div class="code-row">
         <span class="code">${e.code}</span>
@@ -331,6 +411,7 @@ function render(sortKey) {
       ${sizeRow}
       ${sparkHtml}
       ${priceRow}
+      ${feeRow}
       <div class="stats">
         <div><span>主要持股</span><span class="v">${e.n_main}</span></div>
         <div><span>全倉</span><span class="v">${e.n_current}</span></div>
@@ -354,7 +435,9 @@ sortSel.addEventListener('change', () => {
 render(sortSel.value);
 
 const navCnt = etfs.filter(e => e.nav != null).length;
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔（CMoney 合流）· 走勢 TWSE/TPEx 近 ~3M`;
+const feeCnt = etfs.filter(e => e.fee_effective != null).length;
+const tieredCnt = etfs.filter(e => e.fee_effective?.tiered).length;
+$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔 · 費率 ${feeCnt}/${etfs.length} 檔（${tieredCnt} 檔階梯式）· 走勢 TWSE/TPEx 近 ~3M`;
 </script>
 </body>
 </html>
