@@ -7,9 +7,10 @@
 site_build — 從 raw/cmoney/ 的每日 JSON dump 產出 site/data/*.json 給 Pages 前端用。
 （raw/cmoney/ 的內容由外部 CI workflow 每日推入本 repo；本檔只負責消費）
 
-目前只產 Q2 consensus 資料（共識股排行）：
+目前產出：
 
-    site/data/consensus.json
+    site/data/consensus.json    共識股排行
+    site/data/premium.json      21 檔折溢價時序（來自 raw/cmoney/premium/<etf>.json）
 
 Schema:
 {
@@ -50,6 +51,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RAW_CMONEY = ROOT / "raw" / "cmoney"
+RAW_PREMIUM = RAW_CMONEY / "premium"
 WIKI_ETFS = ROOT / "wiki" / "etfs"
 DEFAULT_OUT = ROOT / "site" / "data"
 
@@ -224,6 +226,84 @@ def build_consensus(
     }
 
 
+def build_premium(etf_meta: dict[str, dict]) -> dict | None:
+    """
+    把 raw/cmoney/premium/<ETF>.json 合成 site/data/premium.json。
+
+    來源 schema: {"Title": ["日期","收盤價","淨值","折溢價(%)"], "Data": [[ymd, close, nav, pm], ...]}
+    （降冪；本函數改為升冪輸出好讓前端直接畫）
+    """
+    if not RAW_PREMIUM.exists():
+        return None
+
+    etfs_out: list[dict] = []
+    for f in sorted(RAW_PREMIUM.glob("*.json")):
+        code = f.stem.upper()
+        try:
+            payload = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[WARN] {f}: {e}", file=sys.stderr)
+            continue
+        raw_rows = payload.get("Data") or []
+        rows: list[list] = []
+        for r in raw_rows:
+            if len(r) < 4:
+                continue
+            try:
+                ymd = str(r[0])
+                close = float(r[1])
+                nav = float(r[2])
+                pm = float(r[3])
+            except (TypeError, ValueError):
+                continue
+            rows.append([ymd, round(close, 4), round(nav, 4), round(pm, 3)])
+        if not rows:
+            continue
+        rows.sort(key=lambda x: x[0])  # ascending by date
+
+        premiums = [r[3] for r in rows]
+        n = len(premiums)
+        pos = sum(1 for v in premiums if v > 0)
+        neg = sum(1 for v in premiums if v < 0)
+        flat = n - pos - neg
+        sorted_pm = sorted(premiums)
+        median_pm = (
+            sorted_pm[n // 2] if n % 2
+            else (sorted_pm[n // 2 - 1] + sorted_pm[n // 2]) / 2
+        )
+
+        meta = etf_meta.get(code, {"code": code, "name": code, "issuer": "unknown"})
+        etfs_out.append({
+            "code": code,
+            "name": meta["name"],
+            "issuer": meta["issuer"],
+            "rows": rows,
+            "stats": {
+                "days": n,
+                "avg_premium": round(sum(premiums) / n, 3),
+                "median_premium": round(median_pm, 3),
+                "max_premium": round(max(premiums), 3),
+                "min_premium": round(min(premiums), 3),
+                "days_positive": pos,
+                "days_negative": neg,
+                "days_flat": flat,
+                "pct_positive": round(pos * 100 / n, 1),
+                "recent_premium": premiums[-1],
+                "date_start": rows[0][0],
+                "date_end": rows[-1][0],
+            },
+        })
+
+    if not etfs_out:
+        return None
+    as_of = max(e["stats"]["date_end"] for e in etfs_out)
+    return {
+        "as_of": as_of,
+        "n_etfs": len(etfs_out),
+        "etfs": etfs_out,
+    }
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="site_build")
     p.add_argument("--out", type=Path, default=DEFAULT_OUT,
@@ -255,6 +335,19 @@ def main() -> int:
     print(f"  as_of={data['as_of']}  n_etfs={kpi['n_etfs']}  "
           f"all_in={kpi['all_in_count']}  majority={kpi['majority_count']}  "
           f"solo={kpi['solo_count']}  distinct={kpi['distinct_stocks']}")
+
+    premium = build_premium(etf_meta)
+    if premium is not None:
+        pm_file = args.out / "premium.json"
+        pm_file.write_text(
+            json.dumps(premium, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        print(f"✓ wrote {pm_file}")
+        print(f"  as_of={premium['as_of']}  n_etfs={premium['n_etfs']}  "
+              f"rows_per_etf≈{len(premium['etfs'][0]['rows'])}")
+    else:
+        print(f"[SKIP] {RAW_PREMIUM} 不存在或無資料，未產 premium.json")
     return 0
 
 
