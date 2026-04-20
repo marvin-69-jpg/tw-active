@@ -1225,12 +1225,31 @@ function detectEvents(s) {
   const events = [];
   events.push({ type: 'ENTRY', date: s[0].date, weight: s[0].weight, note: '首次建倉' });
 
+  // 用 shares delta 判 ADD/REDUCE（見 feedback_shares_not_weight_for_comparison memory）。
+  // ETF inflow 時 shares 增但 weight 可能持平甚至下降，weight delta 會漏判經理人實際加碼。
+  // threshold：|Δshares / prev_shares| ≥ 3% 過濾日常微調雜訊。
+  // 若 series 缺 shares（舊 cache），fallback 回 weight delta。
+  const hasShares = s.some(p => typeof p.shares === 'number');
   for (let i = 1; i < s.length; i++) {
-    const delta = s[i].weight - s[i - 1].weight;
-    if (delta >= 0.5) {
-      events.push({ type: 'ADD', date: s[i].date, weight: s[i].weight, from: s[i - 1].weight, note: `+${delta.toFixed(2)}pp` });
-    } else if (delta <= -0.5) {
-      events.push({ type: 'REDUCE', date: s[i].date, weight: s[i].weight, from: s[i - 1].weight, note: `${delta.toFixed(2)}pp` });
+    const cur = s[i], prev = s[i - 1];
+    if (hasShares && typeof cur.shares === 'number' && typeof prev.shares === 'number' && prev.shares > 0) {
+      const dShares = cur.shares - prev.shares;
+      const pct = dShares / prev.shares * 100;
+      if (Math.abs(pct) >= 3) {
+        const sign = pct > 0 ? '+' : '';
+        const type = pct > 0 ? 'ADD' : 'REDUCE';
+        events.push({
+          type, date: cur.date, weight: cur.weight, from: prev.weight,
+          note: `${sign}${pct.toFixed(1)}% 股數`,
+        });
+      }
+    } else {
+      const delta = cur.weight - prev.weight;
+      if (delta >= 0.5) {
+        events.push({ type: 'ADD', date: cur.date, weight: cur.weight, from: prev.weight, note: `+${delta.toFixed(2)}pp 權重` });
+      } else if (delta <= -0.5) {
+        events.push({ type: 'REDUCE', date: cur.date, weight: cur.weight, from: prev.weight, note: `${delta.toFixed(2)}pp 權重` });
+      }
     }
   }
 
