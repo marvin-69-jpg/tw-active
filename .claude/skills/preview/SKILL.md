@@ -146,6 +146,12 @@ PR #24 修了 cache key，但 PR #23 run 已經把「新 first_date + 舊 3 點 
 
 **正解**：workflow 加 pass 2，prices 完成後再 `preview_all` 一次（PR #29）。多 ~30 秒但把依賴寫明。以前沒顯形是因為磁碟上老是有舊 `*-prices.json`（即使 3 點）讓 preview_build 找得到 → 雖然 P&L 算得爛但不是 None。
 
+### 🪤 Layer 2：ETF 自身 sparkline 走另一條 fetch 路徑
+
+`preview_all._fetch_etf_price_series`（首頁 etfs.json 的 `price_series`）跟個股 `preview_prices.fetch_history`（detail 卡的 `<etf>-prices.json`）**不是同一個 code path**。Round 48 把 `preview_prices` 從 TWSE STOCK_DAY 遷到 FinMind 時，個股那條改了，ETF 這條漏改 → `_fetch_etf_price_series` 一直呼叫已被刪掉的 `fetch_twse_month` → 每檔 raise → 首頁 sparkline 全空但 daily-preview 綠燈（exception 被吞）。PR #31 修。
+
+**通則**：source migration 要全 repo grep 舊 API 名稱，不只看 unit test 過。被吞的 exception 是這類 silent breakage 的溫床。
+
 ### 🪤 Layer 4：GH Actions 不 cascade
 
 `daily-preview` push 後 `pages-deploy` **不會自動觸發**。GH Actions 的 default `GITHUB_TOKEN` 為避免遞迴刻意不 fire 後續 workflow。選一：
