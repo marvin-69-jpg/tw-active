@@ -12,6 +12,8 @@ site_build — 從 raw/cmoney/ 的每日 JSON dump 產出 site/data/*.json 給 P
     site/data/consensus.json    共識股排行
     site/data/premium.json      21 檔折溢價時序（來自 raw/cmoney/premium/<etf>.json）
     site/data/winners.json      21 檔 P&L 排行（聚合 site/preview/<etf>.json 的 pnl 欄）
+    site/data/new-positions.json 新建倉合集（跨 21 檔 × 7/30 天視窗）
+    site/data/exits.json         出清合集（跨 21 檔 × 7/30 天視窗）
 
 Schema:
 {
@@ -53,6 +55,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 RAW_CMONEY = ROOT / "raw" / "cmoney"
 RAW_PREMIUM = RAW_CMONEY / "premium"
+RAW_SHARES = RAW_CMONEY / "shares"
 WIKI_ETFS = ROOT / "wiki" / "etfs"
 SITE_PREVIEW = ROOT / "site" / "preview"
 DEFAULT_OUT = ROOT / "site" / "data"
@@ -416,6 +419,159 @@ def build_winners(etf_meta: dict[str, dict]) -> dict | None:
     }
 
 
+def _load_shares_events(etf_meta: dict[str, dict]) -> tuple[list[dict], list[dict], str] | None:
+    """
+    從 raw/cmoney/shares/<ETF>.json 推算每檔 ETF 的歷史 新建倉 / 出清 事件。
+
+    回傳 (new_events, exit_events, latest_date)，每筆 event:
+      {"etf": "00981A", "date": "20260417", "code": "2303", "name": "聯電"}
+
+    邏輯：對每檔 ETF 按日期 set diff：
+      new   = holdings[D] - holdings[D-1]
+      exit  = holdings[D-1] - holdings[D]
+    """
+    if not RAW_SHARES.exists():
+        return None
+
+    all_new: list[dict] = []
+    all_exit: list[dict] = []
+    latest_overall = ""
+
+    for f in sorted(RAW_SHARES.glob("*.json")):
+        etf = f.stem.upper()
+        try:
+            payload = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[WARN] {f}: {e}", file=sys.stderr)
+            continue
+
+        by_date: dict[str, set[str]] = defaultdict(set)
+        name_of: dict[str, str] = {}
+        for row in payload.get("Data", []):
+            if len(row) < 3:
+                continue
+            date, code, name = str(row[0]), str(row[1]), str(row[2])
+            if code in NON_STOCK_CODES:
+                continue
+            if not STOCK_CODE.match(code):
+                continue
+            by_date[date].add(code)
+            # 取最長的中文名（通常最完整）
+            if len(name) > len(name_of.get(code, "")):
+                name_of[code] = name
+
+        if not by_date:
+            continue
+
+        dates = sorted(by_date.keys())
+        if dates[-1] > latest_overall:
+            latest_overall = dates[-1]
+
+        for i in range(1, len(dates)):
+            prev = by_date[dates[i - 1]]
+            curr = by_date[dates[i]]
+            for code in curr - prev:
+                all_new.append({
+                    "etf": etf, "date": dates[i],
+                    "code": code, "name": name_of.get(code, code),
+                })
+            for code in prev - curr:
+                all_exit.append({
+                    "etf": etf, "date": dates[i],
+                    "code": code, "name": name_of.get(code, code),
+                })
+
+    if not latest_overall:
+        return None
+    return all_new, all_exit, latest_overall
+
+
+def _window_start(latest_ymd: str, days: int) -> str:
+    """latest_ymd 往前推 days 天（含 latest 為 window 結尾）的 YYYYMMDD。"""
+    from datetime import datetime, timedelta
+    dt = datetime.strptime(latest_ymd, "%Y%m%d")
+    return (dt - timedelta(days=days)).strftime("%Y%m%d")
+
+
+def _aggregate_events(
+    events: list[dict],
+    start_ymd: str,
+    end_ymd: str,
+) -> list[dict]:
+    """把 event list 聚合成 stock-level list（跨 ETF 的跟進順序）。"""
+    in_window = [e for e in events if start_ymd <= e["date"] <= end_ymd]
+    by_stock: dict[str, dict] = {}
+    for e in in_window:
+        slot = by_stock.setdefault(e["code"], {
+            "code": e["code"],
+            "name": e["name"],
+            "events": [],
+        })
+        slot["events"].append({"etf": e["etf"], "date": e["date"]})
+        if len(e["name"]) > len(slot["name"]):
+            slot["name"] = e["name"]
+
+    rows = []
+    for code, d in by_stock.items():
+        evs = sorted(d["events"], key=lambda x: (x["date"], x["etf"]))
+        dates_only = [x["date"] for x in evs]
+        etfs_set = sorted({x["etf"] for x in evs})
+        rows.append({
+            "code": code,
+            "name": d["name"],
+            "n_etfs": len(etfs_set),
+            "n_events": len(evs),
+            "first_date": dates_only[0],
+            "last_date": dates_only[-1],
+            "etfs": etfs_set,
+            "events": evs,
+        })
+    # 排序：跟進家數 desc → 最近 last_date desc → first_date asc
+    rows.sort(key=lambda r: (-r["n_etfs"], -int(r["last_date"]), int(r["first_date"])))
+    return rows
+
+
+def build_positions_flow(
+    etf_meta: dict[str, dict],
+) -> tuple[dict | None, dict | None]:
+    """
+    產出 new-positions.json + exits.json，兩者結構對稱。
+    """
+    loaded = _load_shares_events(etf_meta)
+    if loaded is None:
+        return None, None
+    new_events, exit_events, latest = loaded
+
+    n_etfs = len({e["etf"] for e in new_events + exit_events})
+    etfs_list = sorted({e["etf"] for e in new_events + exit_events})
+    etfs_meta_list = [
+        etf_meta.get(c, {"code": c, "name": c, "issuer": "unknown"})
+        for c in etfs_list
+    ]
+
+    def _build(events: list[dict]) -> dict:
+        windows = {}
+        for label, days in [("7d", 7), ("30d", 30)]:
+            start = _window_start(latest, days)
+            stocks = _aggregate_events(events, start, latest)
+            windows[label] = {
+                "days": days,
+                "start": start,
+                "end": latest,
+                "n_events": sum(s["n_events"] for s in stocks),
+                "n_stocks": len(stocks),
+                "stocks": stocks,
+            }
+        return {
+            "as_of": latest,
+            "n_etfs": n_etfs,
+            "etfs": etfs_meta_list,
+            "windows": windows,
+        }
+
+    return _build(new_events), _build(exit_events)
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="site_build")
     p.add_argument("--out", type=Path, default=DEFAULT_OUT,
@@ -473,6 +629,32 @@ def main() -> int:
               f"comparable={winners['n_comparable']}  limited={winners['n_limited']}")
     else:
         print(f"[SKIP] {SITE_PREVIEW} 不存在或無 preview JSON，未產 winners.json")
+
+    new_pos, exits = build_positions_flow(etf_meta)
+    if new_pos is not None:
+        np_file = args.out / "new-positions.json"
+        np_file.write_text(
+            json.dumps(new_pos, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        print(f"✓ wrote {np_file}")
+        print(f"  as_of={new_pos['as_of']}  "
+              f"7d={new_pos['windows']['7d']['n_stocks']} stocks / "
+              f"{new_pos['windows']['7d']['n_events']} events  "
+              f"30d={new_pos['windows']['30d']['n_stocks']} stocks")
+    if exits is not None:
+        ex_file = args.out / "exits.json"
+        ex_file.write_text(
+            json.dumps(exits, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        print(f"✓ wrote {ex_file}")
+        print(f"  as_of={exits['as_of']}  "
+              f"7d={exits['windows']['7d']['n_stocks']} stocks / "
+              f"{exits['windows']['7d']['n_events']} events  "
+              f"30d={exits['windows']['30d']['n_stocks']} stocks")
+    if new_pos is None:
+        print(f"[SKIP] {RAW_SHARES} 不存在，未產 new-positions.json / exits.json")
     return 0
 
 
