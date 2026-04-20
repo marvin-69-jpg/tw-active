@@ -8,9 +8,9 @@ name: daily-etfdaily-update
 
 on:
   schedule:
-    # 每個台股交易日 T 當天晚上 20:00 TPE（= 12:00 UTC），週一到週五
-    # 投信官網 PCF 大約 17:00-18:00 TPE 齊全，20:00 預留 2-3 小時緩衝
-    - cron: '0 12 * * 1-5'
+    # 每個台股交易日 T 當天 18:00 TPE（= 10:00 UTC），週一到週五
+    # 投信官網 PCF 大約 17:00-18:00 TPE 齊全，實測 18:00 已可取
+    - cron: '0 10 * * 1-5'
   workflow_dispatch:
 
 permissions:
