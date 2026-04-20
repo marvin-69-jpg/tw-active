@@ -1,0 +1,123 @@
+name: daily-preview-rebuild
+
+# 每當外部 CI push 新的 raw/cmoney/shares/ 就重建 site/preview/ 資料
+# (preview_all.py 產 per-ETF holdings JSON + preview_prices.py 產 FinMind 股價序列)
+#
+# 這是 Pages 資料更新鏈的中間環節：
+#   16:00 TPE cmoney dump → push raw/cmoney/
+#     → 本 workflow 觸發 → 跑 preview_all + preview_prices
+#       → push site/preview/ → 自動觸發 pages-deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'raw/cmoney/shares/**'
+      - 'raw/cmoney/meta/**'
+      - 'tools/preview_all.py'
+      - 'tools/preview_build.py'
+      - 'tools/preview_prices.py'
+      - '.github/workflows/daily-preview.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-preview
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Write FinMind token
+        env:
+          FINMIND_TOKEN: ${{ secrets.FINMIND_TOKEN }}
+        run: |
+          set -eo pipefail
+          if [ -z "$FINMIND_TOKEN" ]; then
+            echo "[warn] FINMIND_TOKEN not set，走 no-auth tier（rate limit 較低）"
+          else
+            # preview_prices.py 預期讀 /home/node/.finmind-token
+            # Actions runner home = /home/runner，改用絕對路徑 + 環境變數 override 較穩
+            # 這邊選擇 mkdir /home/node 方式對齊本機路徑
+            sudo mkdir -p /home/node
+            printf '%s' "$FINMIND_TOKEN" | sudo tee /home/node/.finmind-token >/dev/null
+            sudo chmod 644 /home/node/.finmind-token
+            echo "[ok] token written to /home/node/.finmind-token"
+          fi
+
+      - name: List ETF codes from raw/cmoney/shares/
+        id: codes
+        run: |
+          set -eo pipefail
+          CODES=$(ls raw/cmoney/shares/ | grep -E '^[0-9]{5}[A-Z]\.json$' | sed 's/\.json$//' | tr '\n' ' ')
+          echo "codes=$CODES" >> "$GITHUB_OUTPUT"
+          echo "found: $CODES"
+
+      - name: Rebuild preview per-ETF JSON
+        id: preview_all
+        run: |
+          set -eo pipefail
+          uv run tools/preview_all.py ${{ steps.codes.outputs.codes }}
+          echo "--- site/preview/*.json ---"
+          ls site/preview/*.json 2>/dev/null | grep -v "\-prices.json$" | head -5
+          ls site/preview/*.json 2>/dev/null | grep -v "\-prices.json$" | wc -l | xargs echo "per-ETF count:"
+
+      - name: Rebuild preview prices (FinMind) per ETF
+        id: preview_prices
+        run: |
+          set -eo pipefail
+          for code in ${{ steps.codes.outputs.codes }}; do
+            lc=$(echo "$code" | tr 'A-Z' 'a-z')
+            src="site/preview/${lc}.json"
+            if [ ! -f "$src" ]; then
+              echo "[skip] $src 不存在"
+              continue
+            fi
+            echo "=== $code ==="
+            uv run tools/preview_prices.py "$src"
+          done
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "=== site/preview 檔數 ==="
+          ls site/preview/ 2>/dev/null | wc -l
+          echo "=== per-ETF prices 最新日期 sample ==="
+          for f in site/preview/00981a-prices.json site/preview/00980a-prices.json; do
+            [ -f "$f" ] && python3 -c "
+import json
+d = json.load(open('$f'))
+print('$f:', 'as_of=', d.get('as_of'))
+"
+          done
+
+      - name: Commit and push
+        run: |
+          set -eo pipefail
+          git config user.name "marvin-69-jpg"
+          git config user.email "274374385+marvin-69-jpg@users.noreply.github.com"
+          git add site/preview/
+          if git diff --cached --quiet; then
+            echo "No site/preview changes to commit"
+            exit 0
+          fi
+          TODAY=$(date -u +%Y-%m-%d)
+          git commit -m "chore(preview): daily rebuild $TODAY" \
+                     -m "preview_all + preview_prices 跟隨 raw/cmoney/shares 更新"
+          git push
