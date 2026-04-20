@@ -129,6 +129,12 @@ uv run tools/preview_prices.py site/preview/00981a.json
 
 **通則**：cache key = 所有會影響輸出形狀的輸入欄位的聯集。這條寫進 memory `feedback_cache_key_must_cover_all_deps`，不只 preview 適用。
 
+### 🪤 Layer 3 後續：已污染檔案不會自己修好
+
+PR #24 修了 cache key，但 PR #23 run 已經把「新 first_date + 舊 3 點 series」寫進 `*-prices.json`。PR #24 merge 後的 run 檢查 `(as_of, first_date, source)` 三項全等 → 繼續 resume 3 點 → Pages 股價一直 3 點（PR #27 砍檔才解）。
+
+**修 cache key 的 SOP**：同一 PR 或下一個 PR 砍掉現存 `*-prices.json`（或對等的 cache 檔），強迫重抓。cache fix 只防**未來**污染，救不了**過去**。
+
 ### 🪤 Layer 4：GH Actions 不 cascade
 
 `daily-preview` push 後 `pages-deploy` **不會自動觸發**。GH Actions 的 default `GITHUB_TOKEN` 為避免遞迴刻意不 fire 後續 workflow。選一：
