@@ -888,7 +888,7 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
   }
   const nAdjusted = (ds.n_adds_total || 0) + (ds.n_reductions_total || 0);
   dailyCount.textContent = nAdjusted || '';
-  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 股數差 = 經理人當天動作（權重%會被股價漲跌 confound）`;
+  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 主數字＝Δ股數 × 當日收盤價 = 經理人當天投入/收回的資本（權重%會被股價漲跌 confound）`;
 
   const fmtShares = n => {
     if (n == null) return '—';
@@ -899,10 +899,36 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
   };
   const fmtDelta = n => (n > 0 ? '+' : '') + fmtShares(n);
   const fmtPct = p => (p == null ? '' : (p > 0 ? '+' : '') + p.toFixed(1) + '%');
+  // close on or before a given date (用於估算事件當日金額；揭露 T+1，無 close 落地時用最近一筆)
+  const closeOnOrBefore = (code, date) => {
+    const series = prices[code] || [];
+    if (!series.length) return null;
+    let last = null;
+    for (const p of series) {
+      if (!p.date) continue;
+      if (p.date <= date) last = p.close;
+      else break;
+    }
+    return last;
+  };
+  // 金額三段顯示：≥1 億 → "X.XX 億元"；≥1 萬 → "X 萬元"；其餘 "X 元"
+  const fmtNT = n => {
+    if (n == null) return null;
+    const abs = Math.abs(n);
+    const sign = n < 0 ? '-' : '';
+    if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + ' 億元';
+    if (abs >= 1e4) return sign + Math.round(abs / 1e4).toLocaleString() + ' 萬元';
+    return sign + Math.round(abs).toLocaleString() + ' 元';
+  };
 
   function cardRow(e, kind) {
     const cls = kind === 'add' ? 'add' : (kind === 'red' ? 'red' : '');
     const sign = kind === 'add' ? '+' : '';
+    const close = closeOnOrBefore(e.code, ds.latest_date);
+    const value = close != null ? e.delta * close : null;
+    const valueStr = value != null
+      ? (value > 0 ? '+' : '') + fmtNT(value)
+      : `${fmtDelta(e.delta)} 股`;  // 缺股價 fallback：標明「股」單位
     const pctStr = e.pct != null ? ` <span class="shares-line">(${fmtPct(e.pct)})</span>` : '';
     return `
       <div class="daily-card">
@@ -910,30 +936,36 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta ${cls}">${fmtDelta(e.delta)} 股${pctStr}</div>
-        <div class="shares-line">${fmtShares(e.prev_shares)} → ${fmtShares(e.shares)} · 權重 ${e.weight}%</div>
+        <div class="delta ${cls}">${valueStr}${pctStr}</div>
+        <div class="shares-line">${fmtDelta(e.delta)} 股 · ${fmtShares(e.prev_shares)} → ${fmtShares(e.shares)} · 權重 ${e.weight}%</div>
       </div>`;
   }
   function newCard(e) {
+    const close = closeOnOrBefore(e.code, ds.latest_date);
+    const value = close != null ? e.shares * close : null;
+    const valueStr = value != null ? fmtNT(value) : `${fmtShares(e.shares)} 股`;
     return `
       <div class="daily-card new">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta add">新建倉 ${fmtShares(e.shares)} 股</div>
-        <div class="shares-line">權重 ${e.weight}%</div>
+        <div class="delta add">新建倉 ${valueStr}</div>
+        <div class="shares-line">${fmtShares(e.shares)} 股 · 權重 ${e.weight}%</div>
       </div>`;
   }
   function exitCard(e) {
+    const close = closeOnOrBefore(e.code, ds.prev_date);
+    const value = close != null ? e.prev_shares * close : null;
+    const valueStr = value != null ? `（前一日約 ${fmtNT(value)}）` : `（前一日 ${fmtShares(e.prev_shares)} 股）`;
     return `
       <div class="daily-card exit">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta red">出清</div>
-        <div class="shares-line">前一日 ${fmtShares(e.prev_shares)} 股 · 權重 ${e.prev_weight}%</div>
+        <div class="delta red">出清 ${valueStr}</div>
+        <div class="shares-line">${fmtShares(e.prev_shares)} 股 · 權重 ${e.prev_weight}%</div>
       </div>`;
   }
 
@@ -1134,7 +1166,7 @@ function selectStock(code) {
   drawDetailChart(s, code);
   drawPnlCurve(s, code);
 
-  const events = detectEvents(s);
+  const events = detectEvents(s, code);
   evDiv.innerHTML = '';
   for (const e of events) {
     const div = document.createElement('div');
@@ -1220,29 +1252,51 @@ function renderPnlCard(code) {
   `;
 }
 
-function detectEvents(s) {
+function detectEvents(s, code) {
   if (!s.length) return [];
   const events = [];
   events.push({ type: 'ENTRY', date: s[0].date, weight: s[0].weight, note: '首次建倉' });
 
   // 用 shares delta 判 ADD/REDUCE（見 feedback_shares_not_weight_for_comparison memory）。
-  // ETF inflow 時 shares 增但 weight 可能持平甚至下降，weight delta 會漏判經理人實際加碼。
+  // 顯示用「金額 = Δshares × 當日 close」（見 feedback_show_value_not_pct_shares），
+  // pct 只當內部 noise filter，不直接 surface 給人看。
   // threshold：|Δshares / prev_shares| ≥ shares_pct_threshold（後端 daily_shares 同源，
   // 後端寫入 data.daily_shares.shares_pct_threshold；缺值則 fallback 3.0）。
   // 若 series 缺 shares（舊 cache），fallback 回 weight delta。
   const sharesPctThreshold = (data.daily_shares && data.daily_shares.shares_pct_threshold) || 3;
   const hasShares = s.some(p => typeof p.shares === 'number');
+  // 金額三段格式（同 daily card 邏輯）
+  const fmtNTNote = n => {
+    const abs = Math.abs(n);
+    const sign = n < 0 ? '-' : (n > 0 ? '+' : '');
+    if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + ' 億元';
+    if (abs >= 1e4) return sign + Math.round(abs / 1e4).toLocaleString() + ' 萬元';
+    return sign + Math.round(abs).toLocaleString() + ' 元';
+  };
+  const closeForCode = (date) => {
+    const series = (code && prices[code]) || [];
+    if (!series.length) return null;
+    let last = null;
+    for (const p of series) {
+      if (!p.date) continue;
+      if (p.date <= date) last = p.close;
+      else break;
+    }
+    return last;
+  };
   for (let i = 1; i < s.length; i++) {
     const cur = s[i], prev = s[i - 1];
     if (hasShares && typeof cur.shares === 'number' && typeof prev.shares === 'number' && prev.shares > 0) {
       const dShares = cur.shares - prev.shares;
       const pct = dShares / prev.shares * 100;
       if (Math.abs(pct) >= sharesPctThreshold) {
-        const sign = pct > 0 ? '+' : '';
-        const type = pct > 0 ? 'ADD' : 'REDUCE';
+        const type = dShares > 0 ? 'ADD' : 'REDUCE';
+        const close = closeForCode(cur.date);
+        const note = close != null
+          ? fmtNTNote(dShares * close)
+          : `${dShares > 0 ? '+' : ''}${Math.round(dShares).toLocaleString()} 股`;
         events.push({
-          type, date: cur.date, weight: cur.weight, from: prev.weight,
-          note: `${sign}${pct.toFixed(1)}% 股數`,
+          type, date: cur.date, weight: cur.weight, from: prev.weight, note,
         });
       }
     } else {
@@ -1429,7 +1483,7 @@ function drawDetailChart(s, code) {
   const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.weight).toFixed(1)}`).join(' ');
   svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.25"/>`);
 
-  const events = detectEvents(s);
+  const events = detectEvents(s, code);
   for (const e of events) {
     const i = s.findIndex(x => x.date === e.date);
     if (i < 0) continue;
