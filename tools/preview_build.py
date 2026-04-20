@@ -337,8 +337,34 @@ def load_latest_raw(etf: str) -> tuple[list[list], str]:
     return all_rows, f"{len(files)} batches merged ({len(all_rows)} rows)"
 
 
+def _load_shares_map(etf: str) -> dict[tuple[str, str], float]:
+    """(date, code) -> shares from raw/cmoney/shares/<etf>.json.
+
+    研究動機：series 裡權重受股價 confound，ETF inflow 時 shares 增但 weight 可能不動甚至降。
+    event detection 要用 shares 當 ground truth（見 feedback_shares_not_weight_for_comparison）。
+    schema: [date, code, name, weight, shares, unit]"""
+    path = Path(f"raw/cmoney/shares/{etf}.json")
+    if not path.exists():
+        return {}
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return {}
+    out: dict[tuple[str, str], float] = {}
+    for r in data.get("Data") or []:
+        if not r or len(r) < 5:
+            continue
+        d_str, ccode, _name, _w, sh = r[0], r[1], r[2], r[3], r[4]
+        try:
+            out[(d_str, ccode)] = float(sh) if sh not in (None, "") else 0.0
+        except Exception:
+            continue
+    return out
+
+
 def build(etf: str, min_days: int = 30) -> dict:
     rows, src = load_latest_raw(etf)
+    shares_map = _load_shares_map(etf)
     # rows: [date, name, weight(%), code]
     by_code: dict[str, list[dict]] = {}
     name_of: dict[str, str] = {}
@@ -352,7 +378,11 @@ def build(etf: str, min_days: int = 30) -> dict:
             continue
         if not code or not date:
             continue
-        by_code.setdefault(code, []).append({"date": date, "weight": weight})
+        entry = {"date": date, "weight": weight}
+        sh = shares_map.get((date, code))
+        if sh is not None:
+            entry["shares"] = sh
+        by_code.setdefault(code, []).append(entry)
         name_of[code] = name
 
     for code in by_code:
