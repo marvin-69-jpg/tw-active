@@ -135,6 +135,17 @@ PR #24 修了 cache key，但 PR #23 run 已經把「新 first_date + 舊 3 點 
 
 **修 cache key 的 SOP**：同一 PR 或下一個 PR 砍掉現存 `*-prices.json`（或對等的 cache 檔），強迫重抓。cache fix 只防**未來**污染，救不了**過去**。
 
+### 🪤 Layer 2↔3：P&L 需要 preview_build 跑兩次
+
+`preview_build._compute_stock_pnl` 需要 `raw/cmoney/shares/<etf>.json` **和** `site/preview/<etf>-prices.json` 都存在才算。workflow 預設順序：
+
+1. `preview_all` (→ `preview_build`) — prices 檔還沒建 → `pnl=None`
+2. `preview_prices` — 才建 prices
+
+首次 run 或 prices 被砍（如 PR #27）後，pass 1 算不出 P&L。舊版 workflow 沒 pass 2 → Pages P&L 視圖全空。
+
+**正解**：workflow 加 pass 2，prices 完成後再 `preview_all` 一次（PR #29）。多 ~30 秒但把依賴寫明。以前沒顯形是因為磁碟上老是有舊 `*-prices.json`（即使 3 點）讓 preview_build 找得到 → 雖然 P&L 算得爛但不是 None。
+
 ### 🪤 Layer 4：GH Actions 不 cascade
 
 `daily-preview` push 後 `pages-deploy` **不會自動觸發**。GH Actions 的 default `GITHUB_TOKEN` 為避免遞迴刻意不 fire 後續 workflow。選一：
