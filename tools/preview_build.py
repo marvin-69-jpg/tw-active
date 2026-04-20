@@ -133,21 +133,24 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
     }
 
 
-def _compute_stock_pnl(etf: str) -> dict | None:
+def _compute_stock_pnl(etf: str) -> tuple[dict, dict, list[str]] | None:
     """Per-stock P&L from shares × close price.
 
     研究動機：權重% 被股價漲跌 confound，光看權重軌跡看不出實際賺賠。
     有了股數（raw/cmoney/shares/）× 股價（preview_prices FinMind）就能算：
       CF_t = -Δshares_t × close_t          # buy → 負, sell → 正
-      MV_now = shares_latest × close_latest
-      Total P&L = MV_now + Σ CF_t          # 未實現 + 已實現
-      cost_basis = Σ max(0, -CF_t)         # 累計買入成本（母分）
-      return_pct = P&L / cost_basis
+      MV_t = shares_t × close_t
+      Total P&L_t = MV_t + Σ_{s≤t} CF_s    # 每日累計（未實現 + 已實現）
+      cost_basis = Σ max(0, -CF_t)         # 累計買入成本
+      return_pct = P&L_final / cost_basis
 
     假設：當日揭露的 shares 變動發生在那日盤中/收盤，用該日 close 當成交價。
     無股價的日子（FinMind 缺值）記 missing_price_days，P&L 略偏。
 
-    回 {code: {...}} 或 None（缺檔）。"""
+    回 (summary_dict, curves_dict, dates_list) 或 None（缺檔）。
+      summary_dict: {code: {has_prices, pnl, pnl_pct, mv_now, cost_basis, ...}}
+      curves_dict:  {code: [int_pnl_at_date_i for i in 0..len(dates)-1]} (只含 has_prices=true)
+      dates_list:   [YYYYMMDD, ...] ETF 全交易日軸（跨 stocks 共用）"""
     shares_path = Path(f"raw/cmoney/shares/{etf}.json")
     prices_path = Path(f"site/preview/{etf.lower()}-prices.json")
     if not shares_path.exists() or not prices_path.exists():
@@ -176,11 +179,27 @@ def _compute_stock_pnl(etf: str) -> dict | None:
 
     prices_by_code = prices_data.get("prices") or {}
 
+    # 全交易日軸：所有股票 shares 紀錄日期的聯集（CMoney 每日都報 → 即 ETF 交易日集合）
+    all_dates: list[str] = sorted({d for s in by_code.values() for d, _ in s})
+
+    def _close_on_or_before(price_series: list[dict], d: str) -> float | None:
+        # 線性掃（price_series 已排序 asc）：找 ≤ d 的最後一筆 close
+        last = None
+        for p in price_series:
+            pd = p.get("date")
+            if pd and pd <= d:
+                last = p.get("close")
+            elif pd and pd > d:
+                break
+        return last
+
     result: dict[str, dict] = {}
+    curves: dict[str, list[int]] = {}
     for code, series in by_code.items():
         price_series = prices_by_code.get(code) or []
         has_prices = len(price_series) > 0
         price_map = {p["date"]: p["close"] for p in price_series if p.get("date")}
+        shares_on = {d: sh for d, sh in series}
 
         prev_shares = 0.0
         cash_flow = 0.0
@@ -193,12 +212,7 @@ def _compute_stock_pnl(etf: str) -> dict | None:
                 total_delta_days += 1
                 close = price_map.get(d_str)
                 if close is None:
-                    # 找 ≤ d_str 最近一筆 close 當 fallback（停牌/缺值）
-                    close = next(
-                        (p["close"] for p in reversed(price_series)
-                         if p.get("date") and p["date"] <= d_str),
-                        None,
-                    )
+                    close = _close_on_or_before(price_series, d_str)
                     if close is None:
                         missing_price_days += 1
                 if close is not None:
@@ -237,7 +251,29 @@ def _compute_stock_pnl(etf: str) -> dict | None:
             "missing_price_days": missing_price_days,
             "total_delta_days": total_delta_days,
         }
-    return result
+
+        # 累計 P&L 曲線（對齊 all_dates）
+        # walk through ETF date axis，每日算 cf_cum + mv_t（shares_t × last_known_close）
+        curve: list[int] = []
+        cf_cum = 0.0
+        last_shares = 0.0
+        last_close = None
+        for d in all_dates:
+            cur_shares = shares_on.get(d, last_shares)  # 缺值 carry forward（理論上 CMoney 每日都有）
+            delta = cur_shares - last_shares
+            close_today = price_map.get(d)
+            if close_today is None:
+                close_today = _close_on_or_before(price_series, d)
+            if delta != 0 and close_today is not None:
+                cf_cum += -delta * close_today
+            if close_today is not None:
+                last_close = close_today
+            mv = cur_shares * last_close if (last_close is not None and cur_shares > 0) else 0.0
+            curve.append(int(round(mv + cf_cum)))
+            last_shares = cur_shares
+        curves[code] = curve
+
+    return result, curves, all_dates
 
 
 ISSUER_OF = {
@@ -372,6 +408,11 @@ def build(etf: str, min_days: int = 30) -> dict:
     exited_codes.sort(key=lambda c: exit_date.get(c, ""), reverse=True)
 
     name, issuer = ISSUER_OF.get(etf, (etf, ""))
+    pnl_tuple = _compute_stock_pnl(etf)
+    if pnl_tuple is not None:
+        pnl_summary, pnl_curves, pnl_dates = pnl_tuple
+    else:
+        pnl_summary, pnl_curves, pnl_dates = None, None, None
     out = {
         "etf": {"code": etf, "name": name, "issuer": issuer},
         "as_of": as_of,
@@ -386,7 +427,9 @@ def build(etf: str, min_days: int = 30) -> dict:
         "days_held": {k: days_held[k] for k in series_out},
         "is_new": is_new,  # {code: true} only for brand-new positions
         "daily_shares": _load_daily_shares_delta(etf),
-        "pnl": _compute_stock_pnl(etf),
+        "pnl": pnl_summary,
+        "pnl_curve_dates": pnl_dates,
+        "pnl_curves": pnl_curves,
         "_source_file": src,
     }
     return out

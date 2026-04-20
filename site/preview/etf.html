@@ -272,6 +272,18 @@
     .pnl-card .v { font-size: 14px; }
   }
   #detail-chart { width: 100%; height: 220px; display: block; }
+  #detail-pnl-chart { width: 100%; height: 100px; display: block; margin-top: 4px; }
+  .pnl-chart-label {
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 8px;
+    margin-bottom: 2px;
+    display: flex;
+    justify-content: space-between;
+  }
+  .pnl-chart-label .final.gain { color: var(--accent); }
+  .pnl-chart-label .final.loss { color: var(--accent-down); }
   .chart-legend {
     display: flex;
     gap: 16px;
@@ -700,6 +712,8 @@
           <span><span class="swatch price"></span>收盤價 NT$（右軸）</span>
         </div>
         <svg id="detail-chart"></svg>
+        <div class="pnl-chart-label" id="pnl-chart-label" style="display:none"></div>
+        <svg id="detail-pnl-chart" style="display:none"></svg>
         <div class="events" id="events"></div>
       </div>
     </div>
@@ -1039,6 +1053,8 @@ function selectStock(code) {
     svg.style.display = 'none';
     if (legend) legend.style.display = 'none';
     evDiv.style.display = 'none';
+    $('detail-pnl-chart').style.display = 'none';
+    $('pnl-chart-label').style.display = 'none';
     let note = document.getElementById('new-note');
     if (!note) {
       note = document.createElement('div');
@@ -1116,6 +1132,7 @@ function selectStock(code) {
   if (note) note.style.display = 'none';
 
   drawDetailChart(s, code);
+  drawPnlCurve(s, code);
 
   const events = detectEvents(s);
   evDiv.innerHTML = '';
@@ -1222,6 +1239,110 @@ function detectEvents(s) {
   events.push({ type: 'PEAK', date: s[peakIdx].date, weight: maxW, note: '歷史高' });
 
   return events.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// ============= P&L curve chart (detail, 第二軸) =============
+// 每日 P&L_t = shares_t × close_t + Σ_{s≤t} CF_s
+// 股價漲/跌 + 加碼/減碼 合成的單股累計損益曲線
+// 零線以上綠色 / 以下紅色區域填色；最終值右下角標出
+function drawPnlCurve(s, code) {
+  const svg = $('detail-pnl-chart');
+  const label = $('pnl-chart-label');
+  const curveAll = (data.pnl_curves || {})[code];
+  const curveDates = data.pnl_curve_dates || [];
+  if (!curveAll || !curveDates.length || !s.length) {
+    svg.style.display = 'none';
+    label.style.display = 'none';
+    return;
+  }
+  // 對齊主 chart x-axis：取 s.dates 對應的 pnl 值
+  const dateIdx = new Map(curveDates.map((d, i) => [d, i]));
+  const pts = s.map(p => {
+    const i = dateIdx.get(p.date);
+    return i == null ? null : curveAll[i];
+  });
+  // 如果整段都是 null 或 0，不畫
+  const valid = pts.filter(v => v != null);
+  if (valid.length < 2) {
+    svg.style.display = 'none';
+    label.style.display = 'none';
+    return;
+  }
+
+  svg.style.display = '';
+  label.style.display = '';
+  svg.innerHTML = '';
+
+  const W = svg.clientWidth || 800, H = 100;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  const pad = { l: 44, r: 44, t: 10, b: 18 };
+  const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
+
+  const vMax = Math.max(...valid, 0);
+  const vMin = Math.min(...valid, 0);
+  const range = vMax - vMin || 1;
+  const n = pts.length;
+  const x = i => pad.l + (i / Math.max(n - 1, 1)) * w;
+  const y = v => pad.t + (1 - (v - vMin) / range) * h;
+  const y0 = y(0);
+
+  // Zero reference line
+  svg.insertAdjacentHTML('beforeend',
+    `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y0}" y2="${y0}" stroke="#ccc" stroke-width="1" stroke-dasharray="2 3"/>`);
+
+  // 區域 fill：綠色（上）、紅色（下）
+  // 把路徑切成 segments，每個 segment 從左到右連續但在 zero 處斷開
+  let areaUp = `M${pad.l},${y0}`;
+  let areaDown = `M${pad.l},${y0}`;
+  for (let i = 0; i < n; i++) {
+    const v = pts[i] ?? 0;
+    const vClampedUp = Math.max(0, v);
+    const vClampedDown = Math.min(0, v);
+    areaUp += `L${x(i).toFixed(1)},${y(vClampedUp).toFixed(1)}`;
+    areaDown += `L${x(i).toFixed(1)},${y(vClampedDown).toFixed(1)}`;
+  }
+  areaUp += `L${x(n - 1).toFixed(1)},${y0}Z`;
+  areaDown += `L${x(n - 1).toFixed(1)},${y0}Z`;
+  svg.insertAdjacentHTML('beforeend', `<path d="${areaUp}" fill="#0b6b3a" fill-opacity="0.12" stroke="none"/>`);
+  svg.insertAdjacentHTML('beforeend', `<path d="${areaDown}" fill="#8f2e2e" fill-opacity="0.12" stroke="none"/>`);
+
+  // 主線
+  let d = '';
+  for (let i = 0; i < n; i++) {
+    const v = pts[i];
+    if (v == null) continue;
+    d += `${d === '' ? 'M' : 'L'}${x(i).toFixed(1)},${y(v).toFixed(1)} `;
+  }
+  svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#2d3436" stroke-width="1.25"/>`);
+
+  // 左軸 label：max / min
+  const fmtAxis = v => {
+    const abs = Math.abs(v);
+    if (abs >= 1e8) return (v / 1e8).toFixed(1) + '億';
+    if (abs >= 1e4) return (v / 1e4).toFixed(0) + '萬';
+    return Math.round(v).toLocaleString();
+  };
+  svg.insertAdjacentHTML('beforeend', `
+    <text x="${pad.l - 6}" y="${y(vMax) + 3}" fill="#888" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${fmtAxis(vMax)}</text>
+    <text x="${pad.l - 6}" y="${y(vMin) + 3}" fill="#888" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${fmtAxis(vMin)}</text>
+    <text x="${pad.l - 6}" y="${y0 + 3}" fill="#aaa" font-size="9" text-anchor="end" font-family="ui-monospace, monospace">0</text>
+  `);
+
+  // 右軸：final 值
+  const finalV = valid[valid.length - 1];
+  const finalColor = finalV > 0 ? '#0b6b3a' : finalV < 0 ? '#8f2e2e' : '#888';
+  svg.insertAdjacentHTML('beforeend', `
+    <text x="${W - pad.r + 4}" y="${y(finalV) + 3}" fill="${finalColor}" font-size="10" font-family="ui-monospace, monospace">${(finalV > 0 ? '+' : '') + fmtAxis(finalV)}</text>
+  `);
+
+  // 上方 label 行
+  const peakV = Math.max(...valid);
+  const troughV = Math.min(...valid);
+  const finalCls = finalV > 0 ? 'gain' : finalV < 0 ? 'loss' : '';
+  label.innerHTML = `
+    <span>累計損益 · shares × close - 累計成本</span>
+    <span>峰值 <span class="mono">${(peakV >= 0 ? '+' : '') + fmtAxis(peakV)}</span> · 谷值 <span class="mono">${(troughV >= 0 ? '+' : '') + fmtAxis(troughV)}</span> · 目前 <span class="mono final ${finalCls}">${(finalV > 0 ? '+' : '') + fmtAxis(finalV)}</span></span>
+  `;
 }
 
 function drawDetailChart(s, code) {
