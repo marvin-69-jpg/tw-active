@@ -147,6 +147,19 @@
   table.holdings td.delta { font-family: ui-monospace, monospace; text-align: right; width: 70px; font-size: 12px; }
   .delta.up { color: var(--accent); }
   .delta.down { color: var(--accent-down); }
+  table.holdings td.pnl { font-family: ui-monospace, monospace; text-align: right; width: 110px; font-size: 12px; line-height: 1.4; }
+  table.holdings td.pnl .amt { font-size: 12px; }
+  table.holdings td.pnl .pct { font-size: 10px; color: var(--ink-soft); display: block; }
+  table.holdings td.pnl.gain .amt { color: var(--accent); }
+  table.holdings td.pnl.gain .pct { color: var(--accent); }
+  table.holdings td.pnl.loss .amt { color: var(--accent-down); }
+  table.holdings td.pnl.loss .pct { color: var(--accent-down); }
+  table.holdings td.pnl.na { color: var(--ink-soft); font-size: 11px; }
+  table.holdings th.sortable { cursor: pointer; user-select: none; }
+  table.holdings th.sortable:hover { color: var(--ink); }
+  table.holdings th.sortable .arrow { color: var(--ink-soft); margin-left: 2px; font-size: 9px; }
+  table.holdings th.sortable.active { color: var(--ink); }
+  table.holdings th.sortable.active .arrow { color: var(--ink); }
 
   /* Small multiples grid — wrap downward, no horizontal scroll */
   .sm-strip-wrap { padding-bottom: 8px; }
@@ -587,15 +600,16 @@
   <section class="panel active" data-panel="current">
     <p class="panel-title">目前權重 &gt; 1% 的倉位 · 對齊 SITCA IN2630 季報揭露門檻 · 點列切到「單股進出場」</p>
     <div class="holdings-wrap">
-      <table class="holdings">
+      <table class="holdings" id="holdings-table">
         <thead>
           <tr>
             <th>code</th>
             <th>name</th>
-            <th style="text-align:right">weight</th>
+            <th class="sortable active" data-sort="weight" style="text-align:right">weight<span class="arrow">▼</span></th>
             <th>30d trend</th>
-            <th style="text-align:right">Δ7d</th>
+            <th class="sortable" data-sort="delta7" style="text-align:right">Δ7d<span class="arrow"></span></th>
             <th>since</th>
+            <th class="sortable" data-sort="pnl" style="text-align:right">P&amp;L<span class="arrow"></span></th>
           </tr>
         </thead>
         <tbody id="holdings-tbody"></tbody>
@@ -699,27 +713,91 @@ function switchTab(name) {
 const WEIGHT_THRESHOLD = 1.0; // % — 對齊 SITCA IN2630 ≥1% 揭露規則
 const mainHoldings = data.current.filter(h => h.weight > WEIGHT_THRESHOLD);
 const tbody = $('holdings-tbody');
-for (const h of mainHoldings) {
-  const s = data.series[h.code] || [];
-  const sparkSvg = renderSparkline(s.slice(-30), 150, 32);
-  const delta7 = deltaDays(s, 7);
-  const deltaCls = delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : '';
-  const deltaStr = delta7 !== null ? `${delta7 > 0 ? '+' : ''}${delta7.toFixed(2)}pp` : '—';
-  const firstDate = s.length ? fmt(s[0].date) : '—';
 
-  const newTag = isNew[h.code] ? '<span class="tag-new">NEW</span>' : '';
-  const tr = document.createElement('tr');
-  tr.innerHTML = `
-    <td class="code">${h.code}</td>
-    <td class="name">${h.name}${newTag}</td>
-    <td class="weight">${h.weight.toFixed(2)}%</td>
-    <td class="spark">${sparkSvg}</td>
-    <td class="delta ${deltaCls}">${deltaStr}</td>
-    <td class="since">${firstDate}</td>
-  `;
-  tr.onclick = () => { selectStock(h.code); switchTab('stock'); };
-  tbody.appendChild(tr);
+// 預先算出 rows 資料，sort 時重排 DOM
+// P&L 用 data.pnl[code] — 由 tools/preview_build.py _compute_stock_pnl 算好
+const pnlMap = data.pnl || {};
+function fmtPnlNT(v) {
+  const abs = Math.abs(v);
+  if (abs >= 1e8) return (v / 1e8).toFixed(2) + '億';
+  if (abs >= 1e4) return (v / 1e4).toFixed(0) + '萬';
+  return Math.round(v).toLocaleString();
 }
+const rowsData = mainHoldings.map(h => {
+  const s = data.series[h.code] || [];
+  const delta7 = deltaDays(s, 7);
+  const pnl = pnlMap[h.code] || null;
+  return { h, s, delta7, pnl };
+});
+
+function renderRows(sortKey, desc) {
+  const sorted = [...rowsData].sort((a, b) => {
+    let av, bv;
+    if (sortKey === 'weight') { av = a.h.weight; bv = b.h.weight; }
+    else if (sortKey === 'delta7') { av = a.delta7 ?? -Infinity; bv = b.delta7 ?? -Infinity; }
+    else if (sortKey === 'pnl') {
+      // has_prices 優先；non-TW / 無股價排到底
+      av = (a.pnl && a.pnl.has_prices) ? a.pnl.pnl : -Infinity;
+      bv = (b.pnl && b.pnl.has_prices) ? b.pnl.pnl : -Infinity;
+    }
+    return desc ? bv - av : av - bv;
+  });
+  tbody.innerHTML = '';
+  for (const { h, s, delta7, pnl } of sorted) {
+    const sparkSvg = renderSparkline(s.slice(-30), 150, 32);
+    const deltaCls = delta7 > 0 ? 'up' : delta7 < 0 ? 'down' : '';
+    const deltaStr = delta7 !== null ? `${delta7 > 0 ? '+' : ''}${delta7.toFixed(2)}pp` : '—';
+    const firstDate = s.length ? fmt(s[0].date) : '—';
+    const newTag = isNew[h.code] ? '<span class="tag-new">NEW</span>' : '';
+
+    let pnlCell;
+    if (pnl && pnl.has_prices) {
+      const cls = pnl.pnl > 0 ? 'gain' : pnl.pnl < 0 ? 'loss' : '';
+      const sign = pnl.pnl > 0 ? '+' : '';
+      const pctStr = pnl.pnl_pct == null ? '—' : `${pnl.pnl_pct > 0 ? '+' : ''}${pnl.pnl_pct.toFixed(1)}%`;
+      pnlCell = `<td class="pnl ${cls}"><span class="amt">${sign}${fmtPnlNT(pnl.pnl)}</span><span class="pct">${pctStr}</span></td>`;
+    } else {
+      pnlCell = `<td class="pnl na">—</td>`;
+    }
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="code">${h.code}</td>
+      <td class="name">${h.name}${newTag}</td>
+      <td class="weight">${h.weight.toFixed(2)}%</td>
+      <td class="spark">${sparkSvg}</td>
+      <td class="delta ${deltaCls}">${deltaStr}</td>
+      <td class="since">${firstDate}</td>
+      ${pnlCell}
+    `;
+    tr.onclick = () => { selectStock(h.code); switchTab('stock'); };
+    tbody.appendChild(tr);
+  }
+}
+
+// 預設：weight desc
+let curSort = { key: 'weight', desc: true };
+renderRows(curSort.key, curSort.desc);
+
+// 點 th 切排序
+document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
+  th.addEventListener('click', () => {
+    const key = th.dataset.sort;
+    if (curSort.key === key) curSort.desc = !curSort.desc;
+    else curSort = { key, desc: true };
+    document.querySelectorAll('#holdings-table th.sortable').forEach(x => {
+      const arrow = x.querySelector('.arrow');
+      if (x.dataset.sort === curSort.key) {
+        x.classList.add('active');
+        arrow.textContent = curSort.desc ? '▼' : '▲';
+      } else {
+        x.classList.remove('active');
+        arrow.textContent = '';
+      }
+    });
+    renderRows(curSort.key, curSort.desc);
+  });
+});
 
 // ============= Daily single-day delta =============
 // 讀 data.daily_shares：最新交易日 vs 上一個交易日的股數變動。
