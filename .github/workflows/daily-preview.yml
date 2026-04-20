@@ -72,6 +72,15 @@ jobs:
             uv run tools/preview_prices.py "$src"
           done
 
+      - name: Rebuild preview per-ETF JSON (pass 2, now with prices for P&L)
+        # preview_build._compute_stock_pnl needs <etf>-prices.json to exist.
+        # Pass 1 runs before prices exist (or with stale ones), so pnl ends up
+        # None / based on bad data. Re-run after prices are fresh.
+        run: |
+          set -eo pipefail
+          CODES=$(ls raw/cmoney/shares/ | grep -E '^[0-9]{5}[A-Z]\.json$' | sed 's/\.json$//' | tr '\n' ' ')
+          uv run tools/preview_all.py $CODES
+
       - name: Summary
         if: always()
         run: |
