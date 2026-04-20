@@ -3,131 +3,282 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>主動 ETF 的共識圈 — tw-active</title>
-<meta name="description" content="21 檔台灣主動型 ETF 的共識持股排行：誰都在押台積電？誰是孤股？" />
-<link rel="stylesheet" href="./assets/style.css" />
+<title>如何觀察主動型 ETF — tw-active</title>
+<meta name="description" content="5 個角度觀察台灣主動型 ETF：共識圈、折溢價時序、贏家排行、新建倉、出清合集。" />
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #6b6b6b;
+    --ink-mute: #9a9a9a;
+    --rule: #e0e0e0;
+    --rule-strong: #a0a0a0;
+    --accent: #0b6b3a;
+    --accent-down: #8f2e2e;
+    --paper: #fafaf7;
+    --panel-bg: #ffffff;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, "Noto Sans Mono TC", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  header.site-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+  }
+  header.site-head .brand { color: var(--ink); font-weight: 600; }
+  header.site-head nav a {
+    color: var(--ink-soft);
+    text-decoration: none;
+    margin-left: 16px;
+  }
+  header.site-head nav a:hover { color: var(--ink); }
+
+  main {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  /* Hero */
+  .hero {
+    border-bottom: 1px solid var(--rule-strong);
+    padding-bottom: 24px;
+    margin-bottom: 8px;
+  }
+  .hero .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink-soft);
+    letter-spacing: 0.02em;
+    margin-bottom: 10px;
+  }
+  .hero h1 {
+    font-size: clamp(24px, 4vw, 32px);
+    font-weight: 600;
+    margin: 0 0 12px;
+    letter-spacing: -0.01em;
+  }
+  .hero p.lede {
+    color: var(--ink-soft);
+    max-width: 680px;
+    margin: 0;
+  }
+  .hero p.lede b { color: var(--ink); font-weight: 600; }
+
+  /* Card grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 32px;
+  }
+  @media (max-width: 720px) {
+    .cards { grid-template-columns: 1fr; }
+  }
+  .card {
+    display: flex;
+    flex-direction: column;
+    background: var(--panel-bg);
+    padding: 20px 22px 18px;
+    color: inherit;
+    text-decoration: none;
+    position: relative;
+    min-height: 200px;
+    transition: background 0.12s;
+  }
+  .card:hover { background: #f5f5f1; }
+  .card.disabled { cursor: default; }
+  .card.disabled:hover { background: var(--panel-bg); }
+
+  .card .num {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    letter-spacing: 0.05em;
+    margin-bottom: 6px;
+  }
+  .card h2 {
+    font-size: 17px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    color: var(--ink);
+    letter-spacing: -0.005em;
+  }
+  .card .question {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+    line-height: 1.5;
+  }
+  .card .kpi {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+    border-top: 1px dashed var(--rule);
+    padding-top: 10px;
+    margin-top: auto;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    column-gap: 10px;
+    row-gap: 2px;
+    line-height: 1.5;
+  }
+  .card .kpi .k { color: var(--ink-mute); }
+  .card .kpi .v { color: var(--ink); }
+  .card .cta {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    margin-top: 12px;
+  }
+  .card.disabled .cta { color: var(--ink-mute); }
+  .card .tag-soon {
+    position: absolute;
+    top: 16px;
+    right: 20px;
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    border: 1px solid var(--rule-strong);
+    padding: 1px 6px;
+    letter-spacing: 0.05em;
+  }
+
+  /* Footer */
+  footer.site-foot {
+    max-width: 1000px;
+    margin: 48px auto 0;
+    padding: 16px 24px 24px;
+    border-top: 1px solid var(--rule);
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+  footer.site-foot a { color: var(--ink-soft); text-decoration: none; }
+  footer.site-foot a:hover { color: var(--ink); }
+  footer.site-foot .disclaimer { margin-top: 4px; color: var(--ink-mute); }
+</style>
 </head>
 <body>
-<header class="site-header">
-  <div class="brand">
-    <span class="dot"></span>
-    <a href="./">tw-active</a>
-    <span class="sep">/</span>
-    <span class="crumb">共識圈</span>
-  </div>
-  <nav class="site-nav">
+
+<header class="site-head">
+  <div class="brand">tw-active / 觀察策略</div>
+  <nav>
     <a href="https://github.com/marvin-69-jpg/tw-active" target="_blank" rel="noopener">GitHub</a>
     <a href="https://threads.net/@opus_666999" target="_blank" rel="noopener">Threads</a>
   </nav>
 </header>
 
 <main>
+
 <section class="hero">
-  <h1>主動 ETF 的<span class="hl">共識圈</span></h1>
+  <div class="eyebrow">HOW TO OBSERVE</div>
+  <h1>如何觀察主動型 ETF</h1>
   <p class="lede">
-    台灣 21 檔主動型 ETF 在最新交易日都壓在哪些股票？
-    <strong>共識越深，「主動」越接近「大家一起賭」</strong>——
-    這張圖把這件事直接攤出來。
-  </p>
-  <div class="meta-line">
-    <span>資料日 <time id="as-of">—</time></span>
-    <span class="sep">·</span>
-    <span>來源：投信官網 + 第三方資料彙整服務</span>
-  </div>
-</section>
-
-<section class="kpi-grid">
-  <div class="kpi">
-    <div class="kpi-value" id="kpi-n"></div>
-    <div class="kpi-label">追蹤 ETF 檔數</div>
-    <div class="kpi-hint">全市場主動股票型 ETF</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-value" id="kpi-all-in"></div>
-    <div class="kpi-label">「全員押注」股數</div>
-    <div class="kpi-hint">21 檔全部都持有的股票</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-value" id="kpi-majority"></div>
-    <div class="kpi-label">「過半共識」股數</div>
-    <div class="kpi-hint">被 ≥11 檔持有</div>
-  </div>
-  <div class="kpi">
-    <div class="kpi-value" id="kpi-solo"></div>
-    <div class="kpi-label">「唯一信仰」股數</div>
-    <div class="kpi-hint">只有 1 檔押注的孤股</div>
-  </div>
-</section>
-
-<section class="glossary">
-  <h3>怎麼讀這張圖</h3>
-  <dl>
-    <dt>權重</dt>
-    <dd>一支股票佔一檔 ETF 資產的百分比。比方說 00981A 買了 9.5% 的台積電，就是說這檔 ETF 每 100 元裡有 9.5 元是台積電。</dd>
-    <dt>平均權重</dt>
-    <dd>21 檔 ETF 裡，<b>有買這支股票的那些</b>每檔平均配了多少百分比（沒買的不算進來）。數字越大代表買的人下手越重。</dd>
-    <dt>總權重</dt>
-    <dd>所有持有這支股票的 ETF 權重加起來。可以想成「主動經理人對這支股的集體火力」。</dd>
-    <dt>被幾檔 ETF 持有</dt>
-    <dd>這支股票出現在幾檔主動 ETF 的持股名單裡。21 / 21 = 全員押注。</dd>
-    <dt>顯示前 N 名</dt>
-    <dd>依照你選的排序方式，從最高開始列 N 支股票。N 是 30 / 50 / 100 選一個。</dd>
-  </dl>
-</section>
-
-<section class="controls">
-  <label class="control">
-    <span>排序方式</span>
-    <select id="sort-by">
-      <option value="held_by">被最多檔 ETF 買到</option>
-      <option value="avg_weight">平均權重（下手最重）</option>
-      <option value="total_weight">總權重（集體火力最強）</option>
-    </select>
-  </label>
-  <label class="control">
-    <span>只看至少被 <b id="min-held-label">2</b> 檔持有的股票</span>
-    <input type="range" id="min-held" min="1" max="21" value="2" />
-  </label>
-  <label class="control">
-    <span>看前</span>
-    <select id="top-n">
-      <option value="30">30 名</option>
-      <option value="50" selected>50 名</option>
-      <option value="100">100 名</option>
-    </select>
-  </label>
-</section>
-
-<section class="chart-wrap">
-  <div id="chart" aria-label="主動 ETF 共識股排行圖"></div>
-  <aside id="panel" class="panel empty">
-    <div class="panel-empty">點任一橫條，看哪幾檔 ETF 持有這支股票</div>
-  </aside>
-</section>
-
-<section class="footnote">
-  <p>
-    <b>橫條怎麼看</b>：每一條代表一支股票。<b>橫條長度</b>是被幾檔主動 ETF 持有（越長代表共識越廣），
-    <b>顏色深淺</b>是平均權重（越深代表每檔買的人下手越重）。越上面、越深紅，代表「主動經理人共識最深」——
-    但也意味著這些標的的 alpha 可能被搶完了。
-  </p>
-  <p>
-    <b>限制</b>：資料為最新一日揭露快照，不包含股數、現金部位、期貨與債券。
-    跨國 ETF（美股 / 全球 AI / 美國科技）拉低「全員押注」數字 —— 21 檔裡有
-    4 檔是跨境主動 ETF，不在台股宇宙。
+    台灣 21 檔主動型 ETF，不是同一個東西——每檔的策略、倉位動作、市場定價都不同。
+    這裡列出 <b>5 個觀察角度</b>，每個角度都指向一張可以交互的資料頁。
+    研究立場：<b>機制如何運作、哪裡有破洞</b>，不是推薦買或不買。
   </p>
 </section>
+
+<section class="cards">
+
+  <a class="card" href="./observe/consensus.html">
+    <div class="num">01 / CONSENSUS</div>
+    <h2>共識圈</h2>
+    <p class="question">21 檔 ETF 都在押哪些股票？共識越深，代表 alpha 可能被搶完。</p>
+    <div class="kpi">
+      <span class="k">資料範圍</span><span class="v">21 檔 / 最新交易日</span>
+      <span class="k">看點</span><span class="v">全員押注 vs 孤股</span>
+    </div>
+    <div class="cta">進入觀察 →</div>
+  </a>
+
+  <a class="card disabled">
+    <div class="tag-soon">SOON</div>
+    <div class="num">02 / PREMIUM</div>
+    <h2>折溢價時序</h2>
+    <p class="question">每檔 ETF 收盤價 vs 淨值的時序。溢價持續為正＝申贖套利機制失靈的訊號。</p>
+    <div class="kpi">
+      <span class="k">資料範圍</span><span class="v">21 檔 × 217 天</span>
+      <span class="k">看點</span><span class="v">誰常態溢價 / 折價</span>
+    </div>
+    <div class="cta">即將上線</div>
+  </a>
+
+  <a class="card disabled">
+    <div class="tag-soon">SOON</div>
+    <div class="num">03 / WINNERS</div>
+    <h2>贏家 ETF 排行</h2>
+    <p class="question">用股數 × 收盤計算每檔 ETF 的累積損益，排除權重被股價 confound 的問題。</p>
+    <div class="kpi">
+      <span class="k">資料範圍</span><span class="v">21 檔 / 自建倉起</span>
+      <span class="k">看點</span><span class="v">誰真的賺了錢</span>
+    </div>
+    <div class="cta">即將上線</div>
+  </a>
+
+  <a class="card disabled">
+    <div class="tag-soon">SOON</div>
+    <div class="num">04 / NEW POSITIONS</div>
+    <h2>新建倉合集</h2>
+    <p class="question">近 7 / 30 天，21 檔 ETF 總共在哪些股票開新倉？誰最早、誰跟隨？</p>
+    <div class="kpi">
+      <span class="k">資料範圍</span><span class="v">21 檔 / 每日揭露</span>
+      <span class="k">看點</span><span class="v">主動經理人新共識</span>
+    </div>
+    <div class="cta">即將上線</div>
+  </a>
+
+  <a class="card disabled">
+    <div class="tag-soon">SOON</div>
+    <div class="num">05 / EXITS</div>
+    <h2>出清合集</h2>
+    <p class="question">近 7 / 30 天，21 檔 ETF 把哪些股票完全清出？誰最先跑、誰最後撤？</p>
+    <div class="kpi">
+      <span class="k">資料範圍</span><span class="v">21 檔 / 每日揭露</span>
+      <span class="k">看點</span><span class="v">主動經理人撤退訊號</span>
+    </div>
+    <div class="cta">即將上線</div>
+  </a>
+
+  <div class="card disabled" aria-hidden="true" style="background: transparent; min-height: 0; padding: 20px 22px; color: var(--ink-mute);">
+    <div class="num">— / MORE</div>
+    <p class="question" style="margin: 0;">更多觀察角度持續增加中。有想看的切面？
+      <a href="https://github.com/marvin-69-jpg/tw-active/issues" target="_blank" rel="noopener" style="color: var(--ink-soft);">開 issue →</a>
+    </p>
+  </div>
+
+</section>
+
 </main>
 
-<footer class="site-footer">
-  <p>
+<footer class="site-foot">
+  <div>
     由 AI agent <a href="https://github.com/marvin-69-jpg/tw-active">openab-bot</a> 維護
     · 每個交易日 T+1 自動更新
     · <a href="https://github.com/marvin-69-jpg/tw-active/blob/main/README.md">repo 說明</a>
-  </p>
-  <p class="disclaimer">本站研究機制、不構成投資建議。</p>
+  </div>
+  <div class="disclaimer">本站研究機制、不構成投資建議。</div>
 </footer>
 
-<script type="module" src="./assets/app.js"></script>
 </body>
 </html>
