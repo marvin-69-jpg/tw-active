@@ -335,6 +335,52 @@
   .dot.exit { background: var(--accent-down); }
   .dot.peak { background: #2d3436; }
 
+  /* Daily single-day delta panel */
+  .daily-wrap { display: flex; flex-direction: column; gap: 22px; }
+  .daily-section h3 {
+    margin: 0 0 8px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px; font-weight: 500;
+    color: var(--ink-soft); letter-spacing: 0.04em;
+  }
+  .daily-section h3 .n-total {
+    color: var(--ink); margin-left: 6px; font-size: 10px;
+  }
+  .daily-section h3 .more {
+    color: var(--ink-soft); margin-left: 6px; font-size: 10px;
+  }
+  .daily-section .empty {
+    font-family: ui-monospace, monospace;
+    font-size: 11px; color: var(--ink-soft);
+    padding: 6px 0;
+  }
+  .daily-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px 14px;
+  }
+  .daily-card {
+    border: 1px solid var(--rule);
+    padding: 8px 10px;
+    background: var(--paper);
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    display: flex; flex-direction: column; gap: 3px;
+  }
+  .daily-card .head { display: flex; justify-content: space-between; gap: 6px; }
+  .daily-card .code { color: var(--ink-soft); }
+  .daily-card .name {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    color: var(--ink); font-size: 13px; font-weight: 500;
+  }
+  .daily-card .w { font-size: 11px; color: var(--ink-soft); }
+  .daily-card .delta { font-size: 13px; }
+  .daily-card .delta.add { color: #b8860b; }
+  .daily-card .delta.red { color: #4a7c4a; }
+  .daily-card .shares-line { color: var(--ink-soft); font-size: 11px; }
+  .daily-card.new { border-left: 2px solid #b8860b; }
+  .daily-card.exit { border-left: 2px solid var(--accent-down); opacity: 0.85; }
+
   /* Exited panel - horizontal scroll */
   .exited-strip-wrap { overflow-x: auto; padding-bottom: 8px; }
   .exited-strip {
@@ -453,6 +499,12 @@
     .exited-strip { grid-auto-columns: 130px; gap: 8px 12px; font-size: 11px; }
     .exited-strip .e { padding: 5px 6px; }
     .exited-strip .e .d { font-size: 9px; }
+
+    /* Daily: 縮小卡片寬度 */
+    .daily-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 10px; }
+    .daily-card { padding: 6px 8px; font-size: 11px; }
+    .daily-card .name { font-size: 12px; }
+    .daily-card .delta { font-size: 12px; }
   }
 
   /* ============= Narrow mobile ≤ 380px (iPhone SE) ============= */
@@ -480,6 +532,7 @@
 
   <nav class="tabs" id="tabs">
     <button data-tab="current" class="active">目前持股 <span class="count" id="count-current"></span></button>
+    <button data-tab="daily">當日加減碼 <span class="count" id="count-daily"></span></button>
     <button data-tab="trace">歷史軌跡 <span class="count" id="count-trace"></span></button>
     <button data-tab="stock">單股進出場</button>
     <button data-tab="exited">已出清 <span class="count" id="count-exited"></span></button>
@@ -503,6 +556,12 @@
         <tbody id="holdings-tbody"></tbody>
       </table>
     </div>
+  </section>
+
+  <!-- Tab: daily single-day delta -->
+  <section class="panel" data-panel="daily">
+    <p class="panel-title" id="daily-title">—</p>
+    <div class="daily-wrap" id="daily-wrap"></div>
   </section>
 
   <!-- Tab: small multiples strip -->
@@ -615,6 +674,102 @@ for (const h of mainHoldings) {
   tr.onclick = () => { selectStock(h.code); switchTab('stock'); };
   tbody.appendChild(tr);
 }
+
+// ============= Daily single-day delta =============
+// 讀 data.daily_shares：最新交易日 vs 上一個交易日的股數變動。
+// 研究動機：30 日看趨勢、單日看經理人當天的動作。揭露 T+1，這是能觀察到的
+// 最近一次具體交易決策。權重 % 受股價 confound，股數才是 ground truth。
+(function renderDaily() {
+  const ds = data.daily_shares;
+  const dailyWrap = $('daily-wrap');
+  const dailyTitle = $('daily-title');
+  const dailyCount = $('count-daily');
+  if (!ds) {
+    dailyCount.textContent = '';
+    dailyTitle.textContent = '此 ETF 暫無單日股數資料';
+    dailyWrap.innerHTML = '<div class="empty" style="font-family:ui-monospace,monospace;font-size:12px;color:var(--ink-soft);">（raw/cmoney/shares/ 缺或僅一個交易日資料）</div>';
+    return;
+  }
+  const nAdjusted = (ds.n_adds_total || 0) + (ds.n_reductions_total || 0);
+  dailyCount.textContent = nAdjusted || '';
+  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 股數差 = 經理人當天動作（權重%會被股價漲跌 confound）`;
+
+  const fmtShares = n => {
+    if (n == null) return '—';
+    const abs = Math.abs(n);
+    if (abs >= 1e8) return (n / 1e8).toFixed(2) + '億';
+    if (abs >= 1e4) return (n / 1e4).toFixed(1) + '萬';
+    return Math.round(n).toLocaleString();
+  };
+  const fmtDelta = n => (n > 0 ? '+' : '') + fmtShares(n);
+  const fmtPct = p => (p == null ? '' : (p > 0 ? '+' : '') + p.toFixed(1) + '%');
+
+  function cardRow(e, kind) {
+    const cls = kind === 'add' ? 'add' : (kind === 'red' ? 'red' : '');
+    const sign = kind === 'add' ? '+' : '';
+    const pctStr = e.pct != null ? ` <span class="shares-line">(${fmtPct(e.pct)})</span>` : '';
+    return `
+      <div class="daily-card">
+        <div class="head">
+          <span class="name">${e.name}</span>
+          <span class="code">${e.code}</span>
+        </div>
+        <div class="delta ${cls}">${fmtDelta(e.delta)} 股${pctStr}</div>
+        <div class="shares-line">${fmtShares(e.prev_shares)} → ${fmtShares(e.shares)} · 權重 ${e.weight}%</div>
+      </div>`;
+  }
+  function newCard(e) {
+    return `
+      <div class="daily-card new">
+        <div class="head">
+          <span class="name">${e.name}</span>
+          <span class="code">${e.code}</span>
+        </div>
+        <div class="delta add">新建倉 ${fmtShares(e.shares)} 股</div>
+        <div class="shares-line">權重 ${e.weight}%</div>
+      </div>`;
+  }
+  function exitCard(e) {
+    return `
+      <div class="daily-card exit">
+        <div class="head">
+          <span class="name">${e.name}</span>
+          <span class="code">${e.code}</span>
+        </div>
+        <div class="delta red">出清</div>
+        <div class="shares-line">前一日 ${fmtShares(e.prev_shares)} 股 · 權重 ${e.prev_weight}%</div>
+      </div>`;
+  }
+
+  function section(title, items, renderer, nTotal) {
+    const more = (nTotal != null && nTotal > items.length)
+      ? `<span class="more">（另 ${nTotal - items.length} 檔同類）</span>` : '';
+    const nTag = nTotal != null ? `<span class="n-total">${nTotal}</span>` : '';
+    const body = items.length
+      ? `<div class="daily-grid">${items.map(renderer).join('')}</div>`
+      : `<div class="empty">—</div>`;
+    return `<div class="daily-section"><h3>${title}${nTag}${more}</h3>${body}</div>`;
+  }
+
+  dailyWrap.innerHTML = [
+    section('加碼', ds.top_adds, e => cardRow(e, 'add'), ds.n_adds_total),
+    section('減碼', ds.top_reductions, e => cardRow(e, 'red'), ds.n_reductions_total),
+    section('新建倉', ds.new_positions, newCard, ds.n_new_total),
+    section('出清', ds.exits, exitCard, ds.n_exits_total),
+  ].join('');
+
+  // 點卡片 → 切到 單股進出場
+  dailyWrap.addEventListener('click', ev => {
+    const card = ev.target.closest('.daily-card');
+    if (!card) return;
+    const codeEl = card.querySelector('.code');
+    if (!codeEl) return;
+    const code = codeEl.textContent.trim();
+    if (data.series && data.series[code]) {
+      selectStock(code); switchTab('stock');
+    }
+  });
+})();
 
 // ============= Small multiples horizontal strip =============
 // Sort so NEW 倉位 放最前（研究訊號，不淹沒在中段）
