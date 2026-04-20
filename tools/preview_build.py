@@ -303,20 +303,22 @@ ISSUER_OF = {
 
 
 def load_latest_raw(etf: str) -> tuple[list[list], str]:
-    """Return (rows, source_path). Pick largest 'r' suffix that has .json (not only .meta.json)."""
+    """Return (rows, source_path). Pick most recent dump timestamp; break ties by largest DTRange."""
     pattern = f"raw/cmoney/{etf}/batch_*_r*.json"
     files = [p for p in glob.glob(pattern) if not p.endswith(".meta.json")]
     if not files:
         raise SystemExit(f"no raw data files for {etf} under raw/cmoney/")
-    # Prefer the file with largest 'r' suffix then latest timestamp
-    def _rank(p: str) -> tuple[int, str]:
+    # Prefer the file with latest dump timestamp, then largest 'r' (DTRange) as tiebreaker.
+    # Rationale: a fresh r=3 dump from today beats a stale r=400 dump from yesterday —
+    # as_of is derived from the rows, so stale file = stale as_of on Pages.
+    def _rank(p: str) -> tuple[str, int]:
         name = Path(p).stem
         try:
             r = int(name.split("_r")[-1])
         except Exception:
             r = 0
         ts = name.split("_")[1] if "_" in name else ""
-        return (r, ts)
+        return (ts, r)
     files.sort(key=_rank, reverse=True)
     chosen = files[0]
     data = json.loads(Path(chosen).read_text())
