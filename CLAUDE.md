@@ -85,6 +85,7 @@ log.md         ← 操作記錄
 | **主動 ETF 歷史持股**（全 21 檔深度，權重%） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/<code>/`） | 讀 `raw/cmoney/<code>/` 即可，實作於私有 repo | — |
 | **主動 ETF 歷史持股股數**（ground truth，反 confound） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/shares/`） | 讀 `raw/cmoney/shares/<code>.json` | — |
 | **主動 ETF 配息記錄**（時序 anchor） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/dividend/`） | 讀 `raw/cmoney/dividend/<code>.json` | FundClear 公開說明書（拆源用） |
+| **個股歷史日收盤**（preview overlay、P&L） | **FinMind** `/api/v4/data` TaiwanStockPrice（TWSE+TPEx 統一） | `preview_prices` | — |
 | **基金月報 Top 10** | SITCA **IN2629** | `managerwatch` | — |
 | **基金季報 ≥1% 持股** | SITCA **IN2630** | `managerwatch` | — |
 | **歷史月報 Top 5**（ETF、SITCA filter bug 時） | MOPS `t78sb39_q3` | `mopsetf` | — |
@@ -107,7 +108,9 @@ log.md         ← 操作記錄
 
 | 來源 | 狀況 | 替代 |
 |---|---|---|
-| **Yahoo Finance** | 費率欄只顯示「最優階梯」當「當前實付」造成誤讀；名稱欄截斷；主動 ETF 推薦演算法斷裂（推全被動大盤股） | 費率：`fundclear` 抽公開說明書；名稱：MOPS / 官網；規模：`twquote` |
+| **Yahoo Finance**（ETF 基本資料） | 費率欄只顯示「最優階梯」當「當前實付」造成誤讀；名稱欄截斷；主動 ETF 推薦演算法斷裂（推全被動大盤股） | 費率：`fundclear` 抽公開說明書；名稱：MOPS / 官網；規模：`twquote` |
+| **Yahoo Finance chart v8**（個股歷史） | IP-level rate limit 從 pod 打很快 429，連 query2 subdomain 也擋 | `preview_prices` 改走 FinMind |
+| **TWSE STOCK_DAY legacy**（個股歷史） | 每檔每月 1 call（12× 請求量），429 頻繁，endpoint 不在 OpenAPI | `preview_prices` 改走 FinMind |
 | **MoneyDJ** | 反爬 + 字段常改名 | `twquote`（TWSE/TPEx OpenAPI） |
 | **Goodinfo** | 404 / 反爬 | `twquote` |
 | **SITCA IN2629/IN2630 歷史期** | Server filter 對非最新期失效，回固定兆豐資料（見 `project_sitca_al11_drift` memory） | `mopsetf` |
