@@ -84,6 +84,7 @@ log.md         ← 操作記錄
 | **主動 ETF 當日持股**（ground truth） | **投信官網直取**（5 家 API） | `etfdaily` | `raw/cmoney/`（外部 CI 每日 push） |
 | **主動 ETF 歷史持股**（全 21 檔深度，權重%） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/<code>/`） | 讀 `raw/cmoney/<code>/` 即可，實作於私有 repo | — |
 | **主動 ETF 歷史持股股數**（ground truth，反 confound） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/shares/`） | 讀 `raw/cmoney/shares/<code>.json` | — |
+| **主動 ETF 配息記錄**（時序 anchor） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/dividend/`） | 讀 `raw/cmoney/dividend/<code>.json` | FundClear 公開說明書（拆源用） |
 | **基金月報 Top 10** | SITCA **IN2629** | `managerwatch` | — |
 | **基金季報 ≥1% 持股** | SITCA **IN2630** | `managerwatch` | — |
 | **歷史月報 Top 5**（ETF、SITCA filter bug 時） | MOPS `t78sb39_q3` | `mopsetf` | — |
