@@ -28,6 +28,11 @@ from typing import Iterator
 # cash-like markers to exclude from single-stock analysis
 _CASH_MARKERS = {"C_NTD", "M_NTD", "PFUR_NTD", "RDI_NTD"}
 
+# Shares-delta event thresholds. Both backend (daily_shares) and frontend
+# (etf.html detectEvents) must use these same values — see PR C alignment.
+SHARES_PCT_THRESHOLD = 3.0   # |Δshares / prev_shares| ≥ 3% 才算經理人有意動作
+WEIGHT_FLOOR_PP = 0.3        # max(cur, prev) weight ≥ 0.3pp 才算實質部位（過濾試水溫）
+
 
 def _iter_shares_rows(etf: str) -> Iterator[tuple[str, str, str, float, float]]:
     """Canonical reader for raw/cmoney/shares/<etf>.json.
@@ -84,12 +89,11 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
     latest_date, prev_date = dates_desc[0], dates_desc[1]
     latest, prev = by_date[latest_date], by_date[prev_date]
 
-    WEIGHT_FLOOR = 0.3  # 跟 _load_shares_raw 對齊，過濾試水溫
     adds, reductions, new_positions = [], [], []
     for ccode, cur in latest.items():
         pr = prev.get(ccode)
         if pr is None:
-            if cur["weight"] >= WEIGHT_FLOOR:
+            if cur["weight"] >= WEIGHT_FLOOR_PP:
                 new_positions.append({
                     "code": ccode, "name": cur["name"],
                     "shares": cur["shares"], "weight": round(cur["weight"], 2),
@@ -99,14 +103,17 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
         if delta == 0:
             continue
         max_weight = max(cur["weight"], pr["weight"])
-        if max_weight < WEIGHT_FLOOR:
+        if max_weight < WEIGHT_FLOOR_PP:
             continue
         pct = (delta / pr["shares"] * 100.0) if pr["shares"] > 0 else None
+        # 與前端 detectEvents 一致：|Δshares/prev_shares| ≥ SHARES_PCT_THRESHOLD 才算事件
+        if pct is None or abs(pct) < SHARES_PCT_THRESHOLD:
+            continue
         entry = {
             "code": ccode, "name": cur["name"],
             "shares": cur["shares"], "prev_shares": pr["shares"],
             "delta": delta,
-            "pct": round(pct, 2) if pct is not None else None,
+            "pct": round(pct, 2),
             "weight": round(cur["weight"], 2),
             "prev_weight": round(pr["weight"], 2),
         }
@@ -114,7 +121,7 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
 
     exits = []
     for ccode, pr in prev.items():
-        if ccode not in latest and pr["weight"] >= WEIGHT_FLOOR:
+        if ccode not in latest and pr["weight"] >= WEIGHT_FLOOR_PP:
             exits.append({
                 "code": ccode, "name": pr["name"],
                 "prev_shares": pr["shares"], "prev_weight": round(pr["weight"], 2),
@@ -138,6 +145,8 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
         "n_new_total": len(new_positions),
         "n_exits_total": len(exits),
         "n_holdings": len(latest),
+        "shares_pct_threshold": SHARES_PCT_THRESHOLD,
+        "weight_floor_pp": WEIGHT_FLOOR_PP,
     }
 
 

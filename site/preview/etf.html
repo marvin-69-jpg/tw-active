@@ -1227,15 +1227,17 @@ function detectEvents(s) {
 
   // 用 shares delta 判 ADD/REDUCE（見 feedback_shares_not_weight_for_comparison memory）。
   // ETF inflow 時 shares 增但 weight 可能持平甚至下降，weight delta 會漏判經理人實際加碼。
-  // threshold：|Δshares / prev_shares| ≥ 3% 過濾日常微調雜訊。
+  // threshold：|Δshares / prev_shares| ≥ shares_pct_threshold（後端 daily_shares 同源，
+  // 後端寫入 data.daily_shares.shares_pct_threshold；缺值則 fallback 3.0）。
   // 若 series 缺 shares（舊 cache），fallback 回 weight delta。
+  const sharesPctThreshold = (data.daily_shares && data.daily_shares.shares_pct_threshold) || 3;
   const hasShares = s.some(p => typeof p.shares === 'number');
   for (let i = 1; i < s.length; i++) {
     const cur = s[i], prev = s[i - 1];
     if (hasShares && typeof cur.shares === 'number' && typeof prev.shares === 'number' && prev.shares > 0) {
       const dShares = cur.shares - prev.shares;
       const pct = dShares / prev.shares * 100;
-      if (Math.abs(pct) >= 3) {
+      if (Math.abs(pct) >= sharesPctThreshold) {
         const sign = pct > 0 ? '+' : '';
         const type = pct > 0 ? 'ADD' : 'REDUCE';
         events.push({
