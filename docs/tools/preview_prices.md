@@ -104,9 +104,11 @@ Skip 的 code 類型：
 
 ### Resume / incremental save
 
-- 如果 output path 已存在且 `as_of` + `source` 相同 → 只補缺的 code
+- Cache key = `(as_of, first_date, source)` — 三項**全等**才 resume
 - 每 20 檔 flush 一次到磁碟，kill -9 也不會全白跑
-- 換 source 會失效既有 cache（`source != finmind_v4` → 全重抓）
+- 換 source 或 preview 擴張歷史範圍都會正確 invalidate
+
+**踩過的坑（2026-04-20 PR #24）**：舊版只比對 `(as_of, source)`。當 `preview_build` 改算法擴大歷史（`first_date` 從 20260416 → 20250526，`as_of` 不變），resume 拿回上一輪的 3 天 series 直接寫出 → Pages 股價 overlay 只有 3 點。通則：**cache key 必須涵蓋所有會影響輸出形狀的輸入欄位**，不是只挑「看起來主要」的那個。
 
 ---
 
