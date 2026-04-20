@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>tw-active preview</title>
+<title>tw-active · 主動 ETF 導航</title>
 <style>
   :root {
     --ink: #1a1a1a;
@@ -12,269 +12,105 @@
     --panel: #fff;
     --rule: #e0ddd2;
     --rule-strong: #1a1a1a;
-    --accent: #f2b705;
+    --up: #b8860b;
+    --down: #4a7c4a;
   }
   * { box-sizing: border-box; }
   body {
     font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
     background: var(--paper);
     color: var(--ink);
-    max-width: 1100px;
+    max-width: 900px;
     margin: 0 auto;
-    padding: 32px 24px 48px;
-    font-size: 14px;
+    padding: 28px 20px 48px;
+    font-size: 13px;
     line-height: 1.55;
   }
-  .crumb { font-size: 12px; color: var(--ink-soft); margin-bottom: 12px; }
-  .crumb a { color: var(--ink-soft); text-decoration: none; }
   h1 {
     font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    font-size: 22px; font-weight: 600; margin: 0 0 6px; letter-spacing: -0.01em;
+    font-size: 20px; font-weight: 600; margin: 0 0 4px;
   }
-  .sub { color: var(--ink-soft); font-size: 12px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--rule-strong); }
+  .sub {
+    color: var(--ink-soft); font-size: 12px;
+    padding-bottom: 12px; margin-bottom: 16px;
+    border-bottom: 1px solid var(--rule-strong);
+  }
   .sub .mono { font-family: ui-monospace, monospace; }
-  .sub .sep { margin: 0 6px; color: var(--rule); }
-
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-    gap: 14px;
-  }
-  .card {
-    background: var(--panel);
-    border: 1px solid var(--rule);
-    padding: 14px 14px 12px;
-    text-decoration: none;
-    color: inherit;
-    display: block;
-    transition: border-color 0.12s;
-  }
-  .card:hover { border-color: var(--rule-strong); }
-  .card .code-row {
-    display: flex; align-items: baseline; gap: 8px;
-    margin-bottom: 4px;
-  }
-  .card .code {
-    font-family: ui-monospace, monospace;
-    font-weight: 600; font-size: 15px;
-  }
-  .card .issuer {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    font-size: 11px; color: var(--ink-soft);
-  }
-  .card .name {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    font-size: 13px; font-weight: 500; margin-bottom: 10px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-  .card .size-row {
-    display: flex; align-items: baseline; gap: 10px;
-    padding: 8px 0; border-top: 1px dashed var(--rule);
-    margin-bottom: 0;
-  }
-  .card .size-row .size {
-    font-family: ui-monospace, monospace;
-    font-size: 18px; font-weight: 600; color: var(--ink);
-  }
-  .card .size-row .size-unit { font-size: 11px; color: var(--ink-soft); margin-left: 2px; }
-  .card .size-row .benefit {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    font-size: 11px; color: var(--ink-soft);
-    margin-left: auto;
-  }
-  .card .size-row .benefit .mono { font-family: ui-monospace, monospace; color: var(--ink); }
-  .card .price-row {
-    display: flex; align-items: baseline; gap: 10px;
-    padding: 6px 0; border-top: 1px dashed var(--rule);
-    font-size: 11px; color: var(--ink-soft);
-  }
-  .card .price-row .label { font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
-  .card .price-row .price, .card .price-row .nav {
-    font-family: ui-monospace, monospace; color: var(--ink); font-weight: 500;
-  }
-  .card .price-row .prem { margin-left: auto; font-family: ui-monospace, monospace; font-weight: 500; }
-  .card .price-row .prem.pos { color: #b8860b; }
-  .card .price-row .prem.neg { color: #4a7c4a; }
-  .card .price-row .prem.na { color: var(--ink-soft); font-weight: normal; }
-  .card .fee-row {
-    display: flex; align-items: baseline; gap: 10px;
-    padding: 6px 0; border-top: 1px dashed var(--rule);
-    font-size: 11px; color: var(--ink-soft);
-  }
-  .card .fee-row .label { font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
-  .card .fee-row .fee {
-    font-family: ui-monospace, monospace; color: var(--ink); font-weight: 500;
-  }
-  .card .fee-row .fee.tiered {
-    text-decoration: underline dotted;
-    cursor: help;
-  }
-  .card .fee-row .tier-badge {
-    font-size: 9px; padding: 1px 4px; border: 1px solid var(--rule);
-    border-radius: 2px; color: var(--ink-soft); margin-left: 2px;
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-  }
-  .card .fee-row .yahoo-gap {
-    margin-left: auto; font-family: ui-monospace, monospace;
-    color: #b8860b; font-size: 10px;
-  }
-  .card .fee-row .yahoo-gap.zero { color: var(--ink-soft); }
-  .card .fee-row .div-pol {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    color: var(--ink-soft); font-size: 10px;
-  }
-  .card .shares-row {
-    padding: 6px 0; border-top: 1px dashed var(--rule);
-    font-size: 10px; color: var(--ink-soft);
-    line-height: 1.5;
-  }
-  .card .shares-row .head {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    color: var(--ink); font-size: 11px; margin-bottom: 3px;
-  }
-  .card .shares-row .head .win {
-    font-family: ui-monospace, monospace; font-size: 10px;
-    color: var(--ink-soft); margin-left: 4px; font-weight: normal;
-  }
-  .card .shares-row .line {
-    display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;
-    padding: 1px 0;
-  }
-  .card .shares-row .line .label {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    color: var(--ink-soft); min-width: 2.5em;
-  }
-  .card .shares-row .chip {
-    font-family: ui-monospace, monospace;
-    padding: 0 2px;
-  }
-  .card .shares-row .chip.add { color: #b8860b; }
-  .card .shares-row .chip.red { color: #4a7c4a; }
-  .card .shares-row .chip.new {
-    color: #b8860b;
-    border: 1px solid #b8860b; border-radius: 2px;
-    padding: 0 3px; font-size: 9px;
-  }
-  .card .dividend-row {
-    padding: 6px 0; border-top: 1px dashed var(--rule);
-    font-size: 10px; color: var(--ink-soft);
-    display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
-  }
-  .card .dividend-row .label {
-    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    font-size: 11px; color: var(--ink);
-  }
-  .card .dividend-row .amount {
-    font-family: ui-monospace, monospace; color: var(--ink); font-weight: 500;
-  }
-  .card .dividend-row .yld {
-    font-family: ui-monospace, monospace; color: #b8860b;
-  }
-  .card .dividend-row .period {
-    font-family: ui-monospace, monospace; font-size: 9px;
-    color: var(--ink-soft);
-  }
-  .card .dividend-row .no-payout {
-    color: var(--ink-soft); font-style: italic;
-  }
-  .card .spark {
-    display: block; width: 100%; height: 36px;
-    margin: 6px 0 4px;
-  }
-  .card .spark polyline { fill: none; stroke-width: 1.2; }
-  .card .spark.up polyline { stroke: #b8860b; }
-  .card .spark.down polyline { stroke: #4a7c4a; }
-  .card .spark.flat polyline { stroke: var(--ink-soft); }
-  .card .spark .base { stroke: var(--rule); stroke-width: 0.5; stroke-dasharray: 2 2; }
-  .card .spark-meta {
-    display: flex; justify-content: space-between;
-    font-size: 10px; color: var(--ink-soft);
-    font-family: ui-monospace, monospace;
-    margin-bottom: 6px;
-  }
-  .card .spark-meta .delta.pos { color: #b8860b; }
-  .card .spark-meta .delta.neg { color: #4a7c4a; }
-  .card .stats {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
-    font-size: 10px; color: var(--ink-soft);
-    padding: 8px 0; border-top: 1px dashed var(--rule); border-bottom: 1px dashed var(--rule);
-    margin-bottom: 10px;
-  }
-  .card .stats .v {
-    font-family: ui-monospace, monospace;
-    font-size: 14px; color: var(--ink); font-weight: 500; display: block; margin-top: 1px;
-  }
-  .card .stats .new .v { color: #b8860b; }
 
   .sort-bar {
     display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
-    margin: 16px 0 20px;
-    font-size: 12px;
-    color: var(--ink-soft);
+    margin-bottom: 12px; font-size: 12px; color: var(--ink-soft);
   }
-  .sort-bar label { font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif; }
   .sort-bar select {
     font-family: ui-monospace, monospace; font-size: 12px;
     background: var(--panel); border: 1px solid var(--rule);
-    padding: 4px 8px; color: var(--ink); cursor: pointer;
+    padding: 3px 7px; color: var(--ink); cursor: pointer;
   }
-  .sort-bar select:focus { outline: 1px solid var(--rule-strong); }
-  .card .top3 {
+
+  ul.list { list-style: none; padding: 0; margin: 0; }
+  ul.list li { border-top: 1px solid var(--rule); }
+  ul.list li:last-child { border-bottom: 1px solid var(--rule); }
+  a.row {
+    display: grid;
+    grid-template-columns: 60px 1fr 90px 90px 80px;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 4px;
+    text-decoration: none; color: inherit;
+    transition: background 0.08s;
+  }
+  a.row:hover { background: var(--panel); }
+  .code { font-family: ui-monospace, monospace; font-weight: 600; }
+  .name {
     font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    font-size: 11px; color: var(--ink-soft);
-    line-height: 1.6;
+    font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .card .top3 .row {
-    display: flex; justify-content: space-between; gap: 8px;
-    white-space: nowrap; overflow: hidden;
-  }
-  .card .top3 .n { text-overflow: ellipsis; overflow: hidden; }
-  .card .top3 .w { font-family: ui-monospace, monospace; color: var(--ink); }
-  .card .asof {
-    font-size: 10px; color: var(--ink-soft); margin-top: 10px;
-    font-family: ui-monospace, monospace;
-  }
+  .name .issuer { color: var(--ink-soft); font-size: 11px; margin-left: 6px; }
+  .aum { font-family: ui-monospace, monospace; text-align: right; color: var(--ink-soft); }
+  .aum .v { color: var(--ink); }
+  .list-date { font-family: ui-monospace, monospace; font-size: 11px; color: var(--ink-soft); }
+  .spark { width: 80px; height: 24px; display: block; }
+  .spark polyline { fill: none; stroke-width: 1.2; }
+  .spark.up polyline { stroke: var(--up); }
+  .spark.down polyline { stroke: var(--down); }
+  .spark.flat polyline { stroke: var(--ink-soft); }
 
   .empty { color: var(--ink-soft); padding: 40px 0; text-align: center; }
-
-  @media (max-width: 640px) {
-    body { padding: 20px 12px 32px; font-size: 13px; }
-    h1 { font-size: 18px; }
-    .grid { grid-template-columns: 1fr; gap: 10px; }
-    .card { padding: 12px; }
+  footer {
+    margin-top: 32px; padding-top: 12px; border-top: 1px solid var(--rule);
+    color: var(--ink-soft); font-size: 11px;
   }
 
-  footer {
-    margin-top: 32px; padding-top: 16px;
-    border-top: 1px solid var(--rule);
-    color: var(--ink-soft); font-size: 11px;
+  @media (max-width: 640px) {
+    body { padding: 18px 12px 32px; }
+    h1 { font-size: 17px; }
+    a.row {
+      grid-template-columns: 54px 1fr 60px 60px;
+      gap: 8px;
+      padding: 10px 2px;
+    }
+    a.row .list-date { display: none; }
+    .name { font-size: 12px; }
+    .name .issuer { display: block; margin-left: 0; margin-top: 2px; }
   }
 </style>
 </head>
 <body>
-<div class="crumb"><a href="../">tw-active</a> / preview</div>
-<h1>主動型 ETF · 持股軌跡</h1>
+<h1>tw-active · 主動型 ETF</h1>
 <div class="sub" id="sub">—</div>
 
 <div class="sort-bar">
-  <label for="sort">排序：</label>
+  <label for="sort">排序</label>
   <select id="sort">
-    <option value="aum">規模（大 → 小）</option>
-    <option value="benefit">受益人數（多 → 少）</option>
+    <option value="aum">規模</option>
     <option value="code">代號</option>
-    <option value="n_days">資料長度（長 → 短）</option>
-    <option value="n_current">持股數（多 → 少）</option>
-    <option value="n_new">NEW 數（多 → 少）</option>
-    <option value="n_exited">已出清（多 → 少）</option>
-    <option value="premium">溢折價 |絕對值大 → 小|</option>
-    <option value="price_chg">近期漲跌幅（漲 → 跌）</option>
-    <option value="fee">實付管理費（高 → 低）</option>
-    <option value="fee_gap">階梯差（Yahoo 低階誤讀 bps）</option>
+    <option value="listing">上市日（新 → 舊）</option>
+    <option value="price_chg">近期漲跌</option>
   </select>
-  <span style="margin-left:auto;font-size:11px">規模/受益人數 FundClear · NAV/折溢價 CMoney · 走勢 TWSE/TPEx 近 ~3M</span>
+  <span style="margin-left:auto;font-size:11px;color:var(--ink-soft)">點任一檔進入單檔深度頁</span>
 </div>
 
-<div class="grid" id="grid"></div>
+<ul class="list" id="list"></ul>
 
 <footer id="footer">—</footer>
 
@@ -282,258 +118,73 @@
 const fmt = d => d ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : '—';
 const $ = id => document.getElementById(id);
 
-// cache-buster：每次 build 換 URL，避免瀏覽器拿到沒 price_series 的舊 JSON
 const idx = await fetch(`./etfs.json?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
 const etfs = idx.etfs || [];
 
-// 規模合計（億）
 const totalAum = etfs.reduce((s, e) => s + (e.total_av_yi || 0), 0);
-const totalBenefit = etfs.reduce((s, e) => s + (e.benefit || 0), 0);
 $('sub').innerHTML = `
-  <span class="mono">${idx.n_etfs}</span> 檔主動 ETF
-  <span class="sep">·</span>
-  合計規模 <span class="mono">${totalAum.toFixed(0)}</span> 億 NT$
-  <span class="sep">·</span>
-  合計受益人 <span class="mono">${totalBenefit.toLocaleString()}</span>
-  <span class="sep">·</span>
+  <span class="mono">${idx.n_etfs}</span> 檔 ·
+  合計規模 <span class="mono">${totalAum.toFixed(0)}</span> 億 NT$ ·
   as-of <span class="mono">${fmt(idx.as_of)}</span>
 `;
 
-const fmtNum = n => n == null ? '—' : n.toLocaleString();
-const fmtAum = v => {
-  if (v == null) return '—';
-  return v >= 1000 ? v.toFixed(0) : v.toFixed(1);
-};
+const fmtAum = v => v == null ? '—' : (v >= 1000 ? v.toFixed(0) : v.toFixed(1));
 
-const grid = $('grid');
+function pricePct(e) {
+  const s = e.price_series || [];
+  if (s.length < 2) return null;
+  return (s[s.length - 1].c - s[0].c) / s[0].c * 100;
+}
+
+function renderSpark(series) {
+  if (!series || series.length < 2) return '';
+  const vals = series.map(p => p.c);
+  const w = 80, h = 24, pad = 2;
+  const min = Math.min(...vals), max = Math.max(...vals);
+  const range = max - min || 1;
+  const delta = (vals[vals.length - 1] - vals[0]) / vals[0] * 100;
+  const cls = delta > 0.2 ? 'up' : (delta < -0.2 ? 'down' : 'flat');
+  const pts = vals.map((v, i) => {
+    const x = pad + (i / (vals.length - 1)) * (w - 2 * pad);
+    const y = pad + (1 - (v - min) / range) * (h - 2 * pad);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  return `<svg class="spark ${cls}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
+    <polyline points="${pts}"/>
+  </svg>`;
+}
+
+const list = $('list');
 function render(sortKey) {
   const sorters = {
     aum:       (a, b) => (b.total_av_yi || 0) - (a.total_av_yi || 0) || a.code.localeCompare(b.code),
-    benefit:   (a, b) => (b.benefit || 0) - (a.benefit || 0) || a.code.localeCompare(b.code),
     code:      (a, b) => a.code.localeCompare(b.code),
-    n_days:    (a, b) => b.n_days - a.n_days || a.code.localeCompare(b.code),
-    n_current: (a, b) => b.n_current - a.n_current || a.code.localeCompare(b.code),
-    n_new:     (a, b) => b.n_new - a.n_new || a.code.localeCompare(b.code),
-    n_exited:  (a, b) => b.n_exited - a.n_exited || a.code.localeCompare(b.code),
-    premium:   (a, b) => {
-      // NAV 未揭露 → 沉底
-      const pa = a.premium_pct, pb = b.premium_pct;
-      if (pa == null && pb == null) return a.code.localeCompare(b.code);
-      if (pa == null) return 1;
-      if (pb == null) return -1;
-      return Math.abs(pb) - Math.abs(pa) || a.code.localeCompare(b.code);
-    },
+    listing:   (a, b) => (b.listing_date || '').localeCompare(a.listing_date || '') || a.code.localeCompare(b.code),
     price_chg: (a, b) => {
-      // 近 ~3M 漲跌幅（起→末）
-      const pct = e => {
-        const s = e.price_series || [];
-        if (s.length < 2) return null;
-        return (s[s.length - 1].c - s[0].c) / s[0].c * 100;
-      };
-      const pa = pct(a), pb = pct(b);
+      const pa = pricePct(a), pb = pricePct(b);
       if (pa == null && pb == null) return a.code.localeCompare(b.code);
       if (pa == null) return 1;
       if (pb == null) return -1;
       return pb - pa || a.code.localeCompare(b.code);
     },
-    fee: (a, b) => {
-      const fa = a.fee_effective?.mgmt_effective;
-      const fb = b.fee_effective?.mgmt_effective;
-      if (fa == null && fb == null) return a.code.localeCompare(b.code);
-      if (fa == null) return 1;
-      if (fb == null) return -1;
-      return fb - fa || a.code.localeCompare(b.code);
-    },
-    fee_gap: (a, b) => {
-      // 只對階梯式 ETF 有意義；非階梯 → 0 bps 沉底
-      const gap = e => {
-        const fe = e.fee_effective;
-        if (!fe || !fe.tiered) return 0;
-        return (fe.mgmt_effective - fe.low_rate) * 100; // bps
-      };
-      const ga = gap(a), gb = gap(b);
-      return gb - ga || a.code.localeCompare(b.code);
-    },
   };
   const sorted = [...etfs].sort(sorters[sortKey] || sorters.aum);
-  grid.innerHTML = '';
-  if (!sorted.length) { grid.innerHTML = '<div class="empty">尚無資料</div>'; return; }
+  list.innerHTML = '';
+  if (!sorted.length) { list.innerHTML = '<li class="empty">尚無資料</li>'; return; }
   for (const e of sorted) {
-    const a = document.createElement('a');
-    a.className = 'card';
-    a.href = `./etf.html?code=${e.code}`;
-    const top3Html = (e.top3 || []).map(h =>
-      `<div class="row"><span class="n">${h.code} ${h.name}</span><span class="w">${h.weight.toFixed(2)}%</span></div>`
-    ).join('');
-    const newCell = e.n_new > 0
-      ? `<div class="new"><span>NEW</span><span class="v">${e.n_new}</span></div>`
-      : `<div><span>NEW</span><span class="v">—</span></div>`;
-    const aum = e.total_av_yi;
-    const sizeRow = `<div class="size-row">
-      <span class="size">${fmtAum(aum)}<span class="size-unit"> 億 NT$</span></span>
-      <span class="benefit">受益人 <span class="mono">${fmtNum(e.benefit)}</span></span>
-    </div>`;
-    // Sparkline：近 ~3 個月日收盤
-    const sp = (e.price_series || []).map(p => p.c);
-    let sparkHtml = '';
-    if (sp.length >= 2) {
-      const w = 240, h = 36, pad = 2;
-      const min = Math.min(...sp), max = Math.max(...sp);
-      const range = max - min || 1;
-      const startY = sp[0], endY = sp[sp.length - 1];
-      const deltaPct = ((endY - startY) / startY) * 100;
-      const dir = deltaPct > 0.2 ? 'up' : (deltaPct < -0.2 ? 'down' : 'flat');
-      const pts = sp.map((v, i) => {
-        const x = pad + (i / (sp.length - 1)) * (w - 2 * pad);
-        const y = pad + (1 - (v - min) / range) * (h - 2 * pad);
-        return `${x.toFixed(1)},${y.toFixed(1)}`;
-      }).join(' ');
-      // 起點水平基準線
-      const baseY = pad + (1 - (startY - min) / range) * (h - 2 * pad);
-      const d1 = e.price_series[0].d, d2 = e.price_series[e.price_series.length - 1].d;
-      const fmtShort = d => d ? `${d.slice(4,6)}/${d.slice(6,8)}` : '';
-      const deltaCls = deltaPct > 0.2 ? 'pos' : (deltaPct < -0.2 ? 'neg' : '');
-      const sign = deltaPct > 0 ? '+' : '';
-      sparkHtml = `
-        <svg class="spark ${dir}" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">
-          <line class="base" x1="0" y1="${baseY.toFixed(1)}" x2="${w}" y2="${baseY.toFixed(1)}"/>
-          <polyline points="${pts}"/>
-        </svg>
-        <div class="spark-meta">
-          <span>${fmtShort(d1)} → ${fmtShort(d2)} · ${sp.length}d</span>
-          <span class="delta ${deltaCls}">${sign}${deltaPct.toFixed(1)}%</span>
-        </div>`;
-    } else {
-      sparkHtml = `<div class="spark-meta"><span>走勢資料不足</span></div>`;
-    }
-    // 價格列：收盤（FundClear） + NAV（5/21 有）+ 溢折價 %
-    const close = e.close_price;
-    const nav = e.nav;
-    const prem = e.premium_pct;
-    let premCell;
-    if (prem == null) {
-      premCell = `<span class="prem na" title="NAV 未揭露（投信官網無公開 API）">—</span>`;
-    } else {
-      const cls = prem > 0 ? 'pos' : (prem < 0 ? 'neg' : '');
-      const sign = prem > 0 ? '+' : '';
-      premCell = `<span class="prem ${cls}" title="溢折價 = (收盤 − NAV) / NAV">${sign}${prem.toFixed(2)}%</span>`;
-    }
-    const priceRow = `<div class="price-row">
-      <span class="label">收盤</span><span class="price">${close != null ? close.toFixed(2) : '—'}</span>
-      <span class="label">NAV</span><span class="nav">${nav != null ? nav.toFixed(2) : '—'}</span>
-      ${premCell}
-    </div>`;
-    // 費率列：實付管理費 + 階梯警示 + 配息制度
-    // 研究意圖：Yahoo 只顯示最低階當「當前費率」，這裡秀實付 + 差距讓散戶看到誤讀
-    const fe = e.fee_effective;
-    let feeRow = '';
-    if (fe) {
-      const eff = fe.mgmt_effective;
-      const tieredCls = fe.tiered ? 'tiered' : '';
-      let tip = '';
-      let tierBadge = '';
-      let yahooGap = '';
-      if (fe.tiered) {
-        tip = `階梯：≤${fe.threshold_yi}億 ${fe.high_rate}%、逾 ${fe.threshold_yi}億 ${fe.low_rate}%；` +
-              `當前規模下實付 ${eff.toFixed(3)}%`;
-        tierBadge = `<span class="tier-badge" title="${tip}">階</span>`;
-        const gap = eff - fe.low_rate;
-        if (gap > 0.01) {
-          yahooGap = `<span class="yahoo-gap" title="Yahoo 常只秀最低階 ${fe.low_rate}%，實付較高 +${(gap*100).toFixed(0)} bps">` +
-                     `vs 低階 +${(gap*100).toFixed(0)}bps</span>`;
-        } else {
-          yahooGap = `<span class="yahoo-gap zero" title="規模大到幾乎全在低階">已趨近低階</span>`;
-        }
-      }
-      const divPol = e.dividend_policy
-        ? `<span class="div-pol" title="配息制度">${e.dividend_policy}</span>`
-        : '';
-      feeRow = `<div class="fee-row">
-        <span class="label">管理費</span>
-        <span class="fee ${tieredCls}" title="${tip || ('公開說明書：' + (e.mgmt_fee_raw || '—'))}">${eff.toFixed(2)}%</span>
-        ${tierBadge}
-        ${divPol}
-        ${yahooGap}
-      </div>`;
-    }
-    // 股數變動列：ground truth，~30 天視窗
-    // 研究意圖：權重%受股價漲跌 confound，股數↑才是真加碼
-    const ss = e.shares_signal;
-    let sharesRow = '';
-    if (ss && ss.anchor_date && ss.anchor_date !== ss.as_of) {
-      const pctFmt = (p) => (p == null ? '—' : (p > 0 ? '+' : '') + p.toFixed(0) + '%');
-      const mkChip = (x, cls) =>
-        `<span class="chip ${cls}" title="${x.name}（${x.code}）${x.prev_shares?.toLocaleString?.() ?? ''} → ${x.shares?.toLocaleString?.() ?? ''} 股">${x.name.slice(0,4)} ${pctFmt(x.pct)}</span>`;
-      const adds = (ss.top_adds || []).slice(0, 3).map(x => mkChip(x, 'add')).join(' ');
-      const reds = (ss.top_reductions || []).slice(0, 3).map(x => mkChip(x, 'red')).join(' ');
-      const news = (ss.new_positions || []).slice(0, 3).map(x =>
-        `<span class="chip new" title="新建倉 權重 ${x.weight}%">${x.name.slice(0,4)}</span>`
-      ).join(' ');
-      const winLabel = `${ss.window_days}日`;
-      const parts = [];
-      if (adds) parts.push(`<div class="line"><span class="label">加碼</span>${adds}</div>`);
-      if (reds) parts.push(`<div class="line"><span class="label">減碼</span>${reds}</div>`);
-      if (news) parts.push(`<div class="line"><span class="label">新倉</span>${news}</div>`);
-      if (parts.length) {
-        sharesRow = `<div class="shares-row" title="股數變動：權重%會被股價漲跌影響，股數才是經理人實際動作。視窗 ${fmt(ss.anchor_date)} → ${fmt(ss.as_of)}">
-          <div class="head">股數變動 <span class="win">${winLabel}</span></div>
-          ${parts.join('')}
-        </div>`;
-      }
-    }
-    // 配息列：近期一次配息（年季/金額/殖利率）+ 年化 if available
-    // 研究意圖：主動 ETF 配息來源拆解的基準時序，下游研究要對照公開說明書算實際比例
-    const dv = e.dividend;
-    let dividendRow = '';
-    if (dv) {
-      if (dv.latest) {
-        const p = dv.latest.period || '';
-        // 202601 → 2026 Q1 顯示
-        const pDisplay = p.length === 6
-          ? `${p.slice(0,4)}Q${p.slice(5,6)}`
-          : p;
-        const annHtml = dv.annualized_yield_pct != null
-          ? `<span class="yld" title="近 4 次殖利率加總 ≈ 年化（季配×4）">年化≈${dv.annualized_yield_pct}%</span>`
-          : '';
-        const payDate = dv.latest.pay_date
-          ? `${dv.latest.pay_date.slice(0,4)}/${dv.latest.pay_date.slice(4,6)}/${dv.latest.pay_date.slice(6,8)}`
-          : '';
-        dividendRow = `<div class="dividend-row" title="最新配息：${pDisplay} 現金股利 ${dv.latest.amount} 元、殖利率 ${dv.latest.yield_pct}%、發放日 ${payDate}（共 ${dv.n_payouts} 次配息記錄）">
-          <span class="label">配息</span>
-          <span class="period">${pDisplay}</span>
-          <span class="amount">${dv.latest.amount} 元</span>
-          <span class="yld">殖利率 ${dv.latest.yield_pct}%</span>
-          ${annHtml}
-        </div>`;
-      } else {
-        dividendRow = `<div class="dividend-row" title="尚無配息記錄（多為 2025 後上市、首次配息尚未發生）">
-          <span class="label">配息</span>
-          <span class="no-payout">尚未首次配息</span>
-        </div>`;
-      }
-    }
-    a.innerHTML = `
-      <div class="code-row">
+    const li = document.createElement('li');
+    const pct = pricePct(e);
+    const pctStr = pct == null ? '—' : `${pct > 0 ? '+' : ''}${pct.toFixed(1)}%`;
+    const pctCls = pct == null ? '' : (pct > 0.2 ? 'up' : (pct < -0.2 ? 'down' : 'flat'));
+    li.innerHTML = `
+      <a class="row" href="./etf.html?code=${e.code}">
         <span class="code">${e.code}</span>
-        <span class="issuer">${e.issuer || ''}</span>
-      </div>
-      <div class="name">${e.name}</div>
-      ${sizeRow}
-      ${sparkHtml}
-      ${priceRow}
-      ${feeRow}
-      ${dividendRow}
-      ${sharesRow}
-      <div class="stats">
-        <div><span>主要持股</span><span class="v">${e.n_main}</span></div>
-        <div><span>全倉</span><span class="v">${e.n_current}</span></div>
-        ${newCell}
-        <div><span>已出清</span><span class="v">${e.n_exited}</span></div>
-      </div>
-      <div class="top3">${top3Html || '—'}</div>
-      <div class="asof">${e.n_days} 個交易日 · ${fmt(e.first_date)} → ${fmt(e.as_of)}</div>
-    `;
-    grid.appendChild(a);
+        <span class="name">${e.name}<span class="issuer">${e.issuer || ''}</span></span>
+        <span class="aum"><span class="v">${fmtAum(e.total_av_yi)}</span> 億</span>
+        ${renderSpark(e.price_series)}
+        <span class="list-date" title="上市日">${e.listing_date || '—'}</span>
+      </a>`;
+    list.appendChild(li);
   }
 }
 
@@ -546,12 +197,7 @@ sortSel.addEventListener('change', () => {
 });
 render(sortSel.value);
 
-const navCnt = etfs.filter(e => e.nav != null).length;
-const feeCnt = etfs.filter(e => e.fee_effective != null).length;
-const tieredCnt = etfs.filter(e => e.fee_effective?.tiered).length;
-const sharesCnt = etfs.filter(e => e.shares_signal && e.shares_signal.anchor_date !== e.shares_signal.as_of).length;
-const divCnt = etfs.filter(e => e.dividend && e.dividend.latest).length;
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔 · 費率 ${feeCnt}/${etfs.length} 檔（${tieredCnt} 檔階梯式）· 股數變動 ${sharesCnt}/${etfs.length} 檔 · 已首次配息 ${divCnt}/${etfs.length} 檔 · 走勢 TWSE/TPEx 近 ~3M`;
+$('footer').textContent = `${etfs.length} 檔主動 ETF · 規模 FundClear · 走勢 TWSE/TPEx 近 ~3M · 點一檔進單檔深度`;
 </script>
 </body>
 </html>
