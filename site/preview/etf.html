@@ -213,6 +213,51 @@
   .detail-head .title { font-weight: 600; font-size: 16px; }
   .detail-head .weight-now { font-family: ui-monospace, monospace; font-size: 20px; }
   .detail-subtitle { color: var(--ink-soft); font-size: 12px; font-family: ui-monospace, monospace; margin-bottom: 12px; }
+
+  /* P&L card — 單股損益（股數 × 收盤價） */
+  .pnl-card {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px 16px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border: 1px solid var(--rule);
+    background: var(--paper);
+    font-family: ui-monospace, monospace;
+  }
+  .pnl-card .k {
+    color: var(--ink-soft);
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .pnl-card .v {
+    font-size: 16px;
+    font-weight: 600;
+    margin-top: 2px;
+    letter-spacing: -0.01em;
+  }
+  .pnl-card .v.gain { color: var(--accent); }
+  .pnl-card .v.loss { color: var(--accent-down); }
+  .pnl-card .sub {
+    font-size: 10px;
+    color: var(--ink-soft);
+    margin-top: 1px;
+  }
+  .pnl-card .note {
+    grid-column: 1 / -1;
+    font-size: 10px;
+    color: var(--ink-soft);
+    padding-top: 6px;
+    border-top: 1px dashed var(--rule);
+    line-height: 1.5;
+  }
+  .pnl-card.missing { opacity: 0.7; }
+  .pnl-card.missing .v { font-size: 12px; font-weight: 400; color: var(--ink-soft); }
+  @media (max-width: 640px) {
+    .pnl-card { grid-template-columns: repeat(2, 1fr); padding: 8px 10px; gap: 8px 12px; }
+    .pnl-card .v { font-size: 14px; }
+  }
   #detail-chart { width: 100%; height: 220px; display: block; }
   .chart-legend {
     display: flex;
@@ -583,6 +628,7 @@
           <div class="weight-now" id="detail-weight">—</div>
         </div>
         <div class="detail-subtitle" id="detail-sub">—</div>
+        <div class="pnl-card" id="pnl-card" style="display:none"></div>
         <div class="chart-legend">
           <span><span class="swatch weight"></span>ETF 權重 %（左軸）</span>
           <span><span class="swatch price"></span>收盤價 NT$（右軸）</span>
@@ -845,6 +891,8 @@ function selectStock(code) {
         : `first ${fmt(first)} · last ${fmt(last)} · ${s.length} 個交易日出現`)
     : '—';
 
+  renderPnlCard(code);
+
   const svg = $('detail-chart');
   const evDiv = $('events');
   const legend = document.querySelector('.chart-legend');
@@ -947,6 +995,76 @@ function selectStock(code) {
     `;
     evDiv.appendChild(div);
   }
+}
+
+// ============= P&L card (detail) =============
+// 資料來源：build 時在 tools/preview_build.py _compute_stock_pnl 算好 data.pnl[code]
+// 公式：MV_now + Σ(-Δshares × close_t)；cost_basis = Σ 買入金額
+// 為什麼重要：權重 % 會被股價漲跌 confound（股價漲→權重自然升），
+// 股數 × 股價才是實際賺賠。
+function renderPnlCard(code) {
+  const card = $('pnl-card');
+  const pnl = (data.pnl || {})[code];
+  if (!pnl) { card.style.display = 'none'; return; }
+  card.style.display = '';
+
+  const fmtNT = v => {
+    const abs = Math.abs(v);
+    if (abs >= 1e8) return (v / 1e8).toFixed(2) + ' 億';
+    if (abs >= 1e4) return (v / 1e4).toFixed(1) + ' 萬';
+    return Math.round(v).toLocaleString();
+  };
+  const fmtPct = v => (v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + '%');
+
+  if (!pnl.has_prices) {
+    card.className = 'pnl-card missing';
+    card.innerHTML = `
+      <div><div class="k">損益</div><div class="v">無股價資料</div></div>
+      <div><div class="k">最新股數</div><div class="v">${fmtNT(pnl.shares_latest)}</div></div>
+      <div><div class="k">最新日</div><div class="v">${fmt(pnl.latest_date)}</div></div>
+      <div><div class="k">原因</div><div class="v">海外/期貨/現金</div></div>
+      <div class="note">非 TW 股票不在 FinMind TaiwanStockPrice 資料範圍（海外股 / 期貨 / 現金標記），P&amp;L 暫不計算。</div>
+    `;
+    return;
+  }
+
+  const signSym = pnl.pnl > 0 ? '+' : '';
+  const pnlCls = pnl.pnl > 0 ? 'gain' : pnl.pnl < 0 ? 'loss' : '';
+  const retCls = pnl.pnl_pct == null ? '' : pnl.pnl_pct > 0 ? 'gain' : pnl.pnl_pct < 0 ? 'loss' : '';
+  const exited = pnl.shares_latest === 0;
+  const pnlLabel = exited ? '已實現損益' : '損益（未實現+已實現）';
+  const retLabel = exited ? '實現報酬率' : '報酬率';
+
+  const missingNote = pnl.missing_price_days > 0
+    ? `（${pnl.missing_price_days}/${pnl.total_delta_days} 個交易日缺股價，已用 fallback 近似）` : '';
+
+  card.className = 'pnl-card';
+  card.innerHTML = `
+    <div>
+      <div class="k">${pnlLabel}</div>
+      <div class="v ${pnlCls}">${signSym}${fmtNT(pnl.pnl)}</div>
+      <div class="sub">NT$</div>
+    </div>
+    <div>
+      <div class="k">${retLabel}</div>
+      <div class="v ${retCls}">${fmtPct(pnl.pnl_pct)}</div>
+      <div class="sub">vs 累計買入成本</div>
+    </div>
+    <div>
+      <div class="k">${exited ? '最終市值' : '目前市值'}</div>
+      <div class="v">${fmtNT(pnl.mv_now)}</div>
+      <div class="sub">${fmtNT(pnl.shares_latest)} 股 × NT$${pnl.latest_price}</div>
+    </div>
+    <div>
+      <div class="k">累計買入成本</div>
+      <div class="v">${fmtNT(pnl.cost_basis)}</div>
+      <div class="sub">Σ 買入金額</div>
+    </div>
+    <div class="note">
+      算法：CF<sub>t</sub> = −Δshares × close<sub>t</sub>（買=負，賣=正）；總損益 = 目前市值 + Σ CF<sub>t</sub>；
+      報酬率 = 總損益 ÷ 累計買入成本。${pnl.total_delta_days} 個股數變動日，用 FinMind 該日收盤價當成交價近似。${missingNote}
+    </div>
+  `;
 }
 
 function detectEvents(s) {
