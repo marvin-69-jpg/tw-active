@@ -1,7 +1,7 @@
 // Consensus bar chart — vanilla JS + Observable Plot from CDN.
 import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm";
 
-const DATA_URL = "./data/consensus.json";
+const DATA_URL = new URL("../data/consensus.json", import.meta.url).href;
 
 const state = {
   data: null,
