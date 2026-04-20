@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>贏家 ETF 排行 — tw-active</title>
+<meta name="description" content="21 檔主動型 ETF 用股數 × 收盤計算的累積損益排行，反股價 confound。" />
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #6b6b6b;
+    --ink-mute: #9a9a9a;
+    --rule: #e0e0e0;
+    --rule-strong: #a0a0a0;
+    --accent: #0b6b3a;
+    --accent-down: #8f2e2e;
+    --paper: #fafaf7;
+    --panel-bg: #ffffff;
+    --mono: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, "Noto Sans Mono TC", monospace;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Helvetica Neue", Arial, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--paper); color: var(--ink);
+    font-family: var(--sans); font-size: 14px; line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+  header.site-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 12px 24px; border-bottom: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 12px; color: var(--ink-soft);
+  }
+  header.site-head a.brand-link { color: var(--ink); text-decoration: none; font-weight: 600; }
+  header.site-head nav a {
+    color: var(--ink-soft); text-decoration: none; margin-left: 16px;
+  }
+  header.site-head nav a:hover { color: var(--ink); }
+
+  .crumb {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-soft);
+    padding: 14px 24px 0; max-width: 1200px; margin: 0 auto;
+  }
+  .crumb a { color: var(--ink-soft); text-decoration: none; }
+  .crumb a:hover { color: var(--ink); }
+
+  main { max-width: 1200px; margin: 0 auto; padding: 12px 24px 80px; }
+
+  .hero { border-bottom: 1px solid var(--rule-strong); padding-bottom: 18px; margin-bottom: 24px; }
+  .hero .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--ink-mute); letter-spacing: 0.05em; margin-bottom: 8px; }
+  .hero h1 { font-size: 22px; font-weight: 600; margin: 0 0 8px; letter-spacing: -0.01em; }
+  .hero p { color: var(--ink-soft); margin: 0; max-width: 760px; font-size: 13px; }
+  .hero p b { color: var(--ink); font-weight: 600; }
+  .hero .meta { font-family: var(--mono); font-size: 11px; color: var(--ink-mute); margin-top: 10px; }
+
+  .section-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-top: 28px; margin-bottom: 10px; gap: 12px;
+  }
+  .section-head h2 {
+    font-size: 14px; font-weight: 600; margin: 0;
+    letter-spacing: 0.01em;
+  }
+  .section-head .count {
+    font-family: var(--mono); font-size: 11px; color: var(--ink-mute);
+  }
+
+  /* Controls */
+  .controls {
+    display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    font-family: var(--mono); font-size: 12px; color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .controls select {
+    font: inherit; font-family: var(--mono); font-size: 12px;
+    padding: 4px 8px; border: 1px solid var(--rule-strong);
+    background: var(--panel-bg); color: var(--ink); border-radius: 2px;
+  }
+  .controls .hint { color: var(--ink-mute); margin-left: auto; }
+
+  /* Table */
+  .tbl-wrap { border: 1px solid var(--rule); background: var(--panel-bg); overflow-x: auto; }
+  table.tbl {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  table.tbl th, table.tbl td {
+    padding: 8px 10px; text-align: right; white-space: nowrap;
+    border-bottom: 1px solid var(--rule);
+  }
+  table.tbl th {
+    background: #f6f4ef; color: var(--ink); font-weight: 600;
+    font-size: 11px; letter-spacing: 0.02em;
+    border-bottom: 1px solid var(--rule-strong);
+    position: sticky; top: 0;
+  }
+  table.tbl td.l, table.tbl th.l { text-align: left; }
+  table.tbl tr:last-child td { border-bottom: 0; }
+  table.tbl tr:hover td { background: #f9f7f1; }
+  table.tbl td.rank { color: var(--ink-mute); width: 30px; }
+  table.tbl td.code { color: var(--ink); font-weight: 600; }
+  table.tbl td.name { color: var(--ink-soft); font-family: var(--sans); max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+  table.tbl td.pnl { color: var(--ink); font-weight: 600; }
+  table.tbl td.up { color: var(--accent); }
+  table.tbl td.down { color: var(--accent-down); }
+  table.tbl td.dim { color: var(--ink-mute); }
+
+  .bar-cell { position: relative; min-width: 120px; }
+  .bar-cell .bar {
+    position: absolute; left: 10px; top: 50%;
+    height: 6px; transform: translateY(-50%);
+    background: var(--accent); opacity: 0.18;
+    pointer-events: none;
+    border-radius: 2px;
+  }
+  .bar-cell .bar.down { background: var(--accent-down); }
+  .bar-cell span { position: relative; z-index: 1; }
+
+  .preview-link {
+    color: var(--ink-soft); text-decoration: none;
+    font-family: var(--mono); font-size: 11px;
+  }
+  .preview-link:hover { color: var(--ink); text-decoration: underline; }
+
+  /* Top winners / losers chips */
+  td.chips {
+    font-family: var(--mono); font-size: 10px;
+    color: var(--ink-soft); text-align: left;
+    max-width: 260px;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  td.chips .chip {
+    display: inline-block;
+    padding: 1px 5px;
+    margin-right: 4px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    background: var(--panel-bg);
+  }
+  td.chips .chip.up { color: var(--accent); border-color: #c7e0d2; }
+  td.chips .chip.down { color: var(--accent-down); border-color: #e4cac8; }
+
+  /* Limited table */
+  .limited-note {
+    background: #fff9ec; border: 1px solid #ead9a8; border-left: 3px solid #c89b2a;
+    padding: 10px 14px; margin-bottom: 10px;
+    font-size: 12px; color: var(--ink-soft);
+  }
+  .limited-note b { color: var(--ink); }
+
+  /* Glossary */
+  .glossary {
+    margin-top: 28px; padding: 12px 14px;
+    background: #fff9ec; border: 1px solid #ead9a8; border-left: 3px solid #c89b2a;
+    font-size: 12px; color: var(--ink-soft); line-height: 1.6;
+  }
+  .glossary b { color: var(--ink); }
+  .glossary code {
+    font-family: var(--mono); font-size: 11px;
+    background: var(--panel-bg); padding: 1px 4px; border: 1px solid var(--rule); border-radius: 2px;
+  }
+
+  footer.site-foot {
+    max-width: 1200px; margin: 48px auto 0;
+    padding: 16px 24px 24px; border-top: 1px solid var(--rule);
+    font-family: var(--mono); font-size: 11px; color: var(--ink-mute);
+  }
+  footer.site-foot a { color: var(--ink-soft); text-decoration: none; }
+  footer.site-foot a:hover { color: var(--ink); }
+
+  @media (max-width: 720px) {
+    table.tbl td.chips { display: none; }
+    table.tbl th.chips-h { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-head">
+  <div><a href="../" class="brand-link">tw-active</a> / 贏家 ETF 排行</div>
+  <nav>
+    <a href="https://github.com/marvin-69-jpg/tw-active" target="_blank" rel="noopener">GitHub</a>
+    <a href="https://threads.net/@opus_666999" target="_blank" rel="noopener">Threads</a>
+  </nav>
+</header>
+
+<div class="crumb">
+  <a href="../">觀察策略</a> / <span>贏家 ETF 排行</span>
+</div>
+
+<main>
+
+<section class="hero">
+  <div class="eyebrow">03 / WINNERS</div>
+  <h1>贏家 ETF 排行</h1>
+  <p>
+    用 <b>股數 × 收盤價</b> 計算每檔 ETF 的累積損益（未實現 + 已實現），不是權重百分比。
+    權重會被股價漲跌 confound——台積電漲 10% 會把持有台積電的 ETF 權重「被動」拉高，
+    看起來像主動加碼但經理人根本沒動股數。
+    <b>P&L = 市值（目前股數 × 最新收盤）+ Σ 現金流（−Δstocks × 當日收盤）</b>，
+    這是真正可以比的 ground truth。
+  </p>
+  <div class="meta" id="meta-line">—</div>
+</section>
+
+<section class="section-head">
+  <h2>可比較排行（台股為主，FinMind 覆蓋率 ≥ 70%、資料 ≥ 5 天）</h2>
+  <span class="count" id="comparable-count">—</span>
+</section>
+
+<div class="controls">
+  <label>排序
+    <select id="sort-main">
+      <option value="pnl_desc">累計 P&L（高→低）</option>
+      <option value="pnl_pct_desc">報酬率 %（高→低）</option>
+      <option value="pnl_asc">累計 P&L（低→高）</option>
+      <option value="days_desc">資料天數（多→少）</option>
+      <option value="coverage_desc">覆蓋率（高→低）</option>
+      <option value="code">代碼</option>
+    </select>
+  </label>
+  <span class="hint">橫條長度按絕對 P&L 比例</span>
+</div>
+
+<div class="tbl-wrap">
+  <table class="tbl" id="main-tbl">
+    <thead>
+      <tr>
+        <th class="l" style="width:30px;">#</th>
+        <th class="l">代碼</th>
+        <th class="l">名稱</th>
+        <th>天數</th>
+        <th>覆蓋</th>
+        <th class="bar-cell">累計 P&L (NTD)</th>
+        <th>報酬率</th>
+        <th>成本</th>
+        <th class="l chips-h">贏家 / 虧家 Top</th>
+        <th class="l">preview</th>
+      </tr>
+    </thead>
+    <tbody id="main-body"></tbody>
+  </table>
+</div>
+
+<section class="section-head">
+  <h2>覆蓋受限（海外股、FinMind 無價，或剛上市天數太少）</h2>
+  <span class="count" id="limited-count">—</span>
+</section>
+<div class="limited-note">
+  下方 ETF 的持股以**海外個股**為主（00983A ARK 創新、00989A 美國科技、00998A 復華金融股息等），
+  FinMind 只覆蓋 TWSE / TPEx，這些 ETF 算出的 P&L 可能只反映極小部分持股，<b>不宜跟上表比較</b>。
+  仍列出是為了透明——未來接 US/JP 個股資料後再收斂。
+</div>
+<div class="tbl-wrap">
+  <table class="tbl" id="limited-tbl">
+    <thead>
+      <tr>
+        <th class="l" style="width:30px;">#</th>
+        <th class="l">代碼</th>
+        <th class="l">名稱</th>
+        <th>天數</th>
+        <th>覆蓋</th>
+        <th>P&L (covered)</th>
+        <th>報酬率 (covered)</th>
+        <th class="l">preview</th>
+      </tr>
+    </thead>
+    <tbody id="limited-body"></tbody>
+  </table>
+</div>
+
+<section class="glossary">
+  <b>累計 P&L</b>：<code>MV_now + Σ CF_t</code>，其中 <code>CF_t = −Δshares × close_t</code>（買 = 負、賣 = 正）。包含未實現 + 已實現。<br>
+  <b>成本（cost_basis）</b>：<code>Σ max(0, −CF_t)</code>，只加總買入。報酬率 = P&L / cost_basis。<br>
+  <b>覆蓋</b>：FinMind 有收盤價可算 P&L 的個股 / 總持股。低覆蓋 = 大多數持股是海外股。<br>
+  <b>為什麼不用 AUM 排</b>：AUM 大小 ≠ 賺多少；本頁目的是看**經理人選股/擇時**能力、不是規模。<br>
+  <b>限制</b>：資料起算日為該 ETF 最早持股揭露日（不是成立日）；早期建倉若在揭露窗口前發生，P&L 會從第一個揭露日之後的股數變動才計。
+</section>
+
+</main>
+
+<footer class="site-foot">
+  <div>由 AI agent <a href="https://github.com/marvin-69-jpg/tw-active">openab-bot</a> 維護 · P&L 公式 <code>shares × close</code> 反股價 confound</div>
+</footer>
+
+<script>
+(async () => {
+  const DATA_URL = new URL("../data/winners.json", window.location.href).href;
+  let data;
+  try {
+    const res = await fetch(DATA_URL);
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    data = await res.json();
+  } catch (e) {
+    document.querySelector("#main-body").innerHTML =
+      `<tr><td colspan="10" style="padding:40px;color:var(--accent-down);">資料載入失敗：${e.message}</td></tr>`;
+    return;
+  }
+
+  const fmtDate = (ymd) => ymd ? `${ymd.slice(0,4)}-${ymd.slice(4,6)}-${ymd.slice(6,8)}` : "—";
+  const esc = (s) => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const signedInt = (n) => (n > 0 ? "+" : "") + n.toLocaleString();
+  const fmtPct = (p) => (p > 0 ? "+" : "") + p.toFixed(2) + "%";
+  const fmtCompact = (n) => {
+    const abs = Math.abs(n);
+    const sign = n < 0 ? "−" : (n > 0 ? "+" : "");
+    if (abs >= 1e9) return sign + (abs / 1e8).toFixed(1) + " 億";
+    if (abs >= 1e7) return sign + (abs / 1e4).toFixed(0) + " 萬";
+    if (abs >= 1e4) return sign + (abs / 1e4).toFixed(1) + " 萬";
+    return sign + abs.toLocaleString();
+  };
+
+  // Separate comparable vs limited
+  const comparable = data.etfs.filter(e => e.coverage_pct >= 70 && e.n_days >= 5);
+  const limited = data.etfs.filter(e => !(e.coverage_pct >= 70 && e.n_days >= 5));
+
+  document.querySelector("#comparable-count").textContent = `${comparable.length} 檔`;
+  document.querySelector("#limited-count").textContent = `${limited.length} 檔`;
+  document.querySelector("#meta-line").textContent =
+    `${data.n_etfs} 檔 · 可比較 ${data.n_comparable} 檔 · 覆蓋受限 ${data.n_limited} 檔 · 最新揭露 ${fmtDate(data.as_of)}`;
+
+  const state = { sort: "pnl_desc" };
+
+  function sortList(list) {
+    const arr = list.slice();
+    switch (state.sort) {
+      case "pnl_desc": arr.sort((a,b) => b.pnl - a.pnl); break;
+      case "pnl_asc": arr.sort((a,b) => a.pnl - b.pnl); break;
+      case "pnl_pct_desc": arr.sort((a,b) => b.pnl_pct - a.pnl_pct); break;
+      case "days_desc": arr.sort((a,b) => b.n_days - a.n_days); break;
+      case "coverage_desc": arr.sort((a,b) => b.coverage_pct - a.coverage_pct); break;
+      case "code": arr.sort((a,b) => a.code.localeCompare(b.code)); break;
+    }
+    return arr;
+  }
+
+  function chipHtml(x, klass) {
+    const pct = x.pnl_pct >= 0 ? "+" + x.pnl_pct.toFixed(1) + "%" : x.pnl_pct.toFixed(1) + "%";
+    return `<span class="chip ${klass}">${esc(x.code)} ${pct}</span>`;
+  }
+
+  function renderMain() {
+    const arr = sortList(comparable);
+    const maxAbs = Math.max(1, ...arr.map(e => Math.abs(e.pnl)));
+    const html = arr.map((e, i) => {
+      const barPct = (Math.abs(e.pnl) / maxAbs) * 100;
+      const barCls = e.pnl < 0 ? "down" : "";
+      const pnlCls = e.pnl > 0 ? "up" : e.pnl < 0 ? "down" : "dim";
+      const winners = (e.top_winners || []).map(x => chipHtml(x, "up")).join("");
+      const losers = (e.top_losers || []).map(x => chipHtml(x, "down")).join("");
+      const chips = winners + (losers ? "&nbsp; " + losers : "");
+      return `<tr>
+        <td class="rank">${i + 1}</td>
+        <td class="code">${esc(e.code)}</td>
+        <td class="name l" title="${esc(e.name)}">${esc(e.name)}</td>
+        <td>${e.n_days}</td>
+        <td class="dim">${e.coverage_pct.toFixed(0)}%</td>
+        <td class="pnl ${pnlCls} bar-cell">
+          <div class="bar ${barCls}" style="width: calc(${barPct}% - 20px);"></div>
+          <span title="${e.pnl.toLocaleString()} NTD">${fmtCompact(e.pnl)}</span>
+        </td>
+        <td class="${pnlCls}">${fmtPct(e.pnl_pct)}</td>
+        <td class="dim">${fmtCompact(e.cost_basis)}</td>
+        <td class="chips">${chips}</td>
+        <td class="l"><a class="preview-link" href="../preview/etf.html?code=${e.code}">看 preview →</a></td>
+      </tr>`;
+    }).join("");
+    document.querySelector("#main-body").innerHTML = html || `<tr><td colspan="10" style="padding:24px;color:var(--ink-mute);">沒有符合條件的 ETF</td></tr>`;
+  }
+
+  function renderLimited() {
+    // Limited: sort by coverage desc then n_days desc then pnl desc
+    const arr = limited.slice().sort((a, b) => {
+      if (b.coverage_pct !== a.coverage_pct) return b.coverage_pct - a.coverage_pct;
+      if (b.n_days !== a.n_days) return b.n_days - a.n_days;
+      return b.pnl - a.pnl;
+    });
+    const html = arr.map((e, i) => {
+      const pnlCls = e.pnl > 0 ? "up" : e.pnl < 0 ? "down" : "dim";
+      return `<tr>
+        <td class="rank">${i + 1}</td>
+        <td class="code">${esc(e.code)}</td>
+        <td class="name l" title="${esc(e.name)}">${esc(e.name)}</td>
+        <td>${e.n_days}</td>
+        <td class="dim">${e.coverage_pct.toFixed(0)}%</td>
+        <td class="pnl ${pnlCls}">${fmtCompact(e.pnl)}</td>
+        <td class="${pnlCls}">${fmtPct(e.pnl_pct)}</td>
+        <td class="l"><a class="preview-link" href="../preview/etf.html?code=${e.code}">看 preview →</a></td>
+      </tr>`;
+    }).join("");
+    document.querySelector("#limited-body").innerHTML = html || `<tr><td colspan="8" style="padding:24px;color:var(--ink-mute);">無</td></tr>`;
+  }
+
+  document.querySelector("#sort-main").addEventListener("change", (ev) => {
+    state.sort = ev.target.value;
+    renderMain();
+  });
+
+  renderMain();
+  renderLimited();
+})();
+</script>
+</body>
+</html>

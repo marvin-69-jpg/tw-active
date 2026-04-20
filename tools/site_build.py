@@ -11,6 +11,7 @@ site_build — 從 raw/cmoney/ 的每日 JSON dump 產出 site/data/*.json 給 P
 
     site/data/consensus.json    共識股排行
     site/data/premium.json      21 檔折溢價時序（來自 raw/cmoney/premium/<etf>.json）
+    site/data/winners.json      21 檔 P&L 排行（聚合 site/preview/<etf>.json 的 pnl 欄）
 
 Schema:
 {
@@ -53,6 +54,7 @@ ROOT = Path(__file__).resolve().parents[1]
 RAW_CMONEY = ROOT / "raw" / "cmoney"
 RAW_PREMIUM = RAW_CMONEY / "premium"
 WIKI_ETFS = ROOT / "wiki" / "etfs"
+SITE_PREVIEW = ROOT / "site" / "preview"
 DEFAULT_OUT = ROOT / "site" / "data"
 
 # 現金 / 保證金 / 應收付 — 從 consensus 排除
@@ -304,6 +306,116 @@ def build_premium(etf_meta: dict[str, dict]) -> dict | None:
     }
 
 
+def build_winners(etf_meta: dict[str, dict]) -> dict | None:
+    """
+    聚合 site/preview/<etf>.json 的 pnl 欄做 ETF 級 P&L 排行。
+
+    pnl 欄（preview_build.py::_compute_stock_pnl 產）：
+      {
+        "has_prices": bool,  # FinMind 有無價格（海外股 = False）
+        "pnl": float,        # 絕對 P&L（NTD）
+        "cost_basis": float, # 僅買入累計（NTD）
+        "mv_now": float,
+        ...
+      }
+
+    ETF 級聚合：
+      - 只加總 has_prices=True 的個股（海外股被 FinMind 無價跳過）
+      - coverage_ratio = covered / total
+      - pnl_pct = sum(pnl) / sum(cost_basis) ← 覆蓋子集內的報酬率
+    """
+    if not SITE_PREVIEW.exists():
+        return None
+
+    etfs_out: list[dict] = []
+    for f in sorted(SITE_PREVIEW.glob("*.json")):
+        if f.name.endswith("-prices.json"):
+            continue
+        try:
+            p = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[WARN] {f}: {e}", file=sys.stderr)
+            continue
+
+        etf_field = p.get("etf")
+        if isinstance(etf_field, dict):
+            code = str(etf_field.get("code", "")).upper()
+            name_from_preview = etf_field.get("name")
+            issuer_from_preview = etf_field.get("issuer")
+        else:
+            code = str(etf_field or "").upper()
+            name_from_preview = None
+            issuer_from_preview = None
+        if not code:
+            continue
+
+        pnl_map = p.get("pnl") or {}
+        total_stocks = len(pnl_map)
+        covered = [v for v in pnl_map.values() if v.get("has_prices")]
+        n_covered = len(covered)
+        total_pnl = sum(v["pnl"] for v in covered)
+        total_cost = sum(v["cost_basis"] for v in covered)
+        total_mv = sum(v["mv_now"] for v in covered)
+        pnl_pct = round(total_pnl / total_cost * 100, 2) if total_cost else 0.0
+        coverage = round(n_covered / total_stocks * 100, 1) if total_stocks else 0.0
+
+        # 贏/虧 top 3（只從 covered 取）
+        sorted_cov = sorted(covered, key=lambda v: v["pnl"], reverse=True)
+        def _brief(v, pnl_map_inv_code):
+            return {
+                "code": pnl_map_inv_code,
+                "pnl": int(round(v["pnl"])),
+                "pnl_pct": v.get("pnl_pct", 0),
+            }
+        # 把 code 綁回（pnl_map key 是 stock code）
+        inv = {id(v): k for k, v in pnl_map.items()}
+        top_winners = [
+            _brief(v, inv.get(id(v), ""))
+            for v in sorted_cov[:3]
+        ]
+        top_losers = [
+            _brief(v, inv.get(id(v), ""))
+            for v in sorted_cov[-3:][::-1] if v["pnl"] < 0
+        ]
+
+        meta = etf_meta.get(code, {})
+        name = meta.get("name") or name_from_preview or code
+        issuer = meta.get("issuer") or issuer_from_preview or "unknown"
+
+        etfs_out.append({
+            "code": code,
+            "name": name,
+            "issuer": issuer,
+            "as_of": p.get("as_of"),
+            "first_date": p.get("first_date"),
+            "n_days": p.get("n_days", 0),
+            "total_stocks": total_stocks,
+            "covered_stocks": n_covered,
+            "coverage_pct": coverage,
+            "pnl": int(round(total_pnl)),
+            "pnl_pct": pnl_pct,
+            "cost_basis": int(round(total_cost)),
+            "mv_now": int(round(total_mv)),
+            "top_winners": top_winners,
+            "top_losers": top_losers,
+        })
+
+    if not etfs_out:
+        return None
+
+    # Coverage ≥70% → comparable group；< 70% 或 n_days<5 → limited
+    comparable = [e for e in etfs_out if e["coverage_pct"] >= 70 and e["n_days"] >= 5]
+    limited = [e for e in etfs_out if e not in comparable]
+    as_of = max((e["as_of"] for e in etfs_out if e.get("as_of")), default=None)
+    return {
+        "as_of": as_of,
+        "n_etfs": len(etfs_out),
+        "n_comparable": len(comparable),
+        "n_limited": len(limited),
+        "etfs": etfs_out,
+    }
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="site_build")
     p.add_argument("--out", type=Path, default=DEFAULT_OUT,
@@ -348,6 +460,19 @@ def main() -> int:
               f"rows_per_etf≈{len(premium['etfs'][0]['rows'])}")
     else:
         print(f"[SKIP] {RAW_PREMIUM} 不存在或無資料，未產 premium.json")
+
+    winners = build_winners(etf_meta)
+    if winners is not None:
+        w_file = args.out / "winners.json"
+        w_file.write_text(
+            json.dumps(winners, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        print(f"✓ wrote {w_file}")
+        print(f"  as_of={winners['as_of']}  n_etfs={winners['n_etfs']}  "
+              f"comparable={winners['n_comparable']}  limited={winners['n_limited']}")
+    else:
+        print(f"[SKIP] {SITE_PREVIEW} 不存在或無 preview JSON，未產 winners.json")
     return 0
 
 
