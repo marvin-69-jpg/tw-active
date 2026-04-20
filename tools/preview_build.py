@@ -24,6 +24,115 @@ import json
 import sys
 from pathlib import Path
 
+# cash-like markers to exclude from single-stock analysis
+_CASH_MARKERS = {"C_NTD", "M_NTD", "PFUR_NTD", "RDI_NTD"}
+
+
+def _load_daily_shares_delta(etf: str) -> dict | None:
+    """讀 raw/cmoney/shares/<etf>.json 算「最新交易日 vs 上一個交易日」的股數變動。
+
+    研究動機：30 日視窗看趨勢，單日視窗看經理人當天的動作。每日揭露延遲 T+1，
+    所以「最新 vs 前一天」= 經理人最近一次可觀察的交易決策。
+
+    schema: [日期, 標的代號, 標的名稱, 權重(%), 持有數, 單位]
+
+    回 {
+        latest_date, prev_date,
+        top_adds:[...], top_reductions:[...],
+        new_positions:[...], exits:[...],
+        n_adds_total, n_reductions_total, n_holdings,
+    } or None（無資料或只有一天）
+    """
+    path = Path(f"raw/cmoney/shares/{etf}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return None
+    rows = data.get("Data") or []
+    if not rows:
+        return None
+
+    by_date: dict[str, dict[str, dict]] = {}
+    for r in rows:
+        if not r or len(r) < 5:
+            continue
+        d_str, ccode, name, w, sh = r[0], r[1], r[2], r[3], r[4]
+        if ccode in _CASH_MARKERS:
+            continue
+        try:
+            shares = float(sh) if sh not in (None, "") else 0.0
+            weight = float(w) if w not in (None, "") else 0.0
+        except Exception:
+            continue
+        by_date.setdefault(d_str, {})[ccode] = {
+            "name": name, "shares": shares, "weight": weight,
+        }
+    if len(by_date) < 2:
+        return None
+
+    dates_desc = sorted(by_date.keys(), reverse=True)
+    latest_date, prev_date = dates_desc[0], dates_desc[1]
+    latest, prev = by_date[latest_date], by_date[prev_date]
+
+    WEIGHT_FLOOR = 0.3  # 跟 _load_shares_raw 對齊，過濾試水溫
+    adds, reductions, new_positions = [], [], []
+    for ccode, cur in latest.items():
+        pr = prev.get(ccode)
+        if pr is None:
+            if cur["weight"] >= WEIGHT_FLOOR:
+                new_positions.append({
+                    "code": ccode, "name": cur["name"],
+                    "shares": cur["shares"], "weight": round(cur["weight"], 2),
+                })
+            continue
+        delta = cur["shares"] - pr["shares"]
+        if delta == 0:
+            continue
+        max_weight = max(cur["weight"], pr["weight"])
+        if max_weight < WEIGHT_FLOOR:
+            continue
+        pct = (delta / pr["shares"] * 100.0) if pr["shares"] > 0 else None
+        entry = {
+            "code": ccode, "name": cur["name"],
+            "shares": cur["shares"], "prev_shares": pr["shares"],
+            "delta": delta,
+            "pct": round(pct, 2) if pct is not None else None,
+            "weight": round(cur["weight"], 2),
+            "prev_weight": round(pr["weight"], 2),
+        }
+        (adds if delta > 0 else reductions).append(entry)
+
+    exits = []
+    for ccode, pr in prev.items():
+        if ccode not in latest and pr["weight"] >= WEIGHT_FLOOR:
+            exits.append({
+                "code": ccode, "name": pr["name"],
+                "prev_shares": pr["shares"], "prev_weight": round(pr["weight"], 2),
+            })
+
+    # 排序：絕對股數變動大的在前（pct 輔助）
+    adds.sort(key=lambda e: -abs(e["delta"]))
+    reductions.sort(key=lambda e: -abs(e["delta"]))
+    new_positions.sort(key=lambda e: -e["weight"])
+    exits.sort(key=lambda e: -e["prev_weight"])
+
+    return {
+        "latest_date": latest_date,
+        "prev_date": prev_date,
+        "top_adds": adds[:10],
+        "top_reductions": reductions[:10],
+        "new_positions": new_positions[:10],
+        "exits": exits[:10],
+        "n_adds_total": len(adds),
+        "n_reductions_total": len(reductions),
+        "n_new_total": len(new_positions),
+        "n_exits_total": len(exits),
+        "n_holdings": len(latest),
+    }
+
+
 ISSUER_OF = {
     # minimal mapping for preview caption; extend as needed
     "00981A": ("主動統一台股增長", "統一投信"),
@@ -169,6 +278,7 @@ def build(etf: str, min_days: int = 30) -> dict:
         "name_of": {k: name_of[k] for k in series_out},
         "days_held": {k: days_held[k] for k in series_out},
         "is_new": is_new,  # {code: true} only for brand-new positions
+        "daily_shares": _load_daily_shares_delta(etf),
         "_source_file": src,
     }
     return out
