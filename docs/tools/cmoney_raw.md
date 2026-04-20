@@ -1,8 +1,8 @@
 # cmoney_raw：第三方 ETF 資料 raw consumer
 
-`raw/cmoney/` 由外部 CI 每日 push，本 repo 端只**讀**。反推式 endpoint
-細節（URL、DtNo、headers、User-Agent、Referer 需求）**不寫在這份文件**——
-屬於 private sibling repo 的破解筆記（見 `feedback_keep_source_exploits_private`）。
+`raw/cmoney/` 由外部 CI 每日 push，本 repo 端只**讀**。資料來源的反推細節
+（URL、query 參數、headers、存取條件）**不寫在這份文件**——屬於 private
+sibling repo 的破解筆記（見 `feedback_keep_source_exploits_private`）。
 
 本文件只記錄：抽象層（raw 檔案結構）+ 研究 finding。
 
@@ -10,9 +10,10 @@
 
 ```
 raw/cmoney/
-├── <code>/batch_*.json    ← 主動 ETF 歷史持股（21 檔，每日 snapshot + batch）
+├── <code>/batch_*.json    ← 主動 ETF 歷史持股權重（21 檔，每日 snapshot + batch，欄位只有 %）
 ├── premium/<code>.json    ← 每日 NAV + 折溢價（21 檔全覆蓋，單檔單檔 snapshot）
-└── meta/<code>.json       ← ETF 基本資料（費率、規模、發行商、配息制度）
+├── meta/<code>.json       ← ETF 基本資料（費率、規模、發行商、配息制度）
+└── shares/<code>.json     ← 每日持股**股數**（21 檔全覆蓋，歷史 snapshot 降冪）
 ```
 
 每種檔案的欄位順序固定，Title/Data 分離；`Data[0]` 為最新（時序降冪）。
@@ -22,6 +23,7 @@ raw/cmoney/
 - `tools/preview_all.py::_load_premium_raw()` — 讀 premium 取最新 NAV/折溢價
 - `tools/preview_all.py::_load_meta_raw()` — 讀 meta 取費率原文 + 拆階梯
 - `tools/preview_all.py::_effective_fee()` — 從階梯文字 + 當前規模推估**實付**費率
+- `tools/preview_all.py::_load_shares_raw()` — 讀 shares 算 ~30 天股數變動（加碼/減碼/新倉）
 
 這些 function 只 parse JSON，不知道 endpoint 長什麼樣。raw 缺檔時 graceful 退回
 `etfdaily`（投信官網 5 檔，見 [`etfdaily.md`](etfdaily.md)）。
@@ -66,3 +68,36 @@ Yahoo 欄位與實際的差距。
 - 逾門檻後管理費下降 20bps 是否為隱性 AUM 天花板訊號（達到後才真正「便宜」的
   敘事壓力）？與實際規模成長曲線對照是否能看到「接近門檻前規模增速放緩」？
 - 保管費（另一欄）結構是否對稱於管理費？
+
+## 研究 finding：股數 vs 權重 — 誰才是經理人動作
+
+持股明細只有 `權重(%)`，這個欄位被股價漲跌 **confound**：
+
+- 若台積電當日漲 10%、經理人持有股數不變 → 權重 %↑ 但經理人沒動
+- 若台積電當日跌 5%、經理人加碼 10% → 權重可能持平，但實際上在買入
+- 若台積電跌 30%、經理人同時減倉 20% → 權重暴跌看似減倉，實則是股價砸得更兇
+
+只看權重排序「加碼/減碼」會把**股價效應**誤判為**經理人擇時**。
+
+`shares/<code>.json` 補上 `持有數` 欄位作為 ground truth：
+- `shares↑` 且 `prev_shares > 0` → 真加碼（delta 有號）
+- `shares↓` → 真減倉
+- `code ∈ latest − anchor` → 新建倉
+- `code ∈ anchor − latest` → 全數出清
+
+`_load_shares_raw(code, window_days=30)` 取 latest vs 30 天前 anchor（最近可用日），
+計算每檔 delta / pct，篩 `max(weight, prev_weight) >= 0.3%` 過掉 0.01% 試水溫噪訊，
+回 `top_adds / top_reductions / new_positions / exits` 各 5 檔。preview 卡片
+渲染為 `股數變動 30日` block，tooltip 秀完整股數變化。
+
+### 初步觀察（2026-04-17 snapshot，30 日視窗）
+
+同一家 ETF 在一個月內能出現三位數 % 的加碼（如 00981A 把聯發科股數從 486 千股拉到
+1870 千股，+285%）；也能出現腰斬等級的減倉（如 00981A 把環球晶砍半 -48%）。
+這種幅度是**權重 %** 時序看不見的訊號——權重會被股價壓抑或放大，股數才是經理人
+**實際下單**的紀錄。
+
+後續研究方向：
+- 交叉配對「個股 30 日股價漲跌 × ETF 股數變化」：是**追漲**還是**擇時買低**？
+- 同一檔股票被多家 ETF 同時加碼/減碼 → 產業輪動或經理人 consensus？
+- 股數季度變化 vs SITCA IN2629 月報揭露 Top 10 對照（揭露缺口檢驗）

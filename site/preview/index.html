@@ -123,6 +123,38 @@
     font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
     color: var(--ink-soft); font-size: 10px;
   }
+  .card .shares-row {
+    padding: 6px 0; border-top: 1px dashed var(--rule);
+    font-size: 10px; color: var(--ink-soft);
+    line-height: 1.5;
+  }
+  .card .shares-row .head {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    color: var(--ink); font-size: 11px; margin-bottom: 3px;
+  }
+  .card .shares-row .head .win {
+    font-family: ui-monospace, monospace; font-size: 10px;
+    color: var(--ink-soft); margin-left: 4px; font-weight: normal;
+  }
+  .card .shares-row .line {
+    display: flex; gap: 6px; overflow-x: auto; white-space: nowrap;
+    padding: 1px 0;
+  }
+  .card .shares-row .line .label {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    color: var(--ink-soft); min-width: 2.5em;
+  }
+  .card .shares-row .chip {
+    font-family: ui-monospace, monospace;
+    padding: 0 2px;
+  }
+  .card .shares-row .chip.add { color: #b8860b; }
+  .card .shares-row .chip.red { color: #4a7c4a; }
+  .card .shares-row .chip.new {
+    color: #b8860b;
+    border: 1px solid #b8860b; border-radius: 2px;
+    padding: 0 3px; font-size: 9px;
+  }
   .card .spark {
     display: block; width: 100%; height: 36px;
     margin: 6px 0 4px;
@@ -402,6 +434,31 @@ function render(sortKey) {
         ${yahooGap}
       </div>`;
     }
+    // 股數變動列：ground truth，~30 天視窗
+    // 研究意圖：權重%受股價漲跌 confound，股數↑才是真加碼
+    const ss = e.shares_signal;
+    let sharesRow = '';
+    if (ss && ss.anchor_date && ss.anchor_date !== ss.as_of) {
+      const pctFmt = (p) => (p == null ? '—' : (p > 0 ? '+' : '') + p.toFixed(0) + '%');
+      const mkChip = (x, cls) =>
+        `<span class="chip ${cls}" title="${x.name}（${x.code}）${x.prev_shares?.toLocaleString?.() ?? ''} → ${x.shares?.toLocaleString?.() ?? ''} 股">${x.name.slice(0,4)} ${pctFmt(x.pct)}</span>`;
+      const adds = (ss.top_adds || []).slice(0, 3).map(x => mkChip(x, 'add')).join(' ');
+      const reds = (ss.top_reductions || []).slice(0, 3).map(x => mkChip(x, 'red')).join(' ');
+      const news = (ss.new_positions || []).slice(0, 3).map(x =>
+        `<span class="chip new" title="新建倉 權重 ${x.weight}%">${x.name.slice(0,4)}</span>`
+      ).join(' ');
+      const winLabel = `${ss.window_days}日`;
+      const parts = [];
+      if (adds) parts.push(`<div class="line"><span class="label">加碼</span>${adds}</div>`);
+      if (reds) parts.push(`<div class="line"><span class="label">減碼</span>${reds}</div>`);
+      if (news) parts.push(`<div class="line"><span class="label">新倉</span>${news}</div>`);
+      if (parts.length) {
+        sharesRow = `<div class="shares-row" title="股數變動：權重%會被股價漲跌影響，股數才是經理人實際動作。視窗 ${fmt(ss.anchor_date)} → ${fmt(ss.as_of)}">
+          <div class="head">股數變動 <span class="win">${winLabel}</span></div>
+          ${parts.join('')}
+        </div>`;
+      }
+    }
     a.innerHTML = `
       <div class="code-row">
         <span class="code">${e.code}</span>
@@ -412,6 +469,7 @@ function render(sortKey) {
       ${sparkHtml}
       ${priceRow}
       ${feeRow}
+      ${sharesRow}
       <div class="stats">
         <div><span>主要持股</span><span class="v">${e.n_main}</span></div>
         <div><span>全倉</span><span class="v">${e.n_current}</span></div>
@@ -437,7 +495,8 @@ render(sortSel.value);
 const navCnt = etfs.filter(e => e.nav != null).length;
 const feeCnt = etfs.filter(e => e.fee_effective != null).length;
 const tieredCnt = etfs.filter(e => e.fee_effective?.tiered).length;
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔 · 費率 ${feeCnt}/${etfs.length} 檔（${tieredCnt} 檔階梯式）· 走勢 TWSE/TPEx 近 ~3M`;
+const sharesCnt = etfs.filter(e => e.shares_signal && e.shares_signal.anchor_date !== e.shares_signal.as_of).length;
+$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔 · 費率 ${feeCnt}/${etfs.length} 檔（${tieredCnt} 檔階梯式）· 股數變動 ${sharesCnt}/${etfs.length} 檔 · 走勢 TWSE/TPEx 近 ~3M`;
 </script>
 </body>
 </html>
