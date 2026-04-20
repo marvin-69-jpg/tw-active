@@ -391,6 +391,68 @@ def _load_shares_raw(code: str, window_days: int = 30) -> dict | None:
     }
 
 
+def _load_dividend_raw(code: str) -> dict | None:
+    """讀 raw/cmoney/dividend/<code>.json 抽最近一次配息摘要 + 歷史。
+
+    raw 由外部 CI push，schema: [年季, 現金股利合計(元), 現金股利殖利率(%),
+    除息日, 發放日]，Data 降冪（最新在 [0]）。
+
+    研究意圖：配息來源拆解是主動 ETF 核心體制研究課題。表面時序只是 anchor —
+    下游要對照公開說明書與年報才能拆「實際收益 vs 資本利得 vs 收益平準金 vs
+    本金」。此 consumer 只 surface 時序欄。
+
+    回 {
+        latest: {period, amount, yield_pct, ex_date, pay_date} or None,
+        n_payouts: int,
+        annualized_yield_pct: float | None,  # 取近 4 次殖利率加總（若不足則 None）
+        history: [...],  # 近 20 次 raw-ish
+    } or None（檔不存在）。
+    """
+    path = Path(f"raw/cmoney/dividend/{code}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return None
+    rows = data.get("Data") or []
+    if not rows:
+        return {
+            "latest": None, "n_payouts": 0,
+            "annualized_yield_pct": None, "history": [],
+        }
+
+    def _fnum(x):
+        try:
+            return float(x) if x not in (None, "") else None
+        except Exception:
+            return None
+
+    history = []
+    for r in rows:
+        if not r or len(r) < 5:
+            continue
+        history.append({
+            "period": r[0],
+            "amount": _fnum(r[1]),
+            "yield_pct": _fnum(r[2]),
+            "ex_date": r[3],
+            "pay_date": r[4],
+        })
+
+    latest = history[0] if history else None
+    # 近 4 次殖利率加總視為年化（約略；季配 × 4 ≈ 年化）
+    yields_4 = [h["yield_pct"] for h in history[:4] if h["yield_pct"] is not None]
+    annualized = round(sum(yields_4), 2) if len(yields_4) >= 4 else None
+
+    return {
+        "latest": latest,
+        "n_payouts": len(history),
+        "annualized_yield_pct": annualized,
+        "history": history,
+    }
+
+
 def _fetch_nav(code: str) -> tuple[float | None, str | None]:
     """保留作為 secondary source（pocket.tw 下線時 fallback）。"""
     if code not in etfdaily.CATALOG:
@@ -442,6 +504,8 @@ def build_all(codes: list[str]) -> list[dict]:
         meta = _load_meta_raw(code.upper())
         # 股數變動訊號 — 研究經理人實際建倉/減倉而非被股價 confound 的權重
         shares_signal = _load_shares_raw(code.upper())
+        # 配息記錄 — 配息來源拆解研究的 anchor 時序
+        dividend = _load_dividend_raw(code.upper())
         # FundClear 有些規模欄位會缺；CMoney meta 的 aum_yi 可當備援
         aum_for_fee = total_av_yi if total_av_yi not in (None, "") else (
             meta.get("aum_yi_cmoney") if meta else None)
@@ -510,6 +574,8 @@ def build_all(codes: list[str]) -> list[dict]:
             "shares_k": meta.get("shares_k") if meta else None,
             # 股數變動訊號（~30 天視窗）：加碼/減碼 top 5、新建倉、出場
             "shares_signal": shares_signal,
+            # 配息記錄（latest + 近期歷史 + 年化殖利率）
+            "dividend": dividend,
         })
         nav_str = f"NAV={nav:.2f} prem={premium_pct:+.2f}%" if nav else "NAV=-"
         print(

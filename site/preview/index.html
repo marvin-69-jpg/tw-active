@@ -155,6 +155,28 @@
     border: 1px solid #b8860b; border-radius: 2px;
     padding: 0 3px; font-size: 9px;
   }
+  .card .dividend-row {
+    padding: 6px 0; border-top: 1px dashed var(--rule);
+    font-size: 10px; color: var(--ink-soft);
+    display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap;
+  }
+  .card .dividend-row .label {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    font-size: 11px; color: var(--ink);
+  }
+  .card .dividend-row .amount {
+    font-family: ui-monospace, monospace; color: var(--ink); font-weight: 500;
+  }
+  .card .dividend-row .yld {
+    font-family: ui-monospace, monospace; color: #b8860b;
+  }
+  .card .dividend-row .period {
+    font-family: ui-monospace, monospace; font-size: 9px;
+    color: var(--ink-soft);
+  }
+  .card .dividend-row .no-payout {
+    color: var(--ink-soft); font-style: italic;
+  }
   .card .spark {
     display: block; width: 100%; height: 36px;
     margin: 6px 0 4px;
@@ -459,6 +481,37 @@ function render(sortKey) {
         </div>`;
       }
     }
+    // 配息列：近期一次配息（年季/金額/殖利率）+ 年化 if available
+    // 研究意圖：主動 ETF 配息來源拆解的基準時序，下游研究要對照公開說明書算實際比例
+    const dv = e.dividend;
+    let dividendRow = '';
+    if (dv) {
+      if (dv.latest) {
+        const p = dv.latest.period || '';
+        // 202601 → 2026 Q1 顯示
+        const pDisplay = p.length === 6
+          ? `${p.slice(0,4)}Q${p.slice(5,6)}`
+          : p;
+        const annHtml = dv.annualized_yield_pct != null
+          ? `<span class="yld" title="近 4 次殖利率加總 ≈ 年化（季配×4）">年化≈${dv.annualized_yield_pct}%</span>`
+          : '';
+        const payDate = dv.latest.pay_date
+          ? `${dv.latest.pay_date.slice(0,4)}/${dv.latest.pay_date.slice(4,6)}/${dv.latest.pay_date.slice(6,8)}`
+          : '';
+        dividendRow = `<div class="dividend-row" title="最新配息：${pDisplay} 現金股利 ${dv.latest.amount} 元、殖利率 ${dv.latest.yield_pct}%、發放日 ${payDate}（共 ${dv.n_payouts} 次配息記錄）">
+          <span class="label">配息</span>
+          <span class="period">${pDisplay}</span>
+          <span class="amount">${dv.latest.amount} 元</span>
+          <span class="yld">殖利率 ${dv.latest.yield_pct}%</span>
+          ${annHtml}
+        </div>`;
+      } else {
+        dividendRow = `<div class="dividend-row" title="尚無配息記錄（多為 2025 後上市、首次配息尚未發生）">
+          <span class="label">配息</span>
+          <span class="no-payout">尚未首次配息</span>
+        </div>`;
+      }
+    }
     a.innerHTML = `
       <div class="code-row">
         <span class="code">${e.code}</span>
@@ -469,6 +522,7 @@ function render(sortKey) {
       ${sparkHtml}
       ${priceRow}
       ${feeRow}
+      ${dividendRow}
       ${sharesRow}
       <div class="stats">
         <div><span>主要持股</span><span class="v">${e.n_main}</span></div>
@@ -496,7 +550,8 @@ const navCnt = etfs.filter(e => e.nav != null).length;
 const feeCnt = etfs.filter(e => e.fee_effective != null).length;
 const tieredCnt = etfs.filter(e => e.fee_effective?.tiered).length;
 const sharesCnt = etfs.filter(e => e.shares_signal && e.shares_signal.anchor_date !== e.shares_signal.as_of).length;
-$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔 · 費率 ${feeCnt}/${etfs.length} 檔（${tieredCnt} 檔階梯式）· 股數變動 ${sharesCnt}/${etfs.length} 檔 · 走勢 TWSE/TPEx 近 ~3M`;
+const divCnt = etfs.filter(e => e.dividend && e.dividend.latest).length;
+$('footer').textContent = `data etfs.json · 索引 ${etfs.length} 檔 · 規模/受益人數 FundClear · NAV/折溢價 ${navCnt}/${etfs.length} 檔 · 費率 ${feeCnt}/${etfs.length} 檔（${tieredCnt} 檔階梯式）· 股數變動 ${sharesCnt}/${etfs.length} 檔 · 已首次配息 ${divCnt}/${etfs.length} 檔 · 走勢 TWSE/TPEx 近 ~3M`;
 </script>
 </body>
 </html>
