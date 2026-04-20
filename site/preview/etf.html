@@ -148,15 +148,14 @@
   .delta.up { color: var(--accent); }
   .delta.down { color: var(--accent-down); }
 
-  /* Horizontal small multiples */
-  .sm-strip-wrap { overflow-x: auto; padding-bottom: 8px; }
+  /* Small multiples grid — wrap downward, no horizontal scroll */
+  .sm-strip-wrap { padding-bottom: 8px; }
   .sm-strip {
-    display: flex;
-    gap: 16px;
-    min-width: min-content;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px 20px;
   }
   .sm-cell {
-    flex: 0 0 180px;
     display: flex;
     flex-direction: column;
     gap: 4px;
@@ -395,8 +394,8 @@
     table.holdings td.spark { width: 120px; }
     table.holdings td.since { font-size: 11px; width: 90px; }
 
-    /* Small multiples: 縮小 cell 寬度 */
-    .sm-cell { flex: 0 0 148px; }
+    /* Small multiples: 縮小最小寬度讓 column 更緊湊，svg 也縮一點 */
+    .sm-strip { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px 14px; }
     .sm-cell svg { height: 44px; }
 
     /* Detail: 改成上下堆疊，picker 變成橫向 scroll 的 row */
@@ -508,7 +507,7 @@
 
   <!-- Tab: small multiples strip -->
   <section class="panel" data-panel="trace">
-    <p class="panel-title">每檔股票一張 全期軌跡 · 橫向 scroll 看更多 →</p>
+    <p class="panel-title">每檔股票一張 全期軌跡 · 往下捲看更多</p>
     <div class="sm-strip-wrap">
       <div class="sm-strip" id="sm-strip"></div>
     </div>
