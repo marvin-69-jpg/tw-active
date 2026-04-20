@@ -1,5 +1,7 @@
-// Consensus bar chart — vanilla JS + Observable Plot from CDN.
-import * as Plot from "https://cdn.jsdelivr.net/npm/@observablehq/plot@0.6.17/+esm";
+// Consensus bar chart — hand-rolled SVG for reliable full-row click targets.
+// (Previously used Observable Plot but DOM-level click binding proved fragile:
+//  small bars on low-held_by rows were near-unclickable, and subsequent clicks
+//  after a selection sometimes stopped registering.)
 
 const DATA_URL = new URL("../data/consensus.json", import.meta.url).href;
 
@@ -12,9 +14,9 @@ const state = {
 };
 
 const $ = (sel) => document.querySelector(sel);
+const SVG_NS = "http://www.w3.org/2000/svg";
 
 function fmtDate(ymd) {
-  // "20260417" → "2026-04-17"
   if (!ymd || ymd.length !== 8) return ymd ?? "—";
   return `${ymd.slice(0, 4)}-${ymd.slice(4, 6)}-${ymd.slice(6, 8)}`;
 }
@@ -45,127 +47,140 @@ function filteredRows() {
   rows.sort((a, b) => {
     const diff = (b[state.sortBy] ?? 0) - (a[state.sortBy] ?? 0);
     if (diff !== 0) return diff;
-    // secondary
     return (b.total_weight ?? 0) - (a.total_weight ?? 0);
   });
   return rows.slice(0, state.topN);
 }
 
+// Linear interpolation between two hex colors at t ∈ [0, 1].
+function lerpColor(a, b, t) {
+  const pa = [parseInt(a.slice(1, 3), 16), parseInt(a.slice(3, 5), 16), parseInt(a.slice(5, 7), 16)];
+  const pb = [parseInt(b.slice(1, 3), 16), parseInt(b.slice(3, 5), 16), parseInt(b.slice(5, 7), 16)];
+  const m = pa.map((v, i) => Math.round(v + (pb[i] - v) * t));
+  return `rgb(${m[0]},${m[1]},${m[2]})`;
+}
+
+function barColor(avgWeight) {
+  // match previous Plot scale: linear domain [0, 10] → [#f1e8e6, #8a1a0f], clamp.
+  const t = Math.max(0, Math.min(1, avgWeight / 10));
+  return lerpColor("#f1e8e6", "#8a1a0f", t);
+}
+
+function truncate(s, n) {
+  if (!s) return "";
+  return s.length > n ? s.slice(0, n - 1) + "…" : s;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
+  );
+}
+
 function renderChart() {
+  const host = $("#chart");
   const rows = filteredRows();
   if (!rows.length) {
-    $("#chart").innerHTML =
+    host.innerHTML =
       '<p style="color:var(--ink-soft);padding:48px;text-align:center;">沒有符合篩選條件的股票</p>';
     return;
   }
-  // label with code + name (truncate long English names)
-  const decorated = rows.map((r) => ({
-    ...r,
-    label: `${r.code}  ${truncate(r.name, 18)}`,
-  }));
 
   const maxHeld = state.data.kpi.n_etfs;
-  const barHeight = 22;
-  const marginLeft = 220;
-  const width = Math.min(
-    900,
-    Math.max(480, $("#chart").clientWidth - 32)
-  );
+  const rowH = 22;
+  const padT = 40;
+  const padB = 16;
+  const padL = 220;      // space for labels
+  const padR = 90;       // space for inline stat text
+  const clientW = Math.max(420, host.clientWidth - 32);
+  const width = Math.min(960, clientW);
+  const innerW = width - padL - padR;
+  const height = padT + rows.length * rowH + padB;
 
-  const plot = Plot.plot({
-    width,
-    height: Math.max(360, rows.length * barHeight + 80),
-    marginLeft,
-    marginRight: 60,
-    marginTop: 36,
-    marginBottom: 24,
-    x: {
-      domain: [0, maxHeld],
-      axis: "top",
-      label: `被幾檔主動 ETF 持有（共 ${maxHeld} 檔） →`,
-      labelAnchor: "left",
-      labelOffset: 22,
-      ticks: Math.min(11, maxHeld),
-      grid: true,
-    },
-    y: {
-      domain: decorated.map((d) => d.label),
-      label: null,
-    },
-    color: {
-      type: "linear",
-      domain: [0, 10],
-      range: ["#f1e8e6", "#8a1a0f"],
-      clamp: true,
-    },
-    marks: [
-      Plot.barX(decorated, {
-        y: "label",
-        x: "held_by",
-        fill: "avg_weight",
-        title: (d) =>
-          `${d.code} ${d.name}\n` +
-          `被 ${d.held_by} / ${maxHeld} 檔 ETF 持有\n` +
-          `平均權重 ${fmtPct(d.avg_weight)}（有買的 ETF 平均配多少）\n` +
-          `最重 ${fmtPct(d.max_weight)}（下手最重那檔的比重）\n` +
-          `最輕 ${fmtPct(d.min_weight)}（下手最輕那檔的比重）\n` +
-          `總權重 ${fmtPct(d.total_weight)}（所有持有者加總）\n` +
-          `點擊看哪幾檔 ETF 有買`,
-        className: "consensus-bar",
-      }),
-      Plot.text(decorated, {
-        y: "label",
-        x: "held_by",
-        text: (d) =>
-          state.sortBy === "held_by"
-            ? `${d.held_by} 檔  ·  平均 ${fmtPct(d.avg_weight)}`
-            : `平均 ${fmtPct(d.avg_weight)}  ·  ${d.held_by} 檔`,
-        dx: 6,
-        textAnchor: "start",
-        fontFamily:
-          'ui-monospace, "SF Mono", Menlo, Consolas, "Noto Sans Mono TC", monospace',
-        fontSize: 11,
-        fill: "#3a3a3a",
-      }),
-      Plot.ruleX([0]),
-    ],
-  });
+  const xOf = (v) => padL + (v / maxHeld) * innerW;
 
-  const host = $("#chart");
-  host.innerHTML = "";
-  host.append(plot);
-
-  // wire click handlers via DOM (Observable Plot doesn't expose row-level events directly)
-  const bars = plot.querySelectorAll("[aria-label][fill]");
-  bars.forEach((bar, i) => {
-    const row = decorated[i];
-    if (!row) return;
-    bar.style.cursor = "pointer";
-    bar.addEventListener("click", () => selectStock(row.code));
-  });
-
-  // re-highlight selected
-  if (state.selected) {
-    highlightInChart();
+  // Build SVG as an HTML string (fast, simple) — then attach click handlers
+  // via delegation on the overlay group so every row is a large click target.
+  const ticks = [];
+  const nTicks = Math.min(11, maxHeld);
+  for (let i = 0; i <= nTicks; i++) {
+    const v = (maxHeld / nTicks) * i;
+    const x = xOf(v).toFixed(1);
+    ticks.push(
+      `<line x1="${x}" y1="${padT - 4}" x2="${x}" y2="${height - padB}" stroke="#e6e3dc" stroke-width="0.5" />`,
+      `<text x="${x}" y="${padT - 8}" font-family="ui-monospace,monospace" font-size="10" fill="#8a8a8a" text-anchor="middle">${Math.round(v)}</text>`
+    );
   }
-}
 
-function highlightInChart() {
-  const bars = document.querySelectorAll("#chart [aria-label][fill]");
-  const rows = filteredRows();
-  bars.forEach((bar, i) => {
-    const row = rows[i];
-    if (!row) return;
-    bar.style.outline =
-      row.code === state.selected ? "2px solid #111" : "none";
-    bar.style.outlineOffset = "-1px";
+  const axisLabel =
+    `<text x="${padL}" y="${18}" font-family="ui-monospace,monospace" font-size="11" fill="#6b6b6b">被幾檔主動 ETF 持有（共 ${maxHeld} 檔）→</text>`;
+
+  const bars = rows.map((r, i) => {
+    const y = padT + i * rowH;
+    const cy = y + rowH / 2;
+    const barW = Math.max(0.5, xOf(r.held_by) - padL);
+    const fill = barColor(r.avg_weight);
+    const selected = state.selected === r.code;
+    const labelText = `${r.code}  ${truncate(r.name, 18)}`;
+    const statText =
+      state.sortBy === "held_by"
+        ? `${r.held_by} 檔  ·  平均 ${fmtPct(r.avg_weight)}`
+        : `平均 ${fmtPct(r.avg_weight)}  ·  ${r.held_by} 檔`;
+
+    const tip =
+      `${r.code} ${r.name}\n` +
+      `被 ${r.held_by} / ${maxHeld} 檔 ETF 持有\n` +
+      `平均權重 ${fmtPct(r.avg_weight)}\n` +
+      `最重 ${fmtPct(r.max_weight)}  最輕 ${fmtPct(r.min_weight)}\n` +
+      `總權重 ${fmtPct(r.total_weight)}\n` +
+      `點擊看哪幾檔 ETF 有買`;
+
+    const rowBg = selected ? "#fff3c4" : "transparent";
+
+    return `<g class="row" data-code="${esc(r.code)}">
+      <title>${esc(tip)}</title>
+      <rect x="0" y="${y}" width="${width}" height="${rowH}" fill="${rowBg}" class="row-bg" />
+      <text x="${padL - 8}" y="${cy}" font-family="ui-monospace,monospace" font-size="12" fill="#1a1a1a"
+            text-anchor="end" dominant-baseline="central">${esc(labelText)}</text>
+      <rect x="${padL}" y="${y + 3}" width="${barW.toFixed(1)}" height="${rowH - 6}"
+            fill="${fill}" class="bar" ${selected ? 'stroke="#111" stroke-width="1.5"' : ""} />
+      <text x="${padL + barW + 6}" y="${cy}" font-family="ui-monospace,monospace" font-size="11"
+            fill="#3a3a3a" dominant-baseline="central">${esc(statText)}</text>
+      <rect x="0" y="${y}" width="${width}" height="${rowH}" fill="transparent" class="row-hit"
+            style="cursor:pointer" />
+    </g>`;
+  }).join("");
+
+  // Axis baseline
+  const baseline = `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${height - padB}" stroke="#1a1a1a" stroke-width="1" />`;
+
+  host.innerHTML =
+    `<svg viewBox="0 0 ${width} ${height}" width="${width}" height="${height}"
+          xmlns="${SVG_NS}" role="img" aria-label="主動 ETF 共識股排行">
+       <style>
+         .row:hover .row-bg { fill: #f6f1e8; }
+         .row:hover .bar { filter: brightness(0.92); }
+       </style>
+       ${ticks.join("")}
+       ${axisLabel}
+       ${bars}
+       ${baseline}
+     </svg>`;
+
+  // Single delegated click listener — robust across re-renders.
+  const svg = host.querySelector("svg");
+  svg.addEventListener("click", (ev) => {
+    const g = ev.target.closest("g.row");
+    if (!g) return;
+    const code = g.dataset.code;
+    if (code) selectStock(code);
   });
 }
 
 function selectStock(code) {
   state.selected = code;
+  renderChart();        // re-render to update selected row background + bar stroke
   renderPanel();
-  highlightInChart();
 }
 
 function renderPanel() {
@@ -208,16 +223,6 @@ function renderPanel() {
   `;
 }
 
-function truncate(s, n) {
-  if (!s) return "";
-  return s.length > n ? s.slice(0, n - 1) + "…" : s;
-}
-function esc(s) {
-  return String(s).replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])
-  );
-}
-
 function bindControls() {
   $("#sort-by").addEventListener("change", (e) => {
     state.sortBy = e.target.value;
@@ -233,6 +238,12 @@ function bindControls() {
   $("#top-n").addEventListener("change", (e) => {
     state.topN = +e.target.value;
     renderChart();
+  });
+  // Re-render on resize (width changes) — debounced.
+  let resizeTimer = null;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(renderChart, 120);
   });
 }
 
