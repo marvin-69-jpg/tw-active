@@ -48,18 +48,36 @@ from pathlib import Path
 
 UA = {"User-Agent": "Mozilla/5.0 (tw-active preview_prices)"}
 FINMIND_URL = "https://api.finmindtrade.com/api/v4/data"
+TOKEN_FILE = Path("/home/node/.finmind-token")
+# 跨 ETF 共用的 per-stock 快取：2330 在多個 ETF 裡都出現，只抓一次。
+# 以首次抓取時的最寬日期範圍儲存，讀取時 clip 成該 ETF 需要的範圍。
+CACHE_DIR = Path(".cache/prices")
 
 # TW 股代號格式：4-6 digits，可選 1 個大寫英文後綴（例 00981A）
 # 排除：AMD US / 268A JP / 202605TX / C_NTD / BLSH US 等
 _TW_CODE_RE = re.compile(r"^\d{4,6}[A-Z]?$")
 
 
+def _load_token() -> str | None:
+    """讀 /home/node/.finmind-token；無 token 則走 no-auth tier（較低 rate limit）。"""
+    if TOKEN_FILE.exists():
+        try:
+            tok = TOKEN_FILE.read_text().strip()
+            return tok if tok else None
+        except Exception:
+            return None
+    return None
+
+
 def _is_tw_stock_code(code: str) -> bool:
     return bool(_TW_CODE_RE.fullmatch(code))
 
 
-def _get(url: str, timeout: int = 30) -> bytes:
-    req = urllib.request.Request(url, headers=UA)
+def _get(url: str, token: str | None = None, timeout: int = 30) -> bytes:
+    headers = dict(UA)
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read()
 
@@ -72,8 +90,9 @@ def _to_yyyymmdd(iso: str) -> str:
     return iso.replace("-", "")
 
 
-def fetch_finmind(code: str, start: str, end: str) -> list[dict]:
-    """抓 FinMind TaiwanStockPrice；回 [{date, close}, ...]，空列表代表查無。"""
+def fetch_finmind(code: str, start: str, end: str, token: str | None = None) -> tuple[list[dict], int]:
+    """抓 FinMind TaiwanStockPrice；回 (series, status)。
+    status: 200 = 成功（series 可能空 = 無交易）、402 = rate limit、其他 = 失敗。"""
     qs = urllib.parse.urlencode({
         "dataset": "TaiwanStockPrice",
         "data_id": code,
@@ -81,13 +100,14 @@ def fetch_finmind(code: str, start: str, end: str) -> list[dict]:
         "end_date": _to_iso(end),
     })
     url = f"{FINMIND_URL}?{qs}"
-    raw = _get(url)
+    raw = _get(url, token=token)
     try:
         data = json.loads(raw.decode("utf-8"))
     except Exception:
-        return []
-    if data.get("status") != 200:
-        return []
+        return [], -1
+    status = data.get("status", -1)
+    if status != 200:
+        return [], status
     rows = data.get("data") or []
     series = []
     for r in rows:
@@ -97,21 +117,75 @@ def fetch_finmind(code: str, start: str, end: str) -> list[dict]:
             continue
         series.append({"date": _to_yyyymmdd(iso), "close": round(float(close), 2)})
     series.sort(key=lambda x: x["date"])
-    return series
+    return series, 200
 
 
-def fetch_history(code: str, start: str, end: str, sleep_s: float = 0.2) -> list[dict]:
-    """TW 股單次 FinMind 請求即可（TWSE + TPEx 同 endpoint）。非 TW 股回空。"""
+class RateLimitError(Exception):
+    pass
+
+
+def _cache_path(code: str) -> Path:
+    return CACHE_DIR / f"{code}.json"
+
+
+def _load_cache(code: str) -> dict | None:
+    """回 {first_date, as_of, series} 或 None。"""
+    p = _cache_path(code)
+    if not p.exists():
+        return None
+    try:
+        return json.loads(p.read_text())
+    except Exception:
+        return None
+
+
+def _save_cache(code: str, start: str, end: str, series: list[dict]) -> None:
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    _cache_path(code).write_text(json.dumps({
+        "code": code,
+        "first_date": start,
+        "as_of": end,
+        "series": series,
+    }, ensure_ascii=False))
+
+
+def fetch_history(code: str, start: str, end: str, sleep_s: float = 0.2,
+                  token: str | None = None, use_cache: bool = True) -> list[dict]:
+    """TW 股歷史日收盤。優先走 per-stock 全域快取（.cache/prices/），
+    快取涵蓋目標範圍 → 直接 clip 回傳；否則抓 FinMind 並更新快取。"""
     if not _is_tw_stock_code(code):
         return []
+
+    if use_cache:
+        cached = _load_cache(code)
+        if cached and cached["first_date"] <= start and cached["as_of"] >= end:
+            return [p for p in cached["series"] if start <= p["date"] <= end]
+
+    # 抓更寬範圍：若快取已存在但範圍不夠，直接抓快取的 union
+    fetch_start, fetch_end = start, end
+    if use_cache:
+        cached = _load_cache(code)
+        if cached:
+            fetch_start = min(fetch_start, cached["first_date"])
+            fetch_end = max(fetch_end, cached["as_of"])
+
     try:
-        series = fetch_finmind(code, start, end)
+        series, status = fetch_finmind(code, fetch_start, fetch_end, token=token)
     except urllib.error.HTTPError as exc:
         if exc.code == 429:
-            raise
+            raise RateLimitError("HTTP 429")
         return []
     finally:
         time.sleep(sleep_s)
+
+    if status == 402:
+        raise RateLimitError("FinMind status 402 (hourly quota exceeded)")
+    if status != 200:
+        return []
+
+    if use_cache:
+        _save_cache(code, fetch_start, fetch_end, series)
+
     return [p for p in series if start <= p["date"] <= end]
 
 
@@ -121,7 +195,11 @@ def main() -> int:
     ap.add_argument("--sleep", type=float, default=0.2, help="delay between requests (s)")
     ap.add_argument("--codes", help="comma-separated subset (debug)")
     ap.add_argument("--out", help="output path (default: <stem>-prices.json next to input)")
+    ap.add_argument("--no-cache", action="store_true", help="disable per-stock global cache")
     args = ap.parse_args()
+    token = _load_token()
+    if token:
+        print(f"[auth] FinMind token loaded from {TOKEN_FILE}", file=sys.stderr)
 
     src = Path(args.preview_json)
     if not src.exists():
@@ -161,19 +239,14 @@ def main() -> int:
         print(f"[{i}/{len(todo)}] {code} ...", file=sys.stderr, end=" ", flush=True)
         t0 = time.time()
         try:
-            series = fetch_history(code, start, end, sleep_s=args.sleep)
+            series = fetch_history(code, start, end, sleep_s=args.sleep,
+                                   token=token, use_cache=not args.no_cache)
+        except RateLimitError as exc:
+            print(f"RATE LIMIT ({exc}); stop here — 已存的 cache 保留，等 reset 後再跑", file=sys.stderr)
+            break
         except urllib.error.HTTPError as exc:
-            if exc.code == 429:
-                print(f"429 rate limited, sleep 30s and retry", file=sys.stderr)
-                time.sleep(30)
-                try:
-                    series = fetch_history(code, start, end, sleep_s=args.sleep * 2)
-                except Exception as exc2:
-                    print(f"skip ({exc2})", file=sys.stderr)
-                    continue
-            else:
-                print(f"skip ({exc})", file=sys.stderr)
-                continue
+            print(f"skip HTTP {exc.code}", file=sys.stderr)
+            continue
         except Exception as exc:
             print(f"skip ({exc})", file=sys.stderr)
             continue
