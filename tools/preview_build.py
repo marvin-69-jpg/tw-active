@@ -303,14 +303,18 @@ ISSUER_OF = {
 
 
 def load_latest_raw(etf: str) -> tuple[list[list], str]:
-    """Return (rows, source_path). Pick most recent dump timestamp; break ties by largest DTRange."""
+    """Return (merged_rows, source_desc). Union all batch_*_r*.json files and dedupe by (date, code).
+
+    Why union: daily CI pushes r=3 (3-day delta) batches; weekly/ad-hoc pushes r=400 / r=800
+    backfills. Picking a single batch either loses freshness (stale r=400) or loses history
+    (today's r=3 only has 3 days → everything looks "new"). Union gives both: today's rows
+    from the latest r=3 plus full history from the newest r=400/r=800 backfill.
+    """
     pattern = f"raw/cmoney/{etf}/batch_*_r*.json"
     files = [p for p in glob.glob(pattern) if not p.endswith(".meta.json")]
     if not files:
         raise SystemExit(f"no raw data files for {etf} under raw/cmoney/")
-    # Prefer the file with latest dump timestamp, then largest 'r' (DTRange) as tiebreaker.
-    # Rationale: a fresh r=3 dump from today beats a stale r=400 dump from yesterday —
-    # as_of is derived from the rows, so stale file = stale as_of on Pages.
+    # Sort oldest-first so newer batches overwrite older ones on collision.
     def _rank(p: str) -> tuple[str, int]:
         name = Path(p).stem
         try:
@@ -319,11 +323,18 @@ def load_latest_raw(etf: str) -> tuple[list[list], str]:
             r = 0
         ts = name.split("_")[1] if "_" in name else ""
         return (ts, r)
-    files.sort(key=_rank, reverse=True)
-    chosen = files[0]
-    data = json.loads(Path(chosen).read_text())
-    rows = data.get("Data") or data.get("data") or []
-    return rows, chosen
+    files.sort(key=_rank)
+    merged: dict[tuple, list] = {}
+    for p in files:
+        data = json.loads(Path(p).read_text())
+        rows = data.get("Data") or data.get("data") or []
+        for r in rows:
+            if len(r) < 4:
+                continue
+            key = (r[0], r[3])  # (date, code)
+            merged[key] = r
+    all_rows = list(merged.values())
+    return all_rows, f"{len(files)} batches merged ({len(all_rows)} rows)"
 
 
 def build(etf: str, min_days: int = 30) -> dict:
