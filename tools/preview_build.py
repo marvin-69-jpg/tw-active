@@ -133,6 +133,113 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
     }
 
 
+def _compute_stock_pnl(etf: str) -> dict | None:
+    """Per-stock P&L from shares × close price.
+
+    研究動機：權重% 被股價漲跌 confound，光看權重軌跡看不出實際賺賠。
+    有了股數（raw/cmoney/shares/）× 股價（preview_prices FinMind）就能算：
+      CF_t = -Δshares_t × close_t          # buy → 負, sell → 正
+      MV_now = shares_latest × close_latest
+      Total P&L = MV_now + Σ CF_t          # 未實現 + 已實現
+      cost_basis = Σ max(0, -CF_t)         # 累計買入成本（母分）
+      return_pct = P&L / cost_basis
+
+    假設：當日揭露的 shares 變動發生在那日盤中/收盤，用該日 close 當成交價。
+    無股價的日子（FinMind 缺值）記 missing_price_days，P&L 略偏。
+
+    回 {code: {...}} 或 None（缺檔）。"""
+    shares_path = Path(f"raw/cmoney/shares/{etf}.json")
+    prices_path = Path(f"site/preview/{etf.lower()}-prices.json")
+    if not shares_path.exists() or not prices_path.exists():
+        return None
+    try:
+        shares_data = json.loads(shares_path.read_text())
+        prices_data = json.loads(prices_path.read_text())
+    except Exception:
+        return None
+
+    # shares: code -> [(date, shares), ...] asc
+    by_code: dict[str, list[tuple[str, float]]] = {}
+    for r in shares_data.get("Data") or []:
+        if not r or len(r) < 5:
+            continue
+        d_str, ccode, _name, _w, sh = r[0], r[1], r[2], r[3], r[4]
+        if ccode in _CASH_MARKERS:
+            continue
+        try:
+            shares = float(sh) if sh not in (None, "") else 0.0
+        except Exception:
+            continue
+        by_code.setdefault(ccode, []).append((d_str, shares))
+    for code in by_code:
+        by_code[code].sort(key=lambda t: t[0])
+
+    prices_by_code = prices_data.get("prices") or {}
+
+    result: dict[str, dict] = {}
+    for code, series in by_code.items():
+        price_series = prices_by_code.get(code) or []
+        has_prices = len(price_series) > 0
+        price_map = {p["date"]: p["close"] for p in price_series if p.get("date")}
+
+        prev_shares = 0.0
+        cash_flow = 0.0
+        cost_basis = 0.0
+        missing_price_days = 0
+        total_delta_days = 0
+        for d_str, shares in series:
+            delta = shares - prev_shares
+            if delta != 0:
+                total_delta_days += 1
+                close = price_map.get(d_str)
+                if close is None:
+                    # 找 ≤ d_str 最近一筆 close 當 fallback（停牌/缺值）
+                    close = next(
+                        (p["close"] for p in reversed(price_series)
+                         if p.get("date") and p["date"] <= d_str),
+                        None,
+                    )
+                    if close is None:
+                        missing_price_days += 1
+                if close is not None:
+                    cf = -delta * close
+                    cash_flow += cf
+                    if cf < 0:
+                        cost_basis += -cf
+            prev_shares = shares
+
+        latest_date, latest_shares = series[-1]
+        latest_price = price_map.get(latest_date)
+        if latest_price is None and price_series:
+            latest_price = price_series[-1]["close"]
+
+        if not has_prices or latest_price is None:
+            result[code] = {
+                "has_prices": False,
+                "shares_latest": latest_shares,
+                "latest_date": latest_date,
+            }
+            continue
+
+        mv_now = latest_shares * latest_price
+        pnl = mv_now + cash_flow
+        pnl_pct = (pnl / cost_basis * 100.0) if cost_basis > 0 else None
+
+        result[code] = {
+            "has_prices": True,
+            "shares_latest": latest_shares,
+            "latest_date": latest_date,
+            "latest_price": round(latest_price, 2),
+            "mv_now": round(mv_now, 0),
+            "cost_basis": round(cost_basis, 0),
+            "pnl": round(pnl, 0),
+            "pnl_pct": round(pnl_pct, 2) if pnl_pct is not None else None,
+            "missing_price_days": missing_price_days,
+            "total_delta_days": total_delta_days,
+        }
+    return result
+
+
 ISSUER_OF = {
     # minimal mapping for preview caption; extend as needed
     "00981A": ("主動統一台股增長", "統一投信"),
@@ -279,6 +386,7 @@ def build(etf: str, min_days: int = 30) -> dict:
         "days_held": {k: days_held[k] for k in series_out},
         "is_new": is_new,  # {code: true} only for brand-new positions
         "daily_shares": _load_daily_shares_delta(etf),
+        "pnl": _compute_stock_pnl(etf),
         "_source_file": src,
     }
     return out
