@@ -217,9 +217,14 @@ def main() -> int:
     if out_path.exists():
         try:
             prev = json.loads(out_path.read_text())
-            if prev.get("as_of") == end and prev.get("source") == "finmind_v4":
+            if (prev.get("as_of") == end
+                    and prev.get("first_date") == start
+                    and prev.get("source") == "finmind_v4"):
                 existing = prev.get("prices", {})
                 print(f"[resume] {len(existing)}/{len(all_codes)} codes already cached (finmind_v4)", file=sys.stderr)
+            elif prev.get("as_of") == end:
+                print(f"[invalidate] as_of matches but first_date changed "
+                      f"({prev.get('first_date')}→{start}); re-fetching full history", file=sys.stderr)
         except Exception:
             pass
 
