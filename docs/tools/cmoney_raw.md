@@ -30,6 +30,69 @@ raw/cmoney/
 這些 function 只 parse JSON，不知道 endpoint 長什麼樣。raw 缺檔時 graceful 退回
 `etfdaily`（投信官網 5 檔，見 [`etfdaily.md`](etfdaily.md)）。
 
+## Pages 每日更新：四層鏈
+
+Pages 上的 `as_of` 不是單一 workflow 推出來的，是四層堆疊，任一層 stale 整條斷。
+
+```
+Layer 1  外部 CI → raw/cmoney/{<ETF>/batch_*, shares/*, premium/*, dividend/*, meta/*}
+   ↓           （push 路徑觸發 daily-preview）
+Layer 2  .github/workflows/daily-preview.yml → tools/preview_build.py
+   ↓           → site/preview/<etf>.json、etfs.json、flows.json、winners.json
+Layer 3  同 workflow → tools/preview_prices.py
+   ↓           → site/preview/<etf>-prices.json（FinMind 股價）
+Layer 4  .github/workflows/pages-deploy.yml（由 site/** 路徑觸發）
+              → GitHub Pages
+```
+
+### Layer 1 → Layer 2：batch 要 **union** 不是挑單一
+
+`raw/cmoney/<ETF>/` 底下同時存在：
+
+- `batch_*_r3.json` — 每日 delta 快照（3 天），時間新但歷史短
+- `batch_*_r400.json` / `batch_*_r800.json` — 週期全量 backfill，歷史長但不是每天跑
+
+`preview_build.load_latest_raw()` **必須 union 所有 batch**，以 `(date, code)` 為 key 去重，newer batch overwrite older。早期版本挑單一 batch 的兩種錯都踩過：
+
+- 挑 largest `r` → 被昨天的 r400 蓋掉今天的 r3，`as_of` 永遠慢一天（2026-04-20 PR #22）
+- 挑 latest `ts` → 只剩 3 天歷史，全部 holding 被當 NEW（2026-04-20 PR #23）
+
+### Layer 2 → Layer 3：cache key 要含 `first_date`
+
+`preview_prices.py` 用 `site/preview/<etf>-prices.json` resume 既存 series。cache key 必須比對 `(as_of, first_date, source)` — 只比 `as_of` 會在 preview history 範圍變動時繼承舊 series 長度（2026-04-20 PR #24：first_date 從 20260416 → 20250526 時股價只剩 3 點）。
+
+通則：**cache key = 所有會影響輸出形狀的輸入欄位的聯集**，看起來主要的那個不夠。
+
+### Layer 3 → Layer 4：GH Actions 預設 token 不 cascade
+
+`daily-preview` push 後 `pages-deploy` 不會自動觸發 —— GH Actions 的 default `GITHUB_TOKEN` 為了避免遞迴刻意不 fire 後續 workflow。選一：
+
+1. 手動 `gh workflow run pages-deploy.yml`
+2. `daily-preview` 結尾加一個 `gh workflow run pages-deploy.yml` step（用 PAT）
+3. 把 push 改用 PAT（整條鏈自動）
+
+### Debug SOP
+
+`Pages 資料看起來沒更新 / 怪` 時逐層查：
+
+```bash
+# Layer 1
+ls -lt raw/cmoney/shares/ | head -5            # 檔案 mtime
+jq '.Data[0][0]' raw/cmoney/shares/00981A.json # 最新日期
+
+# Layer 2
+jq '.as_of, .first_date, .n_days' site/preview/00981a.json
+
+# Layer 3
+jq '.as_of, .first_date, .prices["2330"] | length' site/preview/00981a-prices.json
+
+# Layer 4
+export GH_TOKEN=$(cat ~/.gh-token-marvin)
+gh run list --workflow=pages-deploy.yml --limit 3
+```
+
+每層都驗；不要看 layer 1 對了就假設下游對。
+
 ## 研究 finding：階梯費率與 Yahoo 誤讀
 
 21 檔主動 ETF 的**管理費**拆解（2026-04-20 snapshot）：
