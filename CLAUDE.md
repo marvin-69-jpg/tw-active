@@ -82,7 +82,8 @@ log.md         ← 操作記錄
 | **公開說明書**（PDF 全文） | **FundClear** `/api/etf/product/*` | `fundclear` | — |
 | **盤後報價 + 三大法人** | **TWSE/TPEx OpenAPI**（143 / 225 path） | `twquote` | 舊 T86 legacy endpoint |
 | **主動 ETF 當日持股**（ground truth） | **投信官網直取**（5 家 API） | `etfdaily` | `raw/cmoney/`（外部 CI 每日 push） |
-| **主動 ETF 歷史持股**（全 21 檔深度） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/`） | 讀 `raw/cmoney/` 即可，實作於私有 repo | — |
+| **主動 ETF 歷史持股**（全 21 檔深度，權重%） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/<code>/`） | 讀 `raw/cmoney/<code>/` 即可，實作於私有 repo | — |
+| **主動 ETF 歷史持股股數**（ground truth，反 confound） | 第三方資料彙整服務（外部 CI push 至 `raw/cmoney/shares/`） | 讀 `raw/cmoney/shares/<code>.json` | — |
 | **基金月報 Top 10** | SITCA **IN2629** | `managerwatch` | — |
 | **基金季報 ≥1% 持股** | SITCA **IN2630** | `managerwatch` | — |
 | **歷史月報 Top 5**（ETF、SITCA filter bug 時） | MOPS `t78sb39_q3` | `mopsetf` | — |
@@ -151,7 +152,7 @@ gh pr create --base main --head "$BRANCH" --title "..." --body "..."
 3. `docs/tools/<name>.md` — **研究筆記**（問題脈絡 / 破解思路 / 實作 / finding / 穩定度）
 
 跨 session 復用的 primary-source 破解再寫一條 `reference_*` memory。
-反推式後端 API 的完整破解細節（endpoint、DtNo、headers）放 private sibling repo（見 `feedback_keep_source_exploits_private` memory），公開 repo 只講抽象層。
+反推式後端 API 的完整破解細節（endpoint、query 參數、headers、存取條件）放 private sibling repo（見 `feedback_keep_source_exploits_private` memory），公開 repo 只講抽象層。
 
 ### 繁體中文，金融名詞保留英文
 

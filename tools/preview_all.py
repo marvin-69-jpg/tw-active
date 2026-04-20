@@ -247,6 +247,150 @@ def _load_premium_raw(code: str) -> dict | None:
         return None
 
 
+_CASH_MARKERS = {"C_NTD", "M_NTD", "PFUR_NTD", "RDI_NTD"}
+
+
+def _load_shares_raw(code: str, window_days: int = 30) -> dict | None:
+    """讀 raw/cmoney/shares/<code>.json 計算股數變動訊號。
+
+    raw 由私有 CI push，schema: [日期, 標的代號, 標的名稱, 權重(%), 持有數, 單位]。
+
+    研究動機：權重 % 會被股價漲跌 confound，股數才是經理人實際建倉/減倉的 ground truth。
+    例如股價大漲 10%、經理人沒動 → 權重↑但股數不變；反之股數↑才是真加碼。
+
+    回 {
+        as_of, anchor_date, window_days,
+        top_adds:[{code,name,shares,delta,pct}], top_reductions:[...],
+        new_positions:[{code,name,shares,weight}],
+        exits:[{code,name}],
+        n_holdings,
+    } or None。
+    """
+    from datetime import date, timedelta
+    path = Path(f"raw/cmoney/shares/{code}.json")
+    if not path.exists():
+        return None
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return None
+    rows = data.get("Data") or []
+    if not rows:
+        return None
+
+    # 分日分倉：by_date[yyyymmdd][code] = {name, shares, weight}
+    by_date: dict[str, dict[str, dict]] = {}
+    for r in rows:
+        if not r or len(r) < 5:
+            continue
+        d_str, ccode, name, w, sh = r[0], r[1], r[2], r[3], r[4]
+        if ccode in _CASH_MARKERS:
+            continue
+        try:
+            shares = float(sh) if sh not in (None, "") else 0.0
+            weight = float(w) if w not in (None, "") else 0.0
+        except Exception:
+            continue
+        by_date.setdefault(d_str, {})[ccode] = {
+            "name": name, "shares": shares, "weight": weight
+        }
+    if not by_date:
+        return None
+
+    dates_desc = sorted(by_date.keys(), reverse=True)
+    latest_date = dates_desc[0]
+    # 取 ~window_days 天前最近的那天（不一定剛好 30 天，有周末/假日）
+    try:
+        y, m, d = int(latest_date[:4]), int(latest_date[4:6]), int(latest_date[6:8])
+        target = date(y, m, d) - timedelta(days=window_days)
+        target_str = f"{target.year:04d}{target.month:02d}{target.day:02d}"
+    except Exception:
+        target_str = dates_desc[-1]
+
+    # 找 <= target_str 的最近一天；若歷史不夠深則 fallback 最早日
+    anchor_date = None
+    for d_str in dates_desc:
+        if d_str <= target_str:
+            anchor_date = d_str
+            break
+    if anchor_date is None:
+        anchor_date = dates_desc[-1]
+
+    if anchor_date == latest_date:
+        return {
+            "as_of": latest_date,
+            "anchor_date": anchor_date,
+            "window_days": window_days,
+            "top_adds": [], "top_reductions": [],
+            "new_positions": [], "exits": [],
+            "n_holdings": len(by_date[latest_date]),
+            "note": "insufficient_history",
+        }
+
+    latest = by_date[latest_date]
+    anchor = by_date[anchor_date]
+
+    # 過濾噪訊門檻：<0.3% 權重的試水溫部位 pct 變化會很大但研究意義低
+    # （例如從 2 股加到 100 股 = +5000%，但只佔 0.01%）
+    WEIGHT_FLOOR = 0.3
+    adds = []
+    reductions = []
+    new_positions = []
+    for ccode, cur in latest.items():
+        prev = anchor.get(ccode)
+        if prev is None:
+            if cur["weight"] >= WEIGHT_FLOOR:
+                new_positions.append({
+                    "code": ccode, "name": cur["name"],
+                    "shares": cur["shares"], "weight": round(cur["weight"], 2),
+                })
+            continue
+        delta = cur["shares"] - prev["shares"]
+        if prev["shares"] > 0:
+            pct = delta / prev["shares"] * 100.0
+        else:
+            pct = None
+        # 當前 or 過去任一邊有意義權重才收；雙邊都微小不論變化多大都是噪訊
+        max_weight = max(cur["weight"], prev["weight"])
+        if max_weight < WEIGHT_FLOOR:
+            continue
+        entry = {
+            "code": ccode, "name": cur["name"],
+            "shares": cur["shares"], "prev_shares": prev["shares"],
+            "delta": delta,
+            "pct": round(pct, 2) if pct is not None else None,
+            "weight": round(cur["weight"], 2),
+            "prev_weight": round(prev["weight"], 2),
+        }
+        if delta > 0:
+            adds.append(entry)
+        elif delta < 0:
+            reductions.append(entry)
+
+    exits = []
+    for ccode, prev in anchor.items():
+        if ccode not in latest:
+            exits.append({"code": ccode, "name": prev["name"]})
+
+    # 排序：pct 為主（None 排後面）
+    adds.sort(key=lambda e: (e["pct"] is None, -(e["pct"] or 0)))
+    reductions.sort(key=lambda e: (e["pct"] is None, e["pct"] or 0))
+    new_positions.sort(key=lambda e: -e["weight"])
+
+    return {
+        "as_of": latest_date,
+        "anchor_date": anchor_date,
+        "window_days": window_days,
+        "top_adds": adds[:5],
+        "top_reductions": reductions[:5],
+        "new_positions": new_positions[:5],
+        "exits": exits[:5],
+        "n_holdings": len(latest),
+        "n_adds_total": len(adds),
+        "n_reductions_total": len(reductions),
+    }
+
+
 def _fetch_nav(code: str) -> tuple[float | None, str | None]:
     """保留作為 secondary source（pocket.tw 下線時 fallback）。"""
     if code not in etfdaily.CATALOG:
@@ -293,9 +437,11 @@ def build_all(codes: list[str]) -> list[dict]:
         except Exception:
             close_f = None
 
-        # ETF 基本資料（費率、發行商、配息制度、規模、上市日）— CMoney M326
+        # ETF 基本資料（費率、發行商、配息制度、規模、上市日）— CMoney meta raw
         # raw 由私有 CI push；公開 repo 只消費
         meta = _load_meta_raw(code.upper())
+        # 股數變動訊號 — 研究經理人實際建倉/減倉而非被股價 confound 的權重
+        shares_signal = _load_shares_raw(code.upper())
         # FundClear 有些規模欄位會缺；CMoney meta 的 aum_yi 可當備援
         aum_for_fee = total_av_yi if total_av_yi not in (None, "") else (
             meta.get("aum_yi_cmoney") if meta else None)
@@ -353,7 +499,7 @@ def build_all(codes: list[str]) -> list[dict]:
             "premium_pct": round(premium_pct, 3) if premium_pct is not None else None,
             # ETF 自身價格序列（最近 ~4 個月交易日日收盤）供 sparkline
             "price_series": [{"d": p["date"], "c": p["close"]} for p in etf_prices],
-            # 費率 / 基本資料（M326）— 研究主題核心：階梯費率拆解，反 Yahoo 誤讀
+            # 費率 / 基本資料 — 研究主題核心：階梯費率拆解，反 Yahoo 誤讀
             "mgmt_fee_raw": meta.get("mgmt_fee_raw") if meta else None,
             "custody_fee_raw": meta.get("custody_fee_raw") if meta else None,
             "fee_tiered": meta.get("fee_tiered") if meta else None,
@@ -362,6 +508,8 @@ def build_all(codes: list[str]) -> list[dict]:
             "listing_date_cmoney": meta.get("listing_date_cmoney") if meta else None,
             "issuer_full": meta.get("issuer_full") if meta else None,
             "shares_k": meta.get("shares_k") if meta else None,
+            # 股數變動訊號（~30 天視窗）：加碼/減碼 top 5、新建倉、出場
+            "shares_signal": shares_signal,
         })
         nav_str = f"NAV={nav:.2f} prem={premium_pct:+.2f}%" if nav else "NAV=-"
         print(
