@@ -9,38 +9,14 @@ site_build — 從 raw/cmoney/ 的每日 JSON dump 產出 site/data/*.json 給 P
 
 目前產出：
 
-    site/data/consensus.json    共識股排行
+    site/data/flows.json        21 檔主動 ETF 每日資金流入/流出合計（逐股 ×日期）
     site/data/premium.json      21 檔折溢價時序（來自 raw/cmoney/premium/<etf>.json）
     site/data/winners.json      21 檔 P&L 排行（聚合 site/preview/<etf>.json 的 pnl 欄）
     site/data/new-positions.json 新建倉合集（跨 21 檔 × 7/30 天視窗）
     site/data/exits.json         出清合集（跨 21 檔 × 7/30 天視窗）
 
-Schema:
-{
-  "as_of": "2026-04-17",
-  "n_etfs": 21,
-  "etfs": [{"code":"00981A","name":"主動統一台股增長","issuer":"uni-president"}],
-  "kpi": {
-    "n_etfs": 21,
-    "all_in_count": <被全部 ETF 持有的股票數>,
-    "majority_count": <被 >=50% ETF 持有的股票數>,
-    "solo_count": <只被 1 檔持有>,
-    "distinct_stocks": <全體去重標的數>,
-    "top10_avg_weight_share": <前 10 共識股的平均權重加總>
-  },
-  "consensus": [
-    {
-      "code": "2330", "name": "台積電",
-      "held_by": 21,
-      "avg_weight": 8.54, "max_weight": 9.6, "min_weight": 6.1,
-      "total_weight": 178.5,
-      "etfs": [{"etf":"00981A","weight":9.57}, ...]   # desc by weight
-    }
-  ]
-}
-
 Usage:
-  ./tools/site_build.py            # build site/data/consensus.json
+  ./tools/site_build.py            # 產全部 data/*.json
   ./tools/site_build.py --out DIR  # 指定輸出目錄（預設 site/data/）
 """
 from __future__ import annotations
@@ -60,7 +36,7 @@ WIKI_ETFS = ROOT / "wiki" / "etfs"
 SITE_PREVIEW = ROOT / "site" / "preview"
 DEFAULT_OUT = ROOT / "site" / "data"
 
-# 現金 / 保證金 / 應收付 — 從 consensus 排除
+# 現金 / 保證金 / 應收付 — 從股票級聚合排除
 NON_STOCK_CODES = {"C_NTD", "M_NTD", "PFUR_NTD", "RDI_NTD"}
 # 股票代碼形狀：純數字 4–6 碼（含 TW/US suffix 的海外標的如 "LITE US" 也一併含入）
 STOCK_CODE = re.compile(r"^[0-9A-Z]+( [A-Z]{2})?$")
@@ -121,114 +97,6 @@ def _fm_list(fm: str, key: str) -> list[str]:
         return []
     inner = m.group(1)
     return [x.strip().strip('"').strip("'") for x in inner.split(",") if x.strip()]
-
-
-def latest_holdings_per_etf() -> dict[str, tuple[str, list[tuple[str, str, float]]]]:
-    """
-    掃 raw/cmoney/<ETF>/batch_*.json，每檔取最新可得日期的持股明細。
-
-    回傳 {etf_code: (data_date, [(code, name, weight), ...])}
-    """
-    out: dict[str, tuple[str, list[tuple[str, str, float]]]] = {}
-    for etf_dir in sorted(RAW_CMONEY.iterdir()):
-        if not etf_dir.is_dir():
-            continue
-        etf = etf_dir.name.upper()
-        # 蒐集所有 (data_date, row) 再挑 max date
-        rows_by_date: dict[str, list[tuple[str, str, float]]] = defaultdict(list)
-        for f in etf_dir.glob("batch_*.json"):
-            if f.name.endswith(".meta.json"):
-                continue
-            try:
-                payload = json.loads(f.read_text(encoding="utf-8"))
-            except Exception as e:
-                print(f"[WARN] {f}: {e}", file=sys.stderr)
-                continue
-            for row in payload.get("Data", []):
-                if len(row) < 4:
-                    continue
-                date, name, weight, code = row[0], row[1], row[2], row[3]
-                try:
-                    w = float(weight)
-                except (TypeError, ValueError):
-                    continue
-                rows_by_date[str(date)].append((str(code), str(name), w))
-        if not rows_by_date:
-            continue
-        latest = max(rows_by_date.keys())
-        # 同日若有多個 batch 同股重複，取最後出現
-        dedup: dict[str, tuple[str, str, float]] = {}
-        for code, name, w in rows_by_date[latest]:
-            dedup[code] = (code, name, w)
-        out[etf] = (latest, sorted(dedup.values(), key=lambda r: -r[2]))
-    return out
-
-
-def build_consensus(
-    holdings: dict[str, tuple[str, list[tuple[str, str, float]]]],
-    etf_meta: dict[str, dict],
-    top_n: int = 150,
-) -> dict:
-    n_etfs = len(holdings)
-    # { code: {"name": ..., "etfs": [(etf, weight), ...]} }
-    bucket: dict[str, dict] = {}
-    for etf, (_, rows) in holdings.items():
-        for code, name, w in rows:
-            if code in NON_STOCK_CODES:
-                continue
-            if not STOCK_CODE.match(code):
-                continue
-            slot = bucket.setdefault(code, {"name": name, "etfs": []})
-            slot["etfs"].append((etf, w))
-            # 中文名可能跨投信略異：保留最長的（通常最完整）
-            if len(name) > len(slot["name"]):
-                slot["name"] = name
-
-    consensus_rows = []
-    for code, d in bucket.items():
-        weights = [w for _, w in d["etfs"]]
-        consensus_rows.append({
-            "code": code,
-            "name": d["name"],
-            "held_by": len(weights),
-            "avg_weight": round(sum(weights) / len(weights), 3),
-            "max_weight": round(max(weights), 3),
-            "min_weight": round(min(weights), 3),
-            "total_weight": round(sum(weights), 3),
-            "etfs": [
-                {"etf": e, "weight": round(w, 3)}
-                for e, w in sorted(d["etfs"], key=lambda x: -x[1])
-            ],
-        })
-    # 排序：被持有檔數 desc，同 tie 用 total_weight desc
-    consensus_rows.sort(key=lambda r: (-r["held_by"], -r["total_weight"]))
-    trimmed = consensus_rows[:top_n]
-
-    as_of = max(d for (d, _) in holdings.values())
-    etfs_list = [
-        etf_meta.get(e, {"code": e, "name": e, "issuer": "unknown"})
-        for e in sorted(holdings.keys())
-    ]
-
-    all_in = sum(1 for r in consensus_rows if r["held_by"] == n_etfs)
-    majority = sum(1 for r in consensus_rows if r["held_by"] >= (n_etfs + 1) // 2)
-    solo = sum(1 for r in consensus_rows if r["held_by"] == 1)
-    top10_avg_share = round(sum(r["avg_weight"] for r in consensus_rows[:10]), 2)
-
-    return {
-        "as_of": as_of,
-        "n_etfs": n_etfs,
-        "etfs": etfs_list,
-        "kpi": {
-            "n_etfs": n_etfs,
-            "all_in_count": all_in,
-            "majority_count": majority,
-            "solo_count": solo,
-            "distinct_stocks": len(consensus_rows),
-            "top10_avg_weight_share": top10_avg_share,
-        },
-        "consensus": trimmed,
-    }
 
 
 def build_premium(etf_meta: dict[str, dict]) -> dict | None:
@@ -419,6 +287,142 @@ def build_winners(etf_meta: dict[str, dict]) -> dict | None:
     }
 
 
+def _load_global_prices() -> dict[str, dict[str, float]]:
+    """
+    合併所有 site/preview/<etf>-prices.json 產出 {code: {date: close}}。
+    同一支股票跨 ETF 的價格應一致（FinMind 為單一來源），若有衝突後者覆蓋。
+    """
+    out: dict[str, dict[str, float]] = defaultdict(dict)
+    for f in sorted(SITE_PREVIEW.glob("*-prices.json")):
+        try:
+            d = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[WARN] {f}: {e}", file=sys.stderr)
+            continue
+        for code, rows in d.get("prices", {}).items():
+            if code in NON_STOCK_CODES or not STOCK_CODE.match(code):
+                continue
+            if not isinstance(rows, list):
+                continue
+            for row in rows:
+                try:
+                    out[code][str(row["date"])] = float(row["close"])
+                except (KeyError, TypeError, ValueError):
+                    continue
+    return dict(out)
+
+
+def build_flows(etf_meta: dict[str, dict], top_per_side: int = 20) -> dict | None:
+    """
+    每日資金流計算：
+
+        net_cash_flow(stock, date) = Σ_ETF [ Δshares(ETF, stock, D) × close(stock, D) ]
+
+    跨 21 檔主動 ETF 加總。正 = 該日集體買入、負 = 集體賣出。
+    需要 FinMind 價格，無價的股票（海外）該日 skip。
+    """
+    if not RAW_SHARES.exists():
+        return None
+
+    prices = _load_global_prices()
+    if not prices:
+        print("[WARN] 沒有 preview prices 可載入，flows skipped", file=sys.stderr)
+        return None
+
+    # flows[date][code] = net_cash NTD; shares_delta[date][code] 同
+    flows: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    shares_delta: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
+    stock_names: dict[str, str] = {}
+    n_etfs_seen = set()
+
+    for f in sorted(RAW_SHARES.glob("*.json")):
+        etf = f.stem.upper()
+        try:
+            payload = json.loads(f.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"[WARN] {f}: {e}", file=sys.stderr)
+            continue
+        n_etfs_seen.add(etf)
+
+        # index by date: date → code → shares
+        by_date: dict[str, dict[str, float]] = defaultdict(dict)
+        for row in payload.get("Data", []):
+            if len(row) < 6:
+                continue
+            date, code, name, weight, shares, _unit = row[:6]
+            if code in NON_STOCK_CODES or not STOCK_CODE.match(code):
+                continue
+            try:
+                s = float(shares)
+            except (TypeError, ValueError):
+                continue
+            by_date[str(date)][str(code)] = s
+            if len(str(name)) > len(stock_names.get(code, "")):
+                stock_names[code] = str(name)
+
+        dates = sorted(by_date.keys())
+        for i in range(1, len(dates)):
+            d_prev, d_curr = dates[i - 1], dates[i]
+            prev_s, curr_s = by_date[d_prev], by_date[d_curr]
+            codes = set(prev_s) | set(curr_s)
+            for code in codes:
+                delta = curr_s.get(code, 0.0) - prev_s.get(code, 0.0)
+                if delta == 0:
+                    continue
+                close = prices.get(code, {}).get(d_curr)
+                if close is None:
+                    continue
+                flows[d_curr][code] += delta * close
+                shares_delta[d_curr][code] += delta
+
+    if not flows:
+        return None
+
+    # Build per-day summary
+    daily: list[dict] = []
+    for date in sorted(flows.keys()):
+        day = flows[date]
+        items = list(day.items())
+        total_in = sum(v for _, v in items if v > 0)
+        total_out = sum(v for _, v in items if v < 0)
+        n_in = sum(1 for _, v in items if v > 0)
+        n_out = sum(1 for _, v in items if v < 0)
+
+        items_sorted = sorted(items, key=lambda x: -x[1])
+        top_in = items_sorted[:top_per_side]
+        top_out = sorted(items, key=lambda x: x[1])[:top_per_side]
+
+        def _brief(code_flow):
+            code, flow = code_flow
+            return {
+                "code": code,
+                "name": stock_names.get(code, code),
+                "flow": int(round(flow)),
+                "shares_delta": int(round(shares_delta[date][code])),
+            }
+
+        daily.append({
+            "date": date,
+            "net": int(round(total_in + total_out)),
+            "total_in": int(round(total_in)),
+            "total_out": int(round(total_out)),
+            "n_in": n_in,
+            "n_out": n_out,
+            "top_in": [_brief(x) for x in top_in if x[1] > 0],
+            "top_out": [_brief(x) for x in top_out if x[1] < 0],
+        })
+
+    all_dates = [d["date"] for d in daily]
+    return {
+        "as_of": all_dates[-1],
+        "first_date": all_dates[0],
+        "n_etfs": len(n_etfs_seen),
+        "n_stocks_with_price": len(prices),
+        "top_per_side": top_per_side,
+        "daily": daily,
+    }
+
+
 def _load_shares_events(etf_meta: dict[str, dict]) -> tuple[list[dict], list[dict], str] | None:
     """
     從 raw/cmoney/shares/<ETF>.json 推算每檔 ETF 的歷史 新建倉 / 出清 事件。
@@ -576,8 +580,6 @@ def main() -> int:
     p = argparse.ArgumentParser(prog="site_build")
     p.add_argument("--out", type=Path, default=DEFAULT_OUT,
                    help="輸出目錄（預設 site/data/）")
-    p.add_argument("--top", type=int, default=150,
-                   help="consensus 前幾名（預設 150）")
     args = p.parse_args()
 
     if not RAW_CMONEY.exists():
@@ -585,24 +587,23 @@ def main() -> int:
         return 2
 
     etf_meta = load_etf_meta()
-    holdings = latest_holdings_per_etf()
-    if not holdings:
-        print("[ERROR] raw/cmoney 沒有可解析的 batch_*.json", file=sys.stderr)
-        return 3
-
-    data = build_consensus(holdings, etf_meta, top_n=args.top)
-
     args.out.mkdir(parents=True, exist_ok=True)
-    out_file = args.out / "consensus.json"
-    out_file.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    kpi = data["kpi"]
-    print(f"✓ wrote {out_file}")
-    print(f"  as_of={data['as_of']}  n_etfs={kpi['n_etfs']}  "
-          f"all_in={kpi['all_in_count']}  majority={kpi['majority_count']}  "
-          f"solo={kpi['solo_count']}  distinct={kpi['distinct_stocks']}")
+
+    flows = build_flows(etf_meta)
+    if flows is not None:
+        fl_file = args.out / "flows.json"
+        fl_file.write_text(
+            json.dumps(flows, ensure_ascii=False, separators=(",", ":")),
+            encoding="utf-8",
+        )
+        print(f"✓ wrote {fl_file}")
+        last = flows["daily"][-1]
+        print(f"  as_of={flows['as_of']}  n_etfs={flows['n_etfs']}  "
+              f"days={len(flows['daily'])}  "
+              f"latest net={last['net']:+,}  in={last['n_in']} stocks  "
+              f"out={last['n_out']} stocks")
+    else:
+        print(f"[SKIP] 未能產 flows.json（無 shares/ 或無價）", file=sys.stderr)
 
     premium = build_premium(etf_meta)
     if premium is not None:
