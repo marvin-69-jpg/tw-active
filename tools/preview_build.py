@@ -23,9 +23,38 @@ import glob
 import json
 import sys
 from pathlib import Path
+from typing import Iterator
 
 # cash-like markers to exclude from single-stock analysis
 _CASH_MARKERS = {"C_NTD", "M_NTD", "PFUR_NTD", "RDI_NTD"}
+
+
+def _iter_shares_rows(etf: str) -> Iterator[tuple[str, str, str, float, float]]:
+    """Canonical reader for raw/cmoney/shares/<etf>.json.
+
+    Yields (date, code, name, weight, shares). Filters out _CASH_MARKERS and
+    rows that fail parse. All three downstream callers (daily delta, P&L,
+    shares-map for series) share this one parser to avoid filter drift.
+    """
+    path = Path(f"raw/cmoney/shares/{etf}.json")
+    if not path.exists():
+        return
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return
+    for r in data.get("Data") or []:
+        if not r or len(r) < 5:
+            continue
+        d_str, ccode, name, w, sh = r[0], r[1], r[2], r[3], r[4]
+        if ccode in _CASH_MARKERS:
+            continue
+        try:
+            shares = float(sh) if sh not in (None, "") else 0.0
+            weight = float(w) if w not in (None, "") else 0.0
+        except Exception:
+            continue
+        yield d_str, ccode, name, weight, shares
 
 
 def _load_daily_shares_delta(etf: str) -> dict | None:
@@ -43,29 +72,8 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
         n_adds_total, n_reductions_total, n_holdings,
     } or None（無資料或只有一天）
     """
-    path = Path(f"raw/cmoney/shares/{etf}.json")
-    if not path.exists():
-        return None
-    try:
-        data = json.loads(path.read_text())
-    except Exception:
-        return None
-    rows = data.get("Data") or []
-    if not rows:
-        return None
-
     by_date: dict[str, dict[str, dict]] = {}
-    for r in rows:
-        if not r or len(r) < 5:
-            continue
-        d_str, ccode, name, w, sh = r[0], r[1], r[2], r[3], r[4]
-        if ccode in _CASH_MARKERS:
-            continue
-        try:
-            shares = float(sh) if sh not in (None, "") else 0.0
-            weight = float(w) if w not in (None, "") else 0.0
-        except Exception:
-            continue
+    for d_str, ccode, name, weight, shares in _iter_shares_rows(etf):
         by_date.setdefault(d_str, {})[ccode] = {
             "name": name, "shares": shares, "weight": weight,
         }
@@ -151,29 +159,20 @@ def _compute_stock_pnl(etf: str) -> tuple[dict, dict, list[str]] | None:
       summary_dict: {code: {has_prices, pnl, pnl_pct, mv_now, cost_basis, ...}}
       curves_dict:  {code: [int_pnl_at_date_i for i in 0..len(dates)-1]} (只含 has_prices=true)
       dates_list:   [YYYYMMDD, ...] ETF 全交易日軸（跨 stocks 共用）"""
-    shares_path = Path(f"raw/cmoney/shares/{etf}.json")
     prices_path = Path(f"site/preview/{etf.lower()}-prices.json")
-    if not shares_path.exists() or not prices_path.exists():
+    if not Path(f"raw/cmoney/shares/{etf}.json").exists() or not prices_path.exists():
         return None
     try:
-        shares_data = json.loads(shares_path.read_text())
         prices_data = json.loads(prices_path.read_text())
     except Exception:
         return None
 
     # shares: code -> [(date, shares), ...] asc
     by_code: dict[str, list[tuple[str, float]]] = {}
-    for r in shares_data.get("Data") or []:
-        if not r or len(r) < 5:
-            continue
-        d_str, ccode, _name, _w, sh = r[0], r[1], r[2], r[3], r[4]
-        if ccode in _CASH_MARKERS:
-            continue
-        try:
-            shares = float(sh) if sh not in (None, "") else 0.0
-        except Exception:
-            continue
+    for d_str, ccode, _name, _w, shares in _iter_shares_rows(etf):
         by_code.setdefault(ccode, []).append((d_str, shares))
+    if not by_code:
+        return None
     for code in by_code:
         by_code[code].sort(key=lambda t: t[0])
 
@@ -338,28 +337,12 @@ def load_latest_raw(etf: str) -> tuple[list[list], str]:
 
 
 def _load_shares_map(etf: str) -> dict[tuple[str, str], float]:
-    """(date, code) -> shares from raw/cmoney/shares/<etf>.json.
+    """(date, code) -> shares for joining into series.
 
     研究動機：series 裡權重受股價 confound，ETF inflow 時 shares 增但 weight 可能不動甚至降。
     event detection 要用 shares 當 ground truth（見 feedback_shares_not_weight_for_comparison）。
-    schema: [date, code, name, weight, shares, unit]"""
-    path = Path(f"raw/cmoney/shares/{etf}.json")
-    if not path.exists():
-        return {}
-    try:
-        data = json.loads(path.read_text())
-    except Exception:
-        return {}
-    out: dict[tuple[str, str], float] = {}
-    for r in data.get("Data") or []:
-        if not r or len(r) < 5:
-            continue
-        d_str, ccode, _name, _w, sh = r[0], r[1], r[2], r[3], r[4]
-        try:
-            out[(d_str, ccode)] = float(sh) if sh not in (None, "") else 0.0
-        except Exception:
-            continue
-    return out
+    """
+    return {(d, c): sh for d, c, _n, _w, sh in _iter_shares_rows(etf)}
 
 
 def build(etf: str, min_days: int = 30) -> dict:
@@ -372,6 +355,8 @@ def build(etf: str, min_days: int = 30) -> dict:
         if len(r) < 4:
             continue
         date, name, wt, code = r[0], r[1], r[2], r[3]
+        if code in _CASH_MARKERS:
+            continue
         try:
             weight = float(wt)
         except Exception:
@@ -392,6 +377,23 @@ def build(etf: str, min_days: int = 30) -> dict:
     as_of = all_dates[-1] if all_dates else ""
     first_date = all_dates[0] if all_dates else ""
     n_days = len(all_dates)
+
+    # Portfolio establishment date：第一個「持有部位數 ≥ 50% 當前持倉數」的日期。
+    # 為什麼不用 first_date：有些 ETF 上市後幾天還是全現金（e.g. 00401A 第一天只有
+    # cash markers，第二天才一次建 60 檔）。把那種「整批建倉日」當基準，後續才出現
+    # 的部位才算真正的 NEW（manager 在運作中加進來的），否則 100% 都會被誤判 NEW。
+    counts_by_date: dict[str, int] = {}
+    for code, s in by_code.items():
+        for p in s:
+            if p["weight"] > 0:
+                counts_by_date[p["date"]] = counts_by_date.get(p["date"], 0) + 1
+    latest_count = counts_by_date.get(as_of, 0)
+    threshold = max(10, latest_count // 2)
+    establish_date = first_date
+    for d in all_dates:
+        if counts_by_date.get(d, 0) >= threshold:
+            establish_date = d
+            break
 
     # Today's holdings
     current = []
@@ -417,9 +419,11 @@ def build(etf: str, min_days: int = 30) -> dict:
         if n >= min_days:
             series_out[code] = s
         elif held_now:
-            # 新建倉，仍在場上：保留並打 NEW 標記
+            # 短期持有但仍在場上：保留
             series_out[code] = s
-            is_new[code] = True
+            # 只有「establish 後才加入」的部位算 NEW；整批建倉日當天進場的不算
+            if s[0]["date"] > establish_date:
+                is_new[code] = True
         # else: 短期已出清，丟掉（noise）
 
     # Exited codes: only long-held (days_held >= min_days) positions that are no longer held.
