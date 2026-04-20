@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 
 import preview_build  # same dir
-import preview_prices  # same dir — TWSE STOCK_DAY 月抓，共用於 ETF 本身價格
+import preview_prices  # same dir — FinMind fetch_history，共用於 ETF 本身價格
 import fundclear       # same dir — 規模 / 受益人數 primary source
 import etfdaily        # same dir — 每日 NAV（7/21 檔投信有公開 API）
 
@@ -39,56 +39,25 @@ def _load_fundclear_map() -> dict[str, dict]:
     return out
 
 
-def _last_n_months(n: int) -> list[str]:
-    """回 YYYYMM list，含今天往前 n 個月（含今月）"""
-    from datetime import date
-    today = date.today()
-    y, m = today.year, today.month
-    out = []
-    for _ in range(n):
-        out.append(f"{y:04d}{m:02d}")
-        m -= 1
-        if m == 0:
-            m = 12
-            y -= 1
-    return list(reversed(out))
-
-
 def _fetch_etf_price_series(code: str, months: int = 4) -> list[dict]:
-    """抓 ETF 本身最近 months 月的日收盤；跟個股共用 preview_prices 模組。
-    第一個月用 TWSE 試，失敗改打 TPEx（幾檔主動 ETF 在 TPEx 上櫃，如 00998A）。
+    """抓 ETF 本身最近 months 月的日收盤供首頁 sparkline。
+
+    Round 48 個股端由 TWSE STOCK_DAY 遷 FinMind，ETF 這條漏改；TWSE 月抓函式已被移除，
+    呼叫永遠 raise → 首頁 price_series 全空。改走 fetch_history（FinMind，TWSE+TPEx 合一）。
+
     回 [{date, close}, ...] 依日期遞增。"""
-    import time
-    series: list[dict] = []
-    src = None  # "twse" | "tpex"
-    for ym in _last_n_months(months):
-        rows = None
-        if src in (None, "twse"):
-            try:
-                rows = preview_prices.fetch_twse_month(code, ym)
-            except Exception:
-                rows = None
-            if rows:
-                src = "twse"
-        if not rows and src in (None, "tpex"):
-            try:
-                rows = preview_prices.fetch_tpex_month(code, ym)
-            except Exception:
-                rows = None
-            if rows:
-                src = "tpex"
-        if rows:
-            series.extend(rows)
-        time.sleep(0.25)  # 友善間隔
-    # dedupe + sort
-    seen = set()
-    uniq = []
-    for p in sorted(series, key=lambda x: x["date"]):
-        if p["date"] in seen:
-            continue
-        seen.add(p["date"])
-        uniq.append(p)
-    return uniq
+    from datetime import date, timedelta
+    end_d = date.today()
+    # 粗估 months 月 ≈ months*31 天（含 buffer，FinMind clip 到實際交易日）
+    start_d = end_d - timedelta(days=months * 31)
+    start = start_d.strftime("%Y%m%d")
+    end = end_d.strftime("%Y%m%d")
+    token = preview_prices._load_token()
+    try:
+        return preview_prices.fetch_history(code, start, end, token=token)
+    except Exception as exc:
+        print(f"[warn] ETF price_series fetch failed for {code}: {exc}", file=sys.stderr)
+        return []
 
 
 def _load_meta_raw(code: str) -> dict | None:
