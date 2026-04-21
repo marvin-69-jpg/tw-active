@@ -300,7 +300,8 @@
     margin-right: 4px;
   }
   .chart-legend .swatch.weight { background: #1a1a1a; height: 2px; }
-  .chart-legend .swatch.price { background: #b08968; height: 1px; border-top: 1px solid #b08968; }
+  .chart-legend .swatch.lots { background: #4a6fa5; height: 1px; border-top: 1px solid #4a6fa5; }
+  .chart-legend .swatch.price { background: #b08968; height: 1px; border-top: 1px dashed #b08968; }
 
   /* NEW 標記 — 剛建倉 (days_held < 30 AND last_date == as_of) */
   .tag-new {
@@ -709,7 +710,8 @@
         <div class="pnl-card" id="pnl-card" style="display:none"></div>
         <div class="chart-legend">
           <span><span class="swatch weight"></span>ETF 權重 %（左軸）</span>
-          <span><span class="swatch price"></span>收盤價 NT$（右軸）</span>
+          <span><span class="swatch lots"></span>張數（右軸內側，ground truth）</span>
+          <span><span class="swatch price"></span>收盤價 NT$（右軸外側）</span>
         </div>
         <svg id="detail-chart"></svg>
         <div class="pnl-chart-label" id="pnl-chart-label" style="display:none"></div>
@@ -779,6 +781,32 @@ if (initBtn) initBtn.click();
 
 function switchTab(name) {
   tabs.querySelector(`button[data-tab="${name}"]`)?.click();
+}
+
+// ============= Global formatters =============
+// 「張」= shares / 1000（台股慣例），四捨五入後加 thousand-sep
+// 變動一律寫張數 delta + 權重 pp（見 feedback_lots_and_weight_together memory）
+function fmtLots(shares) {
+  if (shares == null) return '—';
+  return Math.round(shares / 1000).toLocaleString();
+}
+function fmtLotsDelta(shares) {
+  if (shares == null) return '—';
+  const s = Math.round(shares / 1000);
+  return (s > 0 ? '+' : '') + s.toLocaleString();
+}
+// NT$ 三段：≥1 億 → X.XX 億元；≥1 萬 → X 萬元；else X 元
+function fmtNTValue(n) {
+  if (n == null) return null;
+  const abs = Math.abs(n);
+  const sign = n < 0 ? '-' : '';
+  if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + ' 億元';
+  if (abs >= 1e4) return sign + Math.round(abs / 1e4).toLocaleString() + ' 萬元';
+  return sign + Math.round(abs).toLocaleString() + ' 元';
+}
+function fmtNTValueSigned(n) {
+  if (n == null) return null;
+  return (n > 0 ? '+' : '') + fmtNTValue(n);
 }
 
 // ============= Current holdings > 1% =============
@@ -888,18 +916,9 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
   }
   const nAdjusted = (ds.n_adds_total || 0) + (ds.n_reductions_total || 0);
   dailyCount.textContent = nAdjusted || '';
-  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 主數字＝Δ股數 × 當日收盤價 = 經理人當天投入/收回的資本（權重%會被股價漲跌 confound）`;
+  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 單位：張（1 張 = 1000 股）· 金額 = Δ張數 × 當日收盤價 · 變動同時看張數與權重 pp`;
 
-  const fmtShares = n => {
-    if (n == null) return '—';
-    const abs = Math.abs(n);
-    if (abs >= 1e8) return (n / 1e8).toFixed(2) + '億';
-    if (abs >= 1e4) return (n / 1e4).toFixed(1) + '萬';
-    return Math.round(n).toLocaleString();
-  };
-  const fmtDelta = n => (n > 0 ? '+' : '') + fmtShares(n);
-  const fmtPct = p => (p == null ? '' : (p > 0 ? '+' : '') + p.toFixed(1) + '%');
-  // close on or before a given date (用於估算事件當日金額；揭露 T+1，無 close 落地時用最近一筆)
+  // close on or before a given date (揭露 T+1，無 close 落地時用最近一筆)
   const closeOnOrBefore = (code, date) => {
     const series = prices[code] || [];
     if (!series.length) return null;
@@ -911,61 +930,54 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
     }
     return last;
   };
-  // 金額三段顯示：≥1 億 → "X.XX 億元"；≥1 萬 → "X 萬元"；其餘 "X 元"
-  const fmtNT = n => {
-    if (n == null) return null;
-    const abs = Math.abs(n);
-    const sign = n < 0 ? '-' : '';
-    if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + ' 億元';
-    if (abs >= 1e4) return sign + Math.round(abs / 1e4).toLocaleString() + ' 萬元';
-    return sign + Math.round(abs).toLocaleString() + ' 元';
-  };
 
   function cardRow(e, kind) {
-    const cls = kind === 'add' ? 'add' : (kind === 'red' ? 'red' : '');
-    const sign = kind === 'add' ? '+' : '';
+    const cls = kind === 'add' ? 'add' : 'red';
     const close = closeOnOrBefore(e.code, ds.latest_date);
     const value = close != null ? e.delta * close : null;
-    const valueStr = value != null
-      ? (value > 0 ? '+' : '') + fmtNT(value)
-      : `${fmtDelta(e.delta)} 股`;  // 缺股價 fallback：標明「股」單位
-    const pctStr = e.pct != null ? ` <span class="shares-line">(${fmtPct(e.pct)})</span>` : '';
+    const dWeight = e.weight - e.prev_weight;
+    const sign = dWeight > 0 ? '+' : '';
+    const valueStr = value != null ? fmtNTValueSigned(value) : null;
+    // 主數字：金額（有股價）／張數 delta（無股價 fallback）
+    const primary = valueStr != null ? valueStr : `${fmtLotsDelta(e.delta)} 張`;
+    // 副數字：張數 delta + 權重 pp 一定一起寫
+    const secondary = `${fmtLotsDelta(e.delta)} 張 / ${sign}${dWeight.toFixed(2)}pp`;
     return `
       <div class="daily-card">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta ${cls}">${valueStr}${pctStr}</div>
-        <div class="shares-line">${fmtDelta(e.delta)} 股 · ${fmtShares(e.prev_shares)} → ${fmtShares(e.shares)} · 權重 ${e.weight}%</div>
+        <div class="delta ${cls}">${primary}</div>
+        <div class="shares-line">${secondary} · ${fmtLots(e.prev_shares)} → ${fmtLots(e.shares)} 張 · 目前 ${e.weight}%</div>
       </div>`;
   }
   function newCard(e) {
     const close = closeOnOrBefore(e.code, ds.latest_date);
     const value = close != null ? e.shares * close : null;
-    const valueStr = value != null ? fmtNT(value) : `${fmtShares(e.shares)} 股`;
+    const primary = value != null ? fmtNTValue(value) : `${fmtLots(e.shares)} 張`;
     return `
       <div class="daily-card new">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta add">新建倉 ${valueStr}</div>
-        <div class="shares-line">${fmtShares(e.shares)} 股 · 權重 ${e.weight}%</div>
+        <div class="delta add">新建倉 ${primary}</div>
+        <div class="shares-line">${fmtLots(e.shares)} 張 / 目前 ${e.weight}%</div>
       </div>`;
   }
   function exitCard(e) {
     const close = closeOnOrBefore(e.code, ds.prev_date);
     const value = close != null ? e.prev_shares * close : null;
-    const valueStr = value != null ? `（前一日約 ${fmtNT(value)}）` : `（前一日 ${fmtShares(e.prev_shares)} 股）`;
+    const suffix = value != null ? `（前一日約 ${fmtNTValue(value)}）` : `（前一日 ${fmtLots(e.prev_shares)} 張）`;
     return `
       <div class="daily-card exit">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta red">出清 ${valueStr}</div>
-        <div class="shares-line">${fmtShares(e.prev_shares)} 股 · 權重 ${e.prev_weight}%</div>
+        <div class="delta red">出清 ${suffix}</div>
+        <div class="shares-line">${fmtLots(e.prev_shares)} 張 / 前一日 ${e.prev_weight}%</div>
       </div>`;
   }
 
@@ -1175,8 +1187,7 @@ function selectStock(code) {
     div.innerHTML = `
       <span><span class="dot ${dotCls}"></span>${fmt(e.date)}</span>
       <span class="tag">${e.type}</span>
-      <span>${e.weight.toFixed(2)}% ${e.from !== undefined ? `(${e.from.toFixed(2)} → ${e.weight.toFixed(2)})` : ''}</span>
-      <span class="tag">${e.note || ''}</span>
+      <span>${renderEventNote(e)}</span>
     `;
     evDiv.appendChild(div);
   }
@@ -1205,7 +1216,7 @@ function renderPnlCard(code) {
     card.className = 'pnl-card missing';
     card.innerHTML = `
       <div><div class="k">損益</div><div class="v">無股價資料</div></div>
-      <div><div class="k">最新股數</div><div class="v">${fmtNT(pnl.shares_latest)}</div></div>
+      <div><div class="k">最新張數</div><div class="v">${fmtLots(pnl.shares_latest)} 張</div></div>
       <div><div class="k">最新日</div><div class="v">${fmt(pnl.latest_date)}</div></div>
       <div><div class="k">原因</div><div class="v">海外/期貨/現金</div></div>
       <div class="note">非 TW 股票不在 FinMind TaiwanStockPrice 資料範圍（海外股 / 期貨 / 現金標記），P&amp;L 暫不計算。</div>
@@ -1238,7 +1249,7 @@ function renderPnlCard(code) {
     <div>
       <div class="k">${exited ? '最終市值' : '目前市值'}</div>
       <div class="v">${fmtNT(pnl.mv_now)}</div>
-      <div class="sub">${fmtNT(pnl.shares_latest)} 股 × NT$${pnl.latest_price}</div>
+      <div class="sub">${fmtLots(pnl.shares_latest)} 張 × NT$${pnl.latest_price}</div>
     </div>
     <div>
       <div class="k">累計買入成本</div>
@@ -1255,24 +1266,17 @@ function renderPnlCard(code) {
 function detectEvents(s, code) {
   if (!s.length) return [];
   const events = [];
-  events.push({ type: 'ENTRY', date: s[0].date, weight: s[0].weight, note: '首次建倉' });
+  // ENTRY: 首次建倉，保留 shares 方便呈現張數
+  events.push({
+    type: 'ENTRY', date: s[0].date, weight: s[0].weight,
+    shares: typeof s[0].shares === 'number' ? s[0].shares : null,
+  });
 
-  // 用 shares delta 判 ADD/REDUCE（見 feedback_shares_not_weight_for_comparison memory）。
-  // 顯示用「金額 = Δshares × 當日 close」（見 feedback_show_value_not_pct_shares），
-  // pct 只當內部 noise filter，不直接 surface 給人看。
-  // threshold：|Δshares / prev_shares| ≥ shares_pct_threshold（後端 daily_shares 同源，
-  // 後端寫入 data.daily_shares.shares_pct_threshold；缺值則 fallback 3.0）。
-  // 若 series 缺 shares（舊 cache），fallback 回 weight delta。
+  // 用 shares delta 判 ADD/REDUCE（feedback_shares_not_weight_for_comparison）。
+  // 顯示用「張數 delta + 權重 pp 一起寫」+ 金額輔助（feedback_lots_and_weight_together）。
+  // pct 只當內部 noise filter，不 surface。
   const sharesPctThreshold = (data.daily_shares && data.daily_shares.shares_pct_threshold) || 3;
   const hasShares = s.some(p => typeof p.shares === 'number');
-  // 金額三段格式（同 daily card 邏輯）
-  const fmtNTNote = n => {
-    const abs = Math.abs(n);
-    const sign = n < 0 ? '-' : (n > 0 ? '+' : '');
-    if (abs >= 1e8) return sign + (abs / 1e8).toFixed(2) + ' 億元';
-    if (abs >= 1e4) return sign + Math.round(abs / 1e4).toLocaleString() + ' 萬元';
-    return sign + Math.round(abs).toLocaleString() + ' 元';
-  };
   const closeForCode = (date) => {
     const series = (code && prices[code]) || [];
     if (!series.length) return null;
@@ -1292,28 +1296,54 @@ function detectEvents(s, code) {
       if (Math.abs(pct) >= sharesPctThreshold) {
         const type = dShares > 0 ? 'ADD' : 'REDUCE';
         const close = closeForCode(cur.date);
-        const note = close != null
-          ? fmtNTNote(dShares * close)
-          : `${dShares > 0 ? '+' : ''}${Math.round(dShares).toLocaleString()} 股`;
         events.push({
-          type, date: cur.date, weight: cur.weight, from: prev.weight, note,
+          type, date: cur.date,
+          weight: cur.weight, fromWeight: prev.weight,
+          shares: cur.shares, fromShares: prev.shares,
+          dShares, dWeight: cur.weight - prev.weight,
+          value: close != null ? dShares * close : null,
         });
       }
     } else {
       const delta = cur.weight - prev.weight;
       if (delta >= 0.5) {
-        events.push({ type: 'ADD', date: cur.date, weight: cur.weight, from: prev.weight, note: `+${delta.toFixed(2)}pp 權重` });
+        events.push({ type: 'ADD', date: cur.date, weight: cur.weight, fromWeight: prev.weight, dWeight: delta });
       } else if (delta <= -0.5) {
-        events.push({ type: 'REDUCE', date: cur.date, weight: cur.weight, from: prev.weight, note: `${delta.toFixed(2)}pp 權重` });
+        events.push({ type: 'REDUCE', date: cur.date, weight: cur.weight, fromWeight: prev.weight, dWeight: delta });
       }
     }
   }
 
   const maxW = Math.max(...s.map(x => x.weight));
   const peakIdx = s.findIndex(x => x.weight === maxW);
-  events.push({ type: 'PEAK', date: s[peakIdx].date, weight: maxW, note: '歷史高' });
+  events.push({ type: 'PEAK', date: s[peakIdx].date, weight: maxW });
 
   return events.sort((a, b) => a.date.localeCompare(b.date));
+}
+
+// Event row 單行顯示：變動同時寫張數 + 權重 pp，金額輔助
+// （feedback_lots_and_weight_together memory）
+function renderEventNote(e) {
+  if (e.type === 'ENTRY') {
+    const lots = e.shares != null ? ` · ${fmtLots(e.shares)} 張` : '';
+    return `首次建倉${lots} · 佔基金 ${e.weight.toFixed(2)}%`;
+  }
+  if (e.type === 'PEAK') {
+    return `歷史權重高 ${e.weight.toFixed(2)}%`;
+  }
+  // ADD / REDUCE
+  const sign = e.dWeight > 0 ? '+' : '';
+  const parts = [];
+  if (e.dShares != null) {
+    parts.push(`${fmtLotsDelta(e.dShares)} 張`);
+  }
+  if (e.dWeight != null) {
+    parts.push(`${sign}${e.dWeight.toFixed(2)}pp`);
+  }
+  if (e.value != null) {
+    parts.push(fmtNTValueSigned(e.value));
+  }
+  return parts.join(' / ');
 }
 
 // ============= P&L curve chart (detail, 第二軸) =============
@@ -1426,8 +1456,8 @@ function drawDetailChart(s, code) {
   if (!s.length) return;
   const W = svg.clientWidth || 800, H = 220;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  // Right padding bigger to make room for price axis label
-  const pad = { l: 44, r: 44, t: 12, b: 24 };
+  // Right padding larger：內側放張數軸，外側放股價軸
+  const pad = { l: 44, r: 72, t: 12, b: 24 };
   const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
 
   const maxW = Math.max(...s.map(x => x.weight));
@@ -1443,6 +1473,34 @@ function drawDetailChart(s, code) {
     svg.insertAdjacentHTML('beforeend', `
       <line x1="${pad.l}" x2="${W - pad.r}" y1="${yy}" y2="${yy}" stroke="#eee" stroke-width="1"/>
       <text x="${pad.l - 6}" y="${yy + 3}" fill="#888" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${v.toFixed(1)}%</text>
+    `);
+  }
+
+  // ===== Lots overlay (right-inner axis, 張數) =====
+  // 張 = shares / 1000；變動才是 ground truth（權重被股價 confound）
+  const lotsPts = s.map((p, i) => ({ i, lots: typeof p.shares === 'number' ? p.shares / 1000 : null }))
+                   .filter(pt => pt.lots !== null);
+  if (lotsPts.length >= 2) {
+    const ls = lotsPts.map(p => p.lots);
+    const lMax = Math.max(...ls), lMin = Math.min(...ls);
+    const lRange = lMax - lMin || 1;
+    const ly = v => pad.t + (1 - (v - lMin) / lRange) * h;
+    // 張數走勢用 stepped line 比較貼近現實（整數張數 discrete 變動）
+    let d = '';
+    for (let k = 0; k < lotsPts.length; k++) {
+      const pt = lotsPts[k];
+      if (k === 0) d += `M${x(pt.i).toFixed(1)},${ly(pt.lots).toFixed(1)} `;
+      else {
+        const prev = lotsPts[k - 1];
+        d += `L${x(pt.i).toFixed(1)},${ly(prev.lots).toFixed(1)} L${x(pt.i).toFixed(1)},${ly(pt.lots).toFixed(1)} `;
+      }
+    }
+    svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#4a6fa5" stroke-width="1" opacity="0.9"/>`);
+    // Right-inner axis labels
+    svg.insertAdjacentHTML('beforeend', `
+      <text x="${W - pad.r + 4}" y="${ly(lMax) + 3}" fill="#4a6fa5" font-size="10" font-family="ui-monospace, monospace">${Math.round(lMax).toLocaleString()}</text>
+      <text x="${W - pad.r + 4}" y="${ly(lMin) + 3}" fill="#4a6fa5" font-size="10" font-family="ui-monospace, monospace">${Math.round(lMin).toLocaleString()}</text>
+      <text x="${W - pad.r + 4}" y="${pad.t - 2}" fill="#4a6fa5" font-size="9" font-family="ui-monospace, monospace">張</text>
     `);
   }
 
@@ -1464,12 +1522,12 @@ function drawDetailChart(s, code) {
       const pt = pricePts[k];
       d += `${k === 0 ? 'M' : 'L'}${x(pt.i).toFixed(1)},${py(pt.price).toFixed(1)} `;
     }
-    svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#b08968" stroke-width="1" stroke-dasharray="0" opacity="0.85"/>`);
-    // Right-axis labels (min / max)
+    svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#b08968" stroke-width="1" stroke-dasharray="2,2" opacity="0.75"/>`);
+    // Right-outer axis labels (股價 NT$)
     svg.insertAdjacentHTML('beforeend', `
-      <text x="${W - pad.r + 4}" y="${py(pMax) + 3}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace">${pMax.toFixed(pMax >= 100 ? 0 : 1)}</text>
-      <text x="${W - pad.r + 4}" y="${py(pMin) + 3}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace">${pMin.toFixed(pMin >= 100 ? 0 : 1)}</text>
-      <text x="${W - pad.r + 4}" y="${pad.t - 2}" fill="#b08968" font-size="9" font-family="ui-monospace, monospace">NT$</text>
+      <text x="${W - 4}" y="${py(pMax) + 3}" fill="#b08968" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${pMax.toFixed(pMax >= 100 ? 0 : 1)}</text>
+      <text x="${W - 4}" y="${py(pMin) + 3}" fill="#b08968" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${pMin.toFixed(pMin >= 100 ? 0 : 1)}</text>
+      <text x="${W - 4}" y="${pad.t - 2}" fill="#b08968" font-size="9" text-anchor="end" font-family="ui-monospace, monospace">NT$</text>
     `);
   } else if (!pricesJson) {
     // prices JSON not loaded at all — silently skip
