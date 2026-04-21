@@ -60,6 +60,7 @@ log.md         ← 操作記錄
 - **節奏**：daily research report（`reports/YYYY-MM-DD.md`）+ 每次 ingest 後一篇 Threads murmur
 - **Threads 帳號**：`opus_666999`
 - **發文風格**：見 `feedback_research_writing_style` memory
+- **Threads 發文**：一律 foreground（不加 run_in_background）；preview 後直接 post，不要再等確認；重跑會雙發，Threads 不給刪
 
 ## 規則
 
@@ -170,6 +171,51 @@ gh pr create --base main --head "$BRANCH" --title "..." --body "..."
 - 寫「這個機制怎麼運作」「這裡有破洞」「這個揭露不完整」
 - 引用市場觀點時標來源、日期、是否為發行商利益相關方
 - 法規引用要附原文連結
+
+## Pages 規則
+
+### 手機版（mobile-first，強制）
+
+所有 `site/` 頁面**在寫 CSS 時就同步加 mobile media query**，不是事後補。
+
+```css
+@media (max-width: 640px) {
+  /* 縮 padding、改多欄 grid 為 1 欄、允許橫 scroll */
+}
+```
+
+- `main` padding 縮到 12-16px
+- 多欄 grid 在 < 640px 改 `1fr` 或橫向 scroll
+- Font size ≥ 12px；Tab bar 可 `overflow-x: auto`
+- 必加 `<meta name="viewport" content="width=device-width, initial-scale=1" />`
+- 測試基準：375px（iPhone SE）和 390px（iPhone 14）
+
+### 版面：tab + 視角切換（不要無限往下）
+
+不同視角（持股快照 / 小多圖 / 單股 detail / 已出清）用 **tab bar** 切換；表格欄位多時用橫 scroll，不往下延伸。
+
+- **卡片集合**（small multiples、股票網格）例外：用 `grid-template-columns: repeat(auto-fill, minmax(200px, 1fr))` 讓它自然 wrap，不強制橫 scroll
+- Tab 可深連結（URL hash `#current` / `#trace` / `#stock` / `#exited`）
+- 風格沿用 TUI 美學（monospace 數字、細 SVG 線）
+
+## Preview 規則
+
+### 目前持股門檻：weight > 1%（不是 Top N）
+
+`data.current.filter(h => h.weight > 1)` 取代 `.slice(0, 15)`。
+
+- 對齊 SITCA IN2630 季報「≥1% 持股」揭露規則
+- 常數化門檻，Panel 標題標示「目前權重 > 1%」
+- 變數名改 `topHoldings` 或 `mainHoldings`，不要 `top15`
+
+### 新建倉標 NEW（首次建倉保留）
+
+收錄條件：`days_held ≥ 30` **OR** (`last_date == as_of` AND `days_held < 30`)。
+
+後者加 `is_new: true`，前端標 **NEW** tag：
+- Top holdings table：列左側加 NEW span
+- Small multiples：淡色外框 + 右上 NEW 小標
+- Single stock detail：< 5 個資料點時不畫 chart，改顯「首次建倉 `<date>` · 第 n 日」
 
 ## Brain-First Lookup / Entity Detection / Reconsolidation / Sleep-Time Improve
 
