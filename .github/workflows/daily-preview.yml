@@ -87,6 +87,7 @@ jobs:
           ls site/preview/ | wc -l | xargs echo "site/preview 檔數:"
 
       - name: Commit and push
+        id: commit
         run: |
           set -eo pipefail
           git config user.name "marvin-69-jpg"
@@ -94,8 +95,19 @@ jobs:
           git add site/preview/
           if git diff --cached --quiet; then
             echo "No site/preview changes"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           TODAY=$(date -u +%Y-%m-%d)
           git commit -m "chore(preview): daily rebuild $TODAY"
           git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Trigger pages-deploy
+        # GITHUB_TOKEN push 不會觸發下游 workflow（GitHub 防遞迴規則），
+        # 用 workflow_dispatch 繞過（dispatch 是 GITHUB_TOKEN 可觸發的例外）。
+        # 參考 feedback_github_token_no_trigger memory（2026-04-21 實戰踩到）。
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run pages-deploy.yml --ref main
