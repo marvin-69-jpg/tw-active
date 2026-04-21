@@ -396,11 +396,66 @@ def cmd_whitelist_coverage(args: argparse.Namespace) -> int:
     return 0
 
 
-# ── ingest: sitca-monthly ─────────────────────────────────────────────
+# ── ingest helpers ────────────────────────────────────────────────────
 
-def _ingest_sitca_monthly(conn: sqlite3.Connection, month: str,
-                          class_code: str | None, comid: str | None) -> int:
-    cli_args = ["sitca", "monthly", "--month", month]
+def _run_single_ingest(source: str, target: str, label: str,
+                       do: "callable[[sqlite3.Connection], int]") -> int:
+    """Wraps the try/_log/commit/close boilerplate shared by every cmd_ingest_*."""
+    conn = _connect()
+    try:
+        n = do(conn)
+        _log(conn, source, target, n, True)
+        conn.commit()
+        print(f"✔ {label} → {n} rows", file=sys.stderr)
+        return 0
+    except Exception as e:
+        _log(conn, source, target, 0, False, str(e))
+        conn.commit()
+        print(f"✘ {label}: {e}", file=sys.stderr)
+        return 1
+    finally:
+        conn.close()
+
+
+def _run_backfill_loop(items: list[str], source: str, label: str,
+                       make_target: "callable[[str], str]",
+                       do: "callable[[sqlite3.Connection, str], int]") -> int:
+    """Shared backfill loop: iterate items, ingest, log, print progress."""
+    print(f"▶ backfill {label}: {len(items)} items "
+          f"[{items[0]} → {items[-1]}]", file=sys.stderr)
+    conn = _connect()
+    ok_count = err_count = total_rows = 0
+    for i, it in enumerate(items, 1):
+        target = make_target(it)
+        try:
+            n = do(conn, it)
+            _log(conn, source, target, n, True)
+            conn.commit()
+            ok_count += 1
+            total_rows += n
+            print(f"  [{i:>2}/{len(items)}] ✔ {it} → {n} rows", file=sys.stderr)
+        except Exception as e:
+            _log(conn, source, target, 0, False, str(e))
+            conn.commit()
+            err_count += 1
+            print(f"  [{i:>2}/{len(items)}] ✘ {it}: {e}", file=sys.stderr)
+    conn.close()
+    print(f"✔ done: {ok_count}/{len(items)} ok, {err_count} errors, "
+          f"{total_rows} rows total", file=sys.stderr)
+    return 0 if err_count == 0 else 1
+
+
+# ── ingest: sitca (monthly + quarterly shared) ────────────────────────
+
+def _ingest_sitca(conn: sqlite3.Connection, phase: str, period: str,
+                  class_code: str | None, comid: str | None) -> int:
+    """phase ∈ {'monthly', 'quarterly'}. Differences:
+      - monthly writes holdings_fund_monthly (PK ym+fund+rank, rank defaults 0)
+      - quarterly writes holdings_fund_quarterly (PK yq+fund+code, skips rows w/o code)
+    """
+    assert phase in ("monthly", "quarterly")
+    flag = "--month" if phase == "monthly" else "--quarter"
+    cli_args = ["sitca", phase, flag, period]
     if comid:
         cli_args += ["--by", "comid", "--comid", comid]
         if class_code:
@@ -413,21 +468,25 @@ def _ingest_sitca_monthly(conn: sqlite3.Connection, month: str,
     payload = _run_json(MANAGERWATCH, cli_args)
     rows = payload.get("rows", [])
     now = _now_iso()
+    table = f"holdings_fund_{phase}"
+    period_col = "ym" if phase == "monthly" else "yq"
     n = 0
     for r in rows:
-        fund = r["fund"]
-        rank = r.get("rank") or 0
+        code = r.get("target_code") or None
+        if phase == "quarterly" and not code:
+            continue  # 季報以 code 為 key，沒 code 跳過
+        rank = (r.get("rank") or 0) if phase == "monthly" else r.get("rank")
         conn.execute(
-            "INSERT OR REPLACE INTO holdings_fund_monthly"
-            "(ym,fund_name,comid,fund_class,rank,code,kind,name,amount,pct,ingested_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            f"INSERT OR REPLACE INTO {table}"
+            f"({period_col},fund_name,comid,fund_class,rank,code,kind,name,amount,pct,ingested_at)"
+            f" VALUES (?,?,?,?,?,?,?,?,?,?,?)",
             (
-                month,
-                fund,
+                period,
+                r["fund"],
                 comid or payload.get("comid"),
                 class_code or payload.get("class"),
                 rank,
-                r.get("target_code") or None,
+                code,
                 r.get("target_type") or None,
                 r.get("target_name") or None,
                 r.get("amount"),
@@ -439,22 +498,17 @@ def _ingest_sitca_monthly(conn: sqlite3.Connection, month: str,
     return n
 
 
+def _sitca_target(phase: str, period: str, class_code: str | None,
+                  comid: str | None) -> str:
+    return f"sitca-{phase}:{period}:{class_code or 'ALL'}:{comid or '-'}"
+
+
 def cmd_ingest_sitca_monthly(args: argparse.Namespace) -> int:
-    conn = _connect()
-    target = f"sitca-monthly:{args.month}:{args.class_code or 'ALL'}:{args.comid or '-'}"
-    try:
-        n = _ingest_sitca_monthly(conn, args.month, args.class_code, args.comid)
-        _log(conn, "managerwatch", target, n, True)
-        conn.commit()
-        print(f"✔ sitca-monthly {args.month} → {n} rows", file=sys.stderr)
-        return 0
-    except Exception as e:
-        _log(conn, "managerwatch", target, 0, False, str(e))
-        conn.commit()
-        print(f"✘ sitca-monthly {args.month}: {e}", file=sys.stderr)
-        return 1
-    finally:
-        conn.close()
+    target = _sitca_target("monthly", args.month, args.class_code, args.comid)
+    return _run_single_ingest(
+        "managerwatch", target, f"sitca-monthly {args.month}",
+        lambda c: _ingest_sitca(c, "monthly", args.month, args.class_code, args.comid),
+    )
 
 
 # ── ingest: mops-monthly ──────────────────────────────────────────────
@@ -494,107 +548,29 @@ def _ingest_mops_monthly(conn: sqlite3.Connection, month: str) -> int:
 
 
 def cmd_ingest_mops_monthly(args: argparse.Namespace) -> int:
-    conn = _connect()
-    target = f"mops-monthly:{args.month}"
-    try:
-        n = _ingest_mops_monthly(conn, args.month)
-        _log(conn, "mopsetf", target, n, True)
-        conn.commit()
-        print(f"✔ mops-monthly {args.month} → {n} rows", file=sys.stderr)
-        return 0
-    except Exception as e:
-        _log(conn, "mopsetf", target, 0, False, str(e))
-        conn.commit()
-        print(f"✘ mops-monthly {args.month}: {e}", file=sys.stderr)
-        return 1
-    finally:
-        conn.close()
+    return _run_single_ingest(
+        "mopsetf", f"mops-monthly:{args.month}", f"mops-monthly {args.month}",
+        lambda c: _ingest_mops_monthly(c, args.month),
+    )
 
 
 def cmd_backfill_mops_monthly(args: argparse.Namespace) -> int:
-    conn = _connect()
-    try:
-        months = _month_range(args.ym_from, args.ym_to)
-        ok = fail = 0
-        for m in months:
-            target = f"mops-monthly:{m}"
-            try:
-                n = _ingest_mops_monthly(conn, m)
-                _log(conn, "mopsetf", target, n, True)
-                print(f"✔ {m} → {n} rows", file=sys.stderr)
-                ok += 1
-            except Exception as e:
-                _log(conn, "mopsetf", target, 0, False, str(e))
-                print(f"✘ {m}: {e}", file=sys.stderr)
-                fail += 1
-            conn.commit()
-        print(f"Done: {ok} ok / {fail} fail / {len(months)} total", file=sys.stderr)
-        return 0 if fail == 0 else 1
-    finally:
-        conn.close()
+    months = _month_range(args.ym_from, args.ym_to)
+    return _run_backfill_loop(
+        months, "mopsetf", "mops-monthly",
+        lambda m: f"mops-monthly:{m}",
+        lambda c, m: _ingest_mops_monthly(c, m),
+    )
 
 
 # ── ingest: sitca-quarterly ───────────────────────────────────────────
 
-def _ingest_sitca_quarterly(conn: sqlite3.Connection, quarter: str,
-                            class_code: str | None, comid: str | None) -> int:
-    cli_args = ["sitca", "quarterly", "--quarter", quarter]
-    if comid:
-        cli_args += ["--by", "comid", "--comid", comid]
-        if class_code:
-            cli_args += ["--class", class_code]
-    else:
-        cli_args += ["--by", "class"]
-        if class_code:
-            cli_args += ["--class", class_code]
-
-    payload = _run_json(MANAGERWATCH, cli_args)
-    rows = payload.get("rows", [])
-    now = _now_iso()
-    n = 0
-    for r in rows:
-        fund = r["fund"]
-        code = r.get("target_code") or ""
-        if not code:
-            continue  # 季報以 code 為 key，沒 code 跳過
-        conn.execute(
-            "INSERT OR REPLACE INTO holdings_fund_quarterly"
-            "(yq,fund_name,comid,fund_class,rank,code,kind,name,amount,pct,ingested_at)"
-            " VALUES (?,?,?,?,?,?,?,?,?,?,?)",
-            (
-                quarter,
-                fund,
-                comid or payload.get("comid"),
-                class_code or payload.get("class"),
-                r.get("rank"),
-                code,
-                r.get("target_type") or None,
-                r.get("target_name") or None,
-                r.get("amount"),
-                r.get("pct"),
-                now,
-            ),
-        )
-        n += 1
-    return n
-
-
 def cmd_ingest_sitca_quarterly(args: argparse.Namespace) -> int:
-    conn = _connect()
-    target = f"sitca-quarterly:{args.quarter}:{args.class_code or 'ALL'}:{args.comid or '-'}"
-    try:
-        n = _ingest_sitca_quarterly(conn, args.quarter, args.class_code, args.comid)
-        _log(conn, "managerwatch", target, n, True)
-        conn.commit()
-        print(f"✔ sitca-quarterly {args.quarter} → {n} rows", file=sys.stderr)
-        return 0
-    except Exception as e:
-        _log(conn, "managerwatch", target, 0, False, str(e))
-        conn.commit()
-        print(f"✘ sitca-quarterly {args.quarter}: {e}", file=sys.stderr)
-        return 1
-    finally:
-        conn.close()
+    target = _sitca_target("quarterly", args.quarter, args.class_code, args.comid)
+    return _run_single_ingest(
+        "managerwatch", target, f"sitca-quarterly {args.quarter}",
+        lambda c: _ingest_sitca(c, "quarterly", args.quarter, args.class_code, args.comid),
+    )
 
 
 # ── ingest: etf-daily ─────────────────────────────────────────────────
@@ -971,29 +947,12 @@ def _weekday_range(ymd_from: str, ymd_to: str) -> list[str]:
 
 def cmd_backfill_sitca_monthly(args: argparse.Namespace) -> int:
     months = _month_range(args.ym_from, args.ym_to)
-    print(f"▶ backfill sitca-monthly: {len(months)} months "
-          f"[{months[0]} → {months[-1]}] class={args.class_code or 'ALL'} "
-          f"comid={args.comid or '-'}", file=sys.stderr)
-    conn = _connect()
-    ok_count = err_count = total_rows = 0
-    for i, m in enumerate(months, 1):
-        target = f"sitca-monthly:{m}:{args.class_code or 'ALL'}:{args.comid or '-'}"
-        try:
-            n = _ingest_sitca_monthly(conn, m, args.class_code, args.comid)
-            _log(conn, "managerwatch", target, n, True)
-            conn.commit()
-            ok_count += 1
-            total_rows += n
-            print(f"  [{i:>2}/{len(months)}] ✔ {m} → {n} rows", file=sys.stderr)
-        except Exception as e:
-            _log(conn, "managerwatch", target, 0, False, str(e))
-            conn.commit()
-            err_count += 1
-            print(f"  [{i:>2}/{len(months)}] ✘ {m}: {e}", file=sys.stderr)
-    conn.close()
-    print(f"✔ done: {ok_count}/{len(months)} ok, {err_count} errors, "
-          f"{total_rows} rows total", file=sys.stderr)
-    return 0 if err_count == 0 else 1
+    return _run_backfill_loop(
+        months, "managerwatch",
+        f"sitca-monthly class={args.class_code or 'ALL'} comid={args.comid or '-'}",
+        lambda m: _sitca_target("monthly", m, args.class_code, args.comid),
+        lambda c, m: _ingest_sitca(c, "monthly", m, args.class_code, args.comid),
+    )
 
 
 def cmd_backfill_etf_daily(args: argparse.Namespace) -> int:
@@ -1050,16 +1009,14 @@ def cmd_backfill_retry(args: argparse.Namespace) -> int:
         target, source = r["target"], r["source"]
         parts = target.split(":")
         try:
-            if source == "managerwatch" and parts[0] == "sitca-monthly":
-                _, month, cls, comid = parts[0], parts[1], parts[2], parts[3]
+            if source == "managerwatch" and parts[0] in ("sitca-monthly", "sitca-quarterly"):
+                phase = "monthly" if parts[0] == "sitca-monthly" else "quarterly"
+                period, cls, comid = parts[1], parts[2], parts[3]
                 cls = None if cls == "ALL" else cls
                 comid = None if comid == "-" else comid
-                n = _ingest_sitca_monthly(conn, month, cls, comid)
-            elif source == "managerwatch" and parts[0] == "sitca-quarterly":
-                _, q, cls, comid = parts[0], parts[1], parts[2], parts[3]
-                cls = None if cls == "ALL" else cls
-                comid = None if comid == "-" else comid
-                n = _ingest_sitca_quarterly(conn, q, cls, comid)
+                n = _ingest_sitca(conn, phase, period, cls, comid)
+            elif source == "mopsetf" and parts[0] == "mops-monthly":
+                n = _ingest_mops_monthly(conn, parts[1])
             elif source == "etfdaily":
                 _, code, date_ymd = parts[0], parts[1], parts[2]
                 date_ymd = None if date_ymd == "auto" else date_ymd
