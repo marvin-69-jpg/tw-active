@@ -15,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write   # gh workflow run pages-deploy.yml 需要
 
 concurrency:
   group: daily-preview
