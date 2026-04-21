@@ -6,13 +6,14 @@ threads — CLI for posting to Threads.
 
 Subcommands:
   whoami                查 token 認證的帳號（驗證 token 還能用）
-  post <file|->         發單篇文章（500 字元上限）
+  post <file|->         發單篇文章（500 字元上限），可加 --image <url>
   thread <file|->       發 thread chain（每段用 "---" 分隔，自動接 reply chain）
   preview <file|->      只切段、不發，看分段結果
 
 Usage:
   threads.py whoami
   threads.py post reports/threads/2026-04-17-daily.md
+  threads.py post draft.md --image https://raw.githubusercontent.com/.../shot.png
   threads.py thread reports/threads/2026-04-17-daily.md --dry-run
   cat post.txt | threads.py post -
 """
@@ -188,9 +189,20 @@ def add_thread_indices(segments: list[str]) -> list[str]:
 
 
 def create_text_container(
-    user_id: str, token: str, text: str, reply_to_id: str | None = None
+    user_id: str, token: str, text: str, reply_to_id: str | None = None,
+    image_url: str | None = None,
 ) -> str:
-    params = {"media_type": "TEXT", "text": text, "access_token": token}
+    """Build a Threads container. If image_url given, create IMAGE container
+    (text becomes caption). Threads API needs a publicly-accessible https URL."""
+    if image_url:
+        params = {
+            "media_type": "IMAGE",
+            "image_url": image_url,
+            "text": text,
+            "access_token": token,
+        }
+    else:
+        params = {"media_type": "TEXT", "text": text, "access_token": token}
     if reply_to_id:
         params["reply_to_id"] = reply_to_id
     resp = _request("POST", f"{API_BASE}/{user_id}/threads", params)
@@ -213,8 +225,11 @@ def post_one(
     text: str,
     reply_to_id: str | None = None,
     delay_sec: int = PUBLISH_DELAY_SEC,
+    image_url: str | None = None,
 ) -> str:
-    container = create_text_container(user_id, token, text, reply_to_id)
+    container = create_text_container(
+        user_id, token, text, reply_to_id, image_url=image_url
+    )
     if delay_sec > 0:
         time.sleep(delay_sec)
     return publish_container(user_id, token, container)
@@ -276,13 +291,17 @@ def cmd_post(args) -> int:
         )
 
     if args.dry_run:
-        print(f"[dry-run] 會發單篇 ({len(text)} chars):")
+        print(f"[dry-run] 會發單篇 ({len(text)} chars)"
+              + (f" + image: {args.image}" if args.image else "") + ":")
         print("─" * 40)
         print(text)
         return 0
 
-    print(f"發文 ({len(text)} chars)...")
-    post_id = post_one(user_id, token, text, delay_sec=args.delay)
+    print(f"發文 ({len(text)} chars)"
+          + (f" + image" if args.image else "") + "...")
+    post_id = post_one(
+        user_id, token, text, delay_sec=args.delay, image_url=args.image
+    )
     print(f"✓ posted: {post_id}")
     return 0
 
@@ -333,6 +352,9 @@ def main() -> int:
     p_post = sub.add_parser("post", help="post a single thread (≤500 chars)")
     p_post.add_argument("source", help="path to .md file, or '-' for stdin")
     p_post.add_argument("--dry-run", action="store_true")
+    p_post.add_argument(
+        "--image", help="public https URL of image to attach (text becomes caption)"
+    )
     p_post.add_argument(
         "--delay", type=int, default=PUBLISH_DELAY_SEC,
         help=f"seconds to wait between create+publish (default {PUBLISH_DELAY_SEC})",
