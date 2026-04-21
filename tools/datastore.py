@@ -1127,7 +1127,7 @@ def build_parser() -> argparse.ArgumentParser:
     sm.add_argument("--comid", help="e.g. A0009 (統一)")
     sm.set_defaults(func=cmd_ingest_sitca_monthly)
 
-    sq = ingest_sub.add_parser("sitca-quarterly", help="SITCA 季報 ≥1%")
+    sq = ingest_sub.add_parser("sitca-quarterly", help="SITCA 季報 ≥1%%")
     sq.add_argument("--quarter", required=True, help="YYYYMM e.g. 202603")
     sq.add_argument("--class", dest="class_code")
     sq.add_argument("--comid")
