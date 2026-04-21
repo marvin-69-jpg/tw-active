@@ -916,7 +916,7 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
   }
   const nAdjusted = (ds.n_adds_total || 0) + (ds.n_reductions_total || 0);
   dailyCount.textContent = nAdjusted || '';
-  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 單位：張（1 張 = 1000 股）· 金額 = Δ張數 × 當日收盤價 · 變動同時看張數與權重 pp`;
+  dailyTitle.innerHTML = `最新 <span class="mono">${fmt(ds.latest_date)}</span> vs 前一交易日 <span class="mono">${fmt(ds.prev_date)}</span> · 過濾 <span class="mono">max(weight, prev_weight) &lt; 0.3%</span> 試水溫 · 單位：張（1 張 = 1000 股）· 四段式：張數 / 權重 pp / 投入金額 / 目前價值`;
 
   // close on or before a given date (揭露 T+1，無 close 落地時用最近一筆)
   const closeOnOrBefore = (code, date) => {
@@ -934,14 +934,18 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
   function cardRow(e, kind) {
     const cls = kind === 'add' ? 'add' : 'red';
     const close = closeOnOrBefore(e.code, ds.latest_date);
-    const value = close != null ? e.delta * close : null;
+    const tradeValue = close != null ? e.delta * close : null;    // 當天投入/收回
+    const currentValue = close != null ? e.shares * close : null;  // 目前價值
     const dWeight = e.weight - e.prev_weight;
     const sign = dWeight > 0 ? '+' : '';
-    const valueStr = value != null ? fmtNTValueSigned(value) : null;
-    // 主數字：金額（有股價）／張數 delta（無股價 fallback）
-    const primary = valueStr != null ? valueStr : `${fmtLotsDelta(e.delta)} 張`;
-    // 副數字：張數 delta + 權重 pp 一定一起寫
-    const secondary = `${fmtLotsDelta(e.delta)} 張 / ${sign}${dWeight.toFixed(2)}pp`;
+    // 四段式：張數 / pp / 投入金額 / 目前價值
+    const parts = [
+      `${fmtLotsDelta(e.delta)} 張`,
+      `${sign}${dWeight.toFixed(2)}pp`,
+    ];
+    if (tradeValue != null) parts.push(`投入 ${fmtNTValueSigned(tradeValue)}`);
+    if (currentValue != null) parts.push(`目前價值 ${fmtNTValue(currentValue)}`);
+    const primary = parts.join(' / ');
     return `
       <div class="daily-card">
         <div class="head">
@@ -949,35 +953,46 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
           <span class="code">${e.code}</span>
         </div>
         <div class="delta ${cls}">${primary}</div>
-        <div class="shares-line">${secondary} · ${fmtLots(e.prev_shares)} → ${fmtLots(e.shares)} 張 · 目前 ${e.weight}%</div>
+        <div class="shares-line">${fmtLots(e.prev_shares)} → ${fmtLots(e.shares)} 張 · 目前 ${e.weight}%</div>
       </div>`;
   }
   function newCard(e) {
     const close = closeOnOrBefore(e.code, ds.latest_date);
-    const value = close != null ? e.shares * close : null;
-    const primary = value != null ? fmtNTValue(value) : `${fmtLots(e.shares)} 張`;
+    const tradeValue = close != null ? e.shares * close : null;  // 新建倉：投入 = 目前價值
+    const parts = [
+      `新建倉 ${fmtLots(e.shares)} 張`,
+      `${e.weight}%`,
+    ];
+    if (tradeValue != null) parts.push(`投入 ${fmtNTValue(tradeValue)}`);
+    if (tradeValue != null) parts.push(`目前價值 ${fmtNTValue(tradeValue)}`);
+    const primary = parts.join(' / ');
     return `
       <div class="daily-card new">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta add">新建倉 ${primary}</div>
-        <div class="shares-line">${fmtLots(e.shares)} 張 / 目前 ${e.weight}%</div>
+        <div class="delta add">${primary}</div>
       </div>`;
   }
   function exitCard(e) {
     const close = closeOnOrBefore(e.code, ds.prev_date);
-    const value = close != null ? e.prev_shares * close : null;
-    const suffix = value != null ? `（前一日約 ${fmtNTValue(value)}）` : `（前一日 ${fmtLots(e.prev_shares)} 張）`;
+    const tradeValue = close != null ? e.prev_shares * close : null; // 出清：收回金額（+）
+    // 出清後「目前價值」= 0，不必顯示，但交易金額顯示「收回」
+    const parts = [
+      `出清 ${fmtLots(e.prev_shares)} 張`,
+      `前一日 ${e.prev_weight}%`,
+    ];
+    if (tradeValue != null) parts.push(`收回約 ${fmtNTValue(tradeValue)}`);
+    parts.push('目前價值 0');
+    const primary = parts.join(' / ');
     return `
       <div class="daily-card exit">
         <div class="head">
           <span class="name">${e.name}</span>
           <span class="code">${e.code}</span>
         </div>
-        <div class="delta red">出清 ${suffix}</div>
-        <div class="shares-line">${fmtLots(e.prev_shares)} 張 / 前一日 ${e.prev_weight}%</div>
+        <div class="delta red">${primary}</div>
       </div>`;
   }
 
@@ -1266,28 +1281,45 @@ function renderPnlCard(code) {
 function detectEvents(s, code) {
   if (!s.length) return [];
   const events = [];
-  // ENTRY: 首次建倉，保留 shares 方便呈現張數
-  events.push({
-    type: 'ENTRY', date: s[0].date, weight: s[0].weight,
-    shares: typeof s[0].shares === 'number' ? s[0].shares : null,
-  });
-
-  // 用 shares delta 判 ADD/REDUCE（feedback_shares_not_weight_for_comparison）。
-  // 顯示用「張數 delta + 權重 pp 一起寫」+ 金額輔助（feedback_lots_and_weight_together）。
-  // pct 只當內部 noise filter，不 surface。
-  const sharesPctThreshold = (data.daily_shares && data.daily_shares.shares_pct_threshold) || 3;
-  const hasShares = s.some(p => typeof p.shares === 'number');
+  // 共用 close series / latest close（計目前價值用）
+  const priceSeries = (code && prices[code]) || [];
+  const latestClose = priceSeries.length ? priceSeries[priceSeries.length - 1].close : null;
   const closeForCode = (date) => {
-    const series = (code && prices[code]) || [];
-    if (!series.length) return null;
+    if (!priceSeries.length) return null;
     let last = null;
-    for (const p of series) {
+    for (const p of priceSeries) {
       if (!p.date) continue;
       if (p.date <= date) last = p.close;
       else break;
     }
     return last;
   };
+
+  // ENTRY: 首次建倉
+  {
+    const sh0 = typeof s[0].shares === 'number' ? s[0].shares : null;
+    const close0 = closeForCode(s[0].date);
+    events.push({
+      type: 'ENTRY', date: s[0].date, weight: s[0].weight,
+      shares: sh0,
+      tradeValue: (sh0 != null && close0 != null) ? sh0 * close0 : null,  // 建倉投入
+      currentValue: (sh0 != null && latestClose != null) ? sh0 * latestClose : null,  // 仍持有就是最新
+    });
+  }
+
+  // ADD/REDUCE (feedback_shares_not_weight_for_comparison)
+  // 四段式：張數 / pp / 投入金額 / 目前價值（feedback_lots_and_weight_together）
+  const sharesPctThreshold = (data.daily_shares && data.daily_shares.shares_pct_threshold) || 3;
+  const hasShares = s.some(p => typeof p.shares === 'number');
+  const latestShares = (() => {
+    for (let k = s.length - 1; k >= 0; k--) {
+      if (typeof s[k].shares === 'number') return s[k].shares;
+    }
+    return null;
+  })();
+  const currentValueAll = (latestShares != null && latestClose != null)
+    ? latestShares * latestClose : null;  // 整檔股票目前在 ETF 的 exposure
+
   for (let i = 1; i < s.length; i++) {
     const cur = s[i], prev = s[i - 1];
     if (hasShares && typeof cur.shares === 'number' && typeof prev.shares === 'number' && prev.shares > 0) {
@@ -1301,7 +1333,8 @@ function detectEvents(s, code) {
           weight: cur.weight, fromWeight: prev.weight,
           shares: cur.shares, fromShares: prev.shares,
           dShares, dWeight: cur.weight - prev.weight,
-          value: close != null ? dShares * close : null,
+          tradeValue: close != null ? dShares * close : null,
+          currentValue: currentValueAll,
         });
       }
     } else {
@@ -1321,12 +1354,16 @@ function detectEvents(s, code) {
   return events.sort((a, b) => a.date.localeCompare(b.date));
 }
 
-// Event row 單行顯示：變動同時寫張數 + 權重 pp，金額輔助
+// Event row 顯示四段式：張數 / pp / 投入金額 / 目前價值
 // （feedback_lots_and_weight_together memory）
 function renderEventNote(e) {
   if (e.type === 'ENTRY') {
-    const lots = e.shares != null ? ` · ${fmtLots(e.shares)} 張` : '';
-    return `首次建倉${lots} · 佔基金 ${e.weight.toFixed(2)}%`;
+    const parts = [`首次建倉`];
+    if (e.shares != null) parts.push(`${fmtLots(e.shares)} 張`);
+    parts.push(`${e.weight.toFixed(2)}%`);
+    if (e.tradeValue != null) parts.push(`投入 ${fmtNTValue(e.tradeValue)}`);
+    if (e.currentValue != null) parts.push(`目前價值 ${fmtNTValue(e.currentValue)}`);
+    return parts.join(' / ');
   }
   if (e.type === 'PEAK') {
     return `歷史權重高 ${e.weight.toFixed(2)}%`;
@@ -1334,15 +1371,10 @@ function renderEventNote(e) {
   // ADD / REDUCE
   const sign = e.dWeight > 0 ? '+' : '';
   const parts = [];
-  if (e.dShares != null) {
-    parts.push(`${fmtLotsDelta(e.dShares)} 張`);
-  }
-  if (e.dWeight != null) {
-    parts.push(`${sign}${e.dWeight.toFixed(2)}pp`);
-  }
-  if (e.value != null) {
-    parts.push(fmtNTValueSigned(e.value));
-  }
+  if (e.dShares != null) parts.push(`${fmtLotsDelta(e.dShares)} 張`);
+  if (e.dWeight != null) parts.push(`${sign}${e.dWeight.toFixed(2)}pp`);
+  if (e.tradeValue != null) parts.push(`投入 ${fmtNTValueSigned(e.tradeValue)}`);
+  if (e.currentValue != null) parts.push(`目前價值 ${fmtNTValue(e.currentValue)}`);
   return parts.join(' / ');
 }
 
