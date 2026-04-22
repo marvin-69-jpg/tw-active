@@ -1139,8 +1139,8 @@ function selectStock(code) {
     // 若有價格資料，展示該日收盤
     const px = (prices[code] || []).find(p => p.date === first);
     const priceCell = px
-      ? `<div class="stat"><div class="k">當日收盤</div><div class="v">NT$${px.close.toFixed(2)}</div></div>`
-      : `<div class="stat"><div class="k">當日收盤</div><div class="v" style="color:#8f2e2e;font-size:12px;font-weight:400;">暫缺（TWSE rate limit）</div></div>`;
+      ? `<div class="stat"><div class="k">建倉日收盤</div><div class="v">NT$${px.close.toFixed(2)}</div></div>`
+      : `<div class="stat"><div class="k">建倉日收盤</div><div class="v" style="color:#8f2e2e;font-size:12px;font-weight:400;">暫缺（TWSE rate limit）</div></div>`;
 
     note.innerHTML = `
       <div class="hd">
