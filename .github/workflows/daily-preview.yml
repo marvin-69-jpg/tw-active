@@ -11,6 +11,8 @@ on:
       - 'tools/preview_build.py'
       - 'tools/preview_prices.py'
       - 'tools/preview_flow.py'
+      - 'tools/preview_scale.py'
+      - 'raw/cmoney/premium/**'
       - '.github/workflows/daily-preview.yml'
   workflow_dispatch:
 
@@ -89,6 +91,13 @@ jobs:
         run: |
           set -eo pipefail
           uv run tools/preview_flow.py
+
+      - name: Rebuild scale/subscription dashboard JSON
+        # 跨 ETF 規模/申購/自肥 → site/preview/scale.json
+        # 吃 raw/cmoney/shares + premium + site/preview/<etf>-prices.json
+        run: |
+          set -eo pipefail
+          uv run tools/preview_scale.py
 
       - name: Summary
         if: always()

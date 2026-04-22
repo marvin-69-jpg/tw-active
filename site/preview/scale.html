@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>tw-active · 規模與申購</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #6b6b6b;
+    --paper: #fafaf7;
+    --panel: #fff;
+    --rule: #e0ddd2;
+    --rule-strong: #1a1a1a;
+    --up: #b8860b;
+    --down: #4a7c4a;
+    --spark: #3a3a3a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 1040px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  a { color: inherit; }
+  h1 {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    font-size: 20px; font-weight: 600; margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--ink-soft); font-size: 12px;
+    padding-bottom: 12px; margin-bottom: 14px;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .sub .mono { font-family: ui-monospace, monospace; color: var(--ink); }
+  .breadcrumb { margin-bottom: 8px; font-size: 11px; color: var(--ink-soft); }
+
+  .totals {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    padding: 10px 12px;
+  }
+  .totals .cell { font-size: 11px; color: var(--ink-soft); }
+  .totals .cell .val {
+    display: block; font-family: ui-monospace, monospace;
+    font-size: 16px; color: var(--ink); margin-top: 2px;
+  }
+  .totals .cell .val.up { color: var(--up); }
+
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--rule-strong);
+    margin-bottom: 12px; overflow-x: auto;
+  }
+  .tab {
+    padding: 8px 14px; font-size: 12px; cursor: pointer;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    font-family: inherit; color: var(--ink-soft); white-space: nowrap;
+  }
+  .tab.active { color: var(--ink); border-bottom-color: var(--rule-strong); }
+  .tab[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+  .sort-row {
+    display: flex; gap: 6px; margin-bottom: 8px; flex-wrap: wrap;
+    font-size: 11px; color: var(--ink-soft);
+  }
+  .sort-btn {
+    padding: 3px 8px; background: transparent; border: 1px solid var(--rule);
+    font-family: inherit; font-size: 11px; color: var(--ink-soft); cursor: pointer;
+  }
+  .sort-btn.active { color: var(--ink); border-color: var(--rule-strong); }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  th, td {
+    padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  th { font-weight: 500; color: var(--ink-soft); font-size: 11px; }
+  th.l, td.l { text-align: left; }
+  td.code { font-family: ui-monospace, monospace; font-weight: 600; }
+  td.name {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    max-width: 200px; overflow: hidden; text-overflow: ellipsis;
+  }
+  td.spark {
+    font-family: ui-monospace, monospace;
+    letter-spacing: -1px; color: var(--spark); font-size: 14px;
+    text-align: left; padding-left: 10px;
+  }
+  td.pct-bar {
+    text-align: left; padding-left: 10px;
+  }
+  .bar {
+    display: inline-block; height: 10px; vertical-align: middle;
+    background: var(--up); opacity: 0.7;
+  }
+  .bar.low { background: var(--down); opacity: 0.5; }
+
+  tr.head-row { cursor: pointer; }
+  tr.head-row:hover { background: var(--panel); }
+  tr.head-row td.caret::after { content: '▸'; color: var(--ink-soft); }
+  tr.head-row.open td.caret::after { content: '▾'; }
+
+  tr.detail td {
+    background: var(--panel); padding: 8px 12px 10px 24px;
+    font-size: 11px; color: var(--ink-soft); text-align: left;
+  }
+  .detail-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  }
+  .detail-grid .box {
+    border: 1px solid var(--rule); padding: 8px 10px; background: var(--paper);
+  }
+  .detail-grid .box h4 {
+    margin: 0 0 4px; font-size: 10px; color: var(--ink-soft);
+    font-family: inherit; font-weight: 500; text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .detail-grid .box .big {
+    font-family: ui-monospace, monospace; color: var(--ink); font-size: 14px;
+  }
+  .detail-grid .box .small { font-size: 11px; color: var(--ink-soft); }
+
+  .glossary {
+    margin-top: 16px; padding: 10px 12px; border: 1px dashed var(--rule);
+    font-size: 11px; color: var(--ink-soft); background: var(--panel);
+  }
+  .glossary b { color: var(--ink); font-weight: 500; }
+
+  footer {
+    margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--rule);
+    color: var(--ink-soft); font-size: 11px;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 18px 12px 32px; font-size: 12px; }
+    h1 { font-size: 17px; }
+    .totals { grid-template-columns: repeat(2, 1fr); }
+    .totals .cell .val { font-size: 14px; }
+    th, td { padding: 6px 4px; font-size: 11px; }
+    td.name { max-width: 90px; }
+    td.spark { font-size: 12px; padding-left: 6px; }
+    .detail-grid { grid-template-columns: 1fr; }
+    .hide-sm { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb"><a href="./">← 回主動 ETF 列表</a></div>
+<h1>主動型 ETF · 規模與申購</h1>
+<div class="sub" id="sub">—</div>
+
+<div class="totals" id="totals">—</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-view="scale">規模時序</button>
+  <button class="tab" data-view="flows" disabled>今日申購榜（Phase 2）</button>
+  <button class="tab" data-view="alpha" disabled>自肥 alpha（Phase 3）</button>
+</div>
+
+<div class="sort-row" id="sort-row">
+  <span>排序：</span>
+  <button class="sort-btn active" data-sort="aum">當前 AUM</button>
+  <button class="sort-btn" data-sort="mult">成長倍數</button>
+  <button class="sort-btn" data-sort="inflow">累計申購</button>
+  <button class="sort-btn" data-sort="share">申購占成長比</button>
+</div>
+
+<div id="view">載入中⋯</div>
+
+<div class="glossary">
+  <div><b>AUM</b>（資產規模）= 基金淨資產總值，這邊用 cmoney 揭露的現金部位÷現金權重反推（比「股數×收盤」更貼近實際規模，因為修正了應付/應收的抵銷）。</div>
+  <div><b>流通單位數</b> = AUM ÷ NAV。申購進來一單位，就是一張新 ETF 被憑空印出，換成現金進來給經理人去買 basket。</div>
+  <div><b>日淨申購</b>（本頁估算）= Δ流通單位 × 當日 NAV。正數代表當天投資人買 ETF 的錢 &gt; 贖回，負數代表贖多於買。只是推估，沒有發行商官方公布的「當日初級市場流」那麼準。</div>
+  <div><b>申購占成長比</b> = 累計淨申購 ÷ (當前 AUM − 起始 AUM)。占比高代表規模膨脹主要是申購進來的、不是持股漲出來的；占比低代表經理人靠選股真的漲出來。</div>
+  <div><b>自肥疑慮</b>：申購當天經理人必須按權重 basket buy，會推高自家持股價格，NAV 就跟著漂亮，然後又吸更多申購。這是 size 本身的正回饋，不是 alpha。</div>
+</div>
+
+<footer id="footer">—</footer>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const fmtDate = d => d ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : '—';
+function fmt億(v, digits = 0) {
+  if (v == null || !isFinite(v)) return '—';
+  const sign = v < 0 ? '−' : (v > 0 ? '' : '');
+  return `${sign}${Math.abs(v).toFixed(digits)} 億`;
+}
+function fmtPct(v, digits = 0) {
+  if (v == null || !isFinite(v)) return '—';
+  return `${(v * 100).toFixed(digits)}%`;
+}
+function fmtMult(v) {
+  if (v == null || !isFinite(v)) return '—';
+  if (v >= 10) return `${v.toFixed(0)}×`;
+  return `${v.toFixed(1)}×`;
+}
+
+// Unicode block sparkline, 0..1 normalized → one of 8 heights
+const BLOCKS = ['▁','▂','▃','▄','▅','▆','▇','█'];
+function sparkline(values, width = 30) {
+  if (!values || !values.length) return '';
+  // Downsample to width
+  const step = Math.max(1, Math.floor(values.length / width));
+  const sampled = [];
+  for (let i = 0; i < values.length; i += step) sampled.push(values[i]);
+  if (sampled[sampled.length - 1] !== values[values.length - 1]) {
+    sampled.push(values[values.length - 1]);
+  }
+  const min = Math.min(...sampled);
+  const max = Math.max(...sampled);
+  if (max === min) return BLOCKS[3].repeat(sampled.length);
+  return sampled.map(v => {
+    const t = (v - min) / (max - min);
+    const idx = Math.min(7, Math.max(0, Math.round(t * 7)));
+    return BLOCKS[idx];
+  }).join('');
+}
+
+const d = await fetch(`./scale.json?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
+
+$('sub').innerHTML = `
+  as-of <span class="mono">${fmtDate(d.as_of)}</span>
+  · <span class="mono">${d.etfs.length}</span> 檔主動 ETF
+  · 資料源 cmoney shares + premium + FinMind 收盤
+`;
+
+const totalAUM = d.etfs.reduce((a, e) => a + e.aum_current, 0);
+const totalInflow = d.etfs.reduce((a, e) => a + e.inflow_cum, 0);
+const totalGrowth = d.etfs.reduce((a, e) => a + e.aum_growth, 0);
+const inflowShare = totalGrowth > 0 ? totalInflow / totalGrowth : 0;
+
+$('totals').innerHTML = `
+  <div class="cell">21 檔總 AUM<span class="val">${fmt億(totalAUM)}</span></div>
+  <div class="cell">累計淨申購<span class="val up">${fmt億(totalInflow)}</span></div>
+  <div class="cell">AUM 總成長<span class="val">${fmt億(totalGrowth)}</span></div>
+  <div class="cell">申購占成長<span class="val up">${fmtPct(inflowShare)}</span></div>
+`;
+
+let currentSort = 'aum';
+
+function sortEtfs(key) {
+  const etfs = [...d.etfs];
+  if (key === 'aum') etfs.sort((a, b) => b.aum_current - a.aum_current);
+  else if (key === 'mult') etfs.sort((a, b) => b.growth_mult - a.growth_mult);
+  else if (key === 'inflow') etfs.sort((a, b) => b.inflow_cum - a.inflow_cum);
+  else if (key === 'share') etfs.sort((a, b) => b.inflow_share_of_growth - a.inflow_share_of_growth);
+  return etfs;
+}
+
+function renderScale() {
+  const etfs = sortEtfs(currentSort);
+  const maxInflowShare = Math.max(...etfs.map(e => Math.max(0, e.inflow_share_of_growth)), 1);
+
+  const header = `
+    <table>
+      <thead>
+        <tr>
+          <th class="l" style="width:18px"></th>
+          <th class="l" style="width:58px">代號</th>
+          <th class="l">名稱</th>
+          <th>天數</th>
+          <th>起始→現在 AUM 億</th>
+          <th>倍</th>
+          <th class="hide-sm">累計申購</th>
+          <th>申購占成長</th>
+          <th class="l hide-sm">AUM 走勢</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  const body = etfs.map((e, i) => {
+    const series = (e.series || []).map(p => p.aum);
+    const spark = sparkline(series);
+    const share = Math.max(0, Math.min(1, e.inflow_share_of_growth));
+    const barWidth = Math.round(share * 80);
+    const barCls = share >= 0.5 ? '' : 'low';
+    return `
+      <tr class="head-row" data-idx="${i}">
+        <td class="caret"></td>
+        <td class="code l">${e.code}</td>
+        <td class="name l">${e.name || '—'}</td>
+        <td>${e.n_days}</td>
+        <td>${e.aum_first.toFixed(0)} → <b>${e.aum_current.toFixed(0)}</b></td>
+        <td>${fmtMult(e.growth_mult)}</td>
+        <td class="hide-sm ntd up">${fmt億(e.inflow_cum)}</td>
+        <td class="pct-bar">
+          <span class="bar ${barCls}" style="width:${barWidth}px"></span>
+          <span style="margin-left:4px">${fmtPct(e.inflow_share_of_growth)}</span>
+        </td>
+        <td class="spark hide-sm">${spark}</td>
+      </tr>
+      <tr class="detail" data-idx="${i}" style="display:none">
+        <td colspan="9">
+          <div class="detail-grid">
+            <div class="box">
+              <h4>發行商</h4>
+              <div class="big">${e.issuer || '—'}</div>
+              <div class="small">上市 ${fmtDate(e.first_date)} · 最新 ${fmtDate(e.as_of)}</div>
+            </div>
+            <div class="box">
+              <h4>最高單日申購</h4>
+              <div class="big up">${e.top_inflow_day ? fmt億(e.top_inflow_day.inflow, 1) : '—'}</div>
+              <div class="small">${e.top_inflow_day ? fmtDate(e.top_inflow_day.date) : '—'}</div>
+            </div>
+            <div class="box">
+              <h4>最高單日贖回</h4>
+              <div class="big down">${e.top_outflow_day ? fmt億(e.top_outflow_day.inflow, 1) : '—'}</div>
+              <div class="small">${e.top_outflow_day ? fmtDate(e.top_outflow_day.date) : '—'}</div>
+            </div>
+            <div class="box">
+              <h4>NAV</h4>
+              <div class="big">${e.nav_current.toFixed(2)}</div>
+              <div class="small">流通單位 ${e.units_current.toFixed(2)} 億</div>
+            </div>
+            <div class="box">
+              <h4>AUM 成長</h4>
+              <div class="big">+${e.aum_growth.toFixed(0)} 億</div>
+              <div class="small">${e.aum_first.toFixed(0)} → ${e.aum_current.toFixed(0)} 億</div>
+            </div>
+            <div class="box">
+              <h4>申購 vs 資本增值</h4>
+              <div class="big">${fmtPct(e.inflow_share_of_growth)}</div>
+              <div class="small">申購 ${e.inflow_cum.toFixed(0)} / 漲價 ${(e.aum_growth - e.inflow_cum).toFixed(0)} 億</div>
+            </div>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  $('view').innerHTML = header + body + '</tbody></table>';
+
+  $('view').querySelectorAll('tr.head-row').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const idx = tr.dataset.idx;
+      const detail = $('view').querySelector(`tr.detail[data-idx="${idx}"]`);
+      const open = tr.classList.toggle('open');
+      detail.style.display = open ? 'table-row' : 'none';
+    });
+  });
+}
+
+document.querySelectorAll('.sort-btn').forEach(b => {
+  b.addEventListener('click', () => {
+    document.querySelectorAll('.sort-btn').forEach(x => x.classList.remove('active'));
+    b.classList.add('active');
+    currentSort = b.dataset.sort;
+    renderScale();
+  });
+});
+
+document.querySelectorAll('.tab:not([disabled])').forEach(t => {
+  t.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    t.classList.add('active');
+    if (t.dataset.view === 'scale') renderScale();
+  });
+});
+
+renderScale();
+
+$('footer').innerHTML = `
+  資料源：cmoney 每日持股揭露（CI 每日 push）+ FinMind 個股收盤 · 本頁只估算，非發行商初級市場官方流量
+`;
+</script>
+</body>
+</html>
