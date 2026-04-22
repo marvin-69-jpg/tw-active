@@ -123,7 +123,7 @@
 <body>
 
 <div class="breadcrumb"><a href="./">← 回主動 ETF 列表</a></div>
-<h1>每日資金流 · 主動 ETF 經理人</h1>
+<h1>主動型 ETF · 每日經理人資金流</h1>
 <div class="sub" id="sub">—</div>
 
 <div class="totals" id="totals">—</div>
@@ -163,17 +163,18 @@ function fmtShares(v) {
 
 const d = await fetch(`./flow.json?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
 
+const totalEtfs = d.etfs_covered.length + d.etfs_lagging.length;
 $('sub').innerHTML = `
   as-of <span class="mono">${fmtDate(d.as_of)}</span> vs 前日 <span class="mono">${fmtDate(d.prev_date)}</span>
-  · <span class="mono">${d.etfs_covered.length}</span>/<span class="mono">${d.etfs_covered.length + d.etfs_lagging.length}</span> 家已揭露
+  · <span class="mono">${d.etfs_covered.length}</span>/<span class="mono">${totalEtfs}</span> 家主動 ETF 已揭露
   · 涉及 <span class="mono">${d.totals.n_stocks_touched}</span> 檔個股
 `;
 
 $('totals').innerHTML = `
-  <div class="cell">流入金額<span class="val up">${fmtNtd(d.totals.ntd_in)}</span></div>
-  <div class="cell">流出金額<span class="val down">${fmtNtd(d.totals.ntd_out)}</span></div>
-  <div class="cell">淨流入<span class="val ${d.totals.net >= 0 ? 'up' : 'down'}">${fmtNtd(d.totals.net)}</span></div>
-  <div class="cell">涵蓋 ETF<span class="val">${d.etfs_covered.length} 家</span></div>
+  <div class="cell">主動 ETF 流入<span class="val up">${fmtNtd(d.totals.ntd_in)}</span></div>
+  <div class="cell">主動 ETF 流出<span class="val down">${fmtNtd(d.totals.ntd_out)}</span></div>
+  <div class="cell">主動 ETF 淨流入<span class="val ${d.totals.net >= 0 ? 'up' : 'down'}">${fmtNtd(d.totals.net)}</span></div>
+  <div class="cell">涵蓋 / 總計<span class="val">${d.etfs_covered.length} / ${totalEtfs} 家</span></div>
 `;
 
 function renderFlowTable(rows, mode) {
@@ -278,7 +279,8 @@ if (initBtn) {
 
 const thr = d.thresholds || {};
 $('note').innerHTML = `
-  <b>資料意義</b>：經理人今日持有股數 vs 前一個揭露日的差，× 當日收盤價 = 當日實際資金流。
+  <b>資料意義</b>：這裡統計的是 21 檔台灣主動型 ETF 經理人手上股數的變動，
+  不是全台股市場的資金流。公式：Δshares × 當日收盤價。
   過濾門檻 |Δshares / prev_shares| ≥ ${thr.shares_pct}% 且當期最大權重 ≥ ${thr.weight_floor_pp}pp（濾微調）。
   <br /><br />
   <b>注意</b>：部分 ETF 揭露延遲於 ${fmtDate(d.as_of)}，未納入本日聚合：
