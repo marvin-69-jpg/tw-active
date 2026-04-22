@@ -271,7 +271,7 @@
     .pnl-card { grid-template-columns: repeat(2, 1fr); padding: 8px 10px; gap: 8px 12px; }
     .pnl-card .v { font-size: 14px; }
   }
-  #detail-chart { width: 100%; height: 220px; display: block; }
+  #detail-chart { width: 100%; height: 320px; display: block; }
   #detail-pnl-chart { width: 100%; height: 100px; display: block; margin-top: 4px; }
   .pnl-chart-label {
     font-family: ui-monospace, monospace;
@@ -634,7 +634,7 @@
     .detail-head .title { font-size: 14px; }
     .detail-head .weight-now { font-size: 16px; }
     .detail-subtitle { font-size: 11px; }
-    #detail-chart { height: 180px; }
+    #detail-chart { height: 240px; }
 
     /* Events: 改兩行 grid，避免 4-col 炸開 */
     .events { font-size: 11px; max-height: 200px; }
@@ -741,9 +741,8 @@
         <div class="detail-subtitle" id="detail-sub">—</div>
         <div class="pnl-card" id="pnl-card" style="display:none"></div>
         <div class="chart-legend">
-          <span><span class="swatch weight"></span>ETF 權重 %（左軸）</span>
-          <span><span class="swatch lots"></span>張數（右軸內側，ground truth）</span>
-          <span><span class="swatch price"></span>收盤價 NT$（右軸外側）</span>
+          <span><span class="swatch lots"></span>張數（左軸，ground truth）</span>
+          <span><span class="swatch price"></span>收盤價 NT$（右軸）</span>
         </div>
         <svg id="detail-chart"></svg>
         <div class="pnl-chart-label" id="pnl-chart-label" style="display:none"></div>
@@ -1532,104 +1531,86 @@ function drawDetailChart(s, code, isExited = false) {
   const svg = $('detail-chart');
   svg.innerHTML = '';
   if (!s.length) return;
-  const W = svg.clientWidth || 800, H = 220;
+  const W = svg.clientWidth || 800, H = svg.clientHeight || 320;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  // Right padding larger：內側放張數軸，外側放股價軸
-  const pad = { l: 44, r: 72, t: 12, b: 24 };
+  // 左軸：張數；右軸：股價
+  const pad = { l: 52, r: 56, t: 14, b: 26 };
   const w = W - pad.l - pad.r, h = H - pad.t - pad.b;
-
-  const maxW = Math.max(...s.map(x => x.weight));
-  const minW = 0;
   const n = s.length;
   const x = i => pad.l + (i / Math.max(n - 1, 1)) * w;
-  const y = v => pad.t + (1 - (v - minW) / (maxW - minW || 1)) * h;
 
-  const ticks = 4;
-  for (let i = 0; i <= ticks; i++) {
-    const v = (maxW / ticks) * i;
-    const yy = y(v);
-    svg.insertAdjacentHTML('beforeend', `
-      <line x1="${pad.l}" x2="${W - pad.r}" y1="${yy}" y2="${yy}" stroke="#eee" stroke-width="1"/>
-      <text x="${pad.l - 6}" y="${yy + 3}" fill="#888" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${v.toFixed(1)}%</text>
-    `);
-  }
-
-  // ===== Lots overlay (right-inner axis, 張數) =====
-  // 張 = shares / 1000；變動才是 ground truth（權重被股價 confound）
+  // ===== 張數（左軸，stepped line）=====
   const lotsPts = s.map((p, i) => ({ i, lots: typeof p.shares === 'number' ? p.shares / 1000 : null }))
                    .filter(pt => pt.lots !== null);
+  let ly = v => pad.t + h / 2; // fallback
   if (lotsPts.length >= 2) {
     const ls = lotsPts.map(p => p.lots);
     const lMax = Math.max(...ls), lMin = Math.min(...ls);
     const lRange = lMax - lMin || 1;
-    const ly = v => pad.t + (1 - (v - lMin) / lRange) * h;
-    // 張數走勢用 stepped line 比較貼近現實（整數張數 discrete 變動）
+    ly = v => pad.t + (1 - (v - lMin) / lRange) * h;
+
+    // grid lines（淡灰，5條）
+    for (let i = 0; i <= 4; i++) {
+      const v = lMin + (lRange / 4) * i;
+      const yy = ly(v);
+      svg.insertAdjacentHTML('beforeend', `<line x1="${pad.l}" x2="${W - pad.r}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" stroke="#ebebeb" stroke-width="1"/>`);
+      svg.insertAdjacentHTML('beforeend', `<text x="${pad.l - 6}" y="${(yy + 3.5).toFixed(1)}" fill="#888" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${Math.round(v).toLocaleString()}</text>`);
+    }
+    svg.insertAdjacentHTML('beforeend', `<text x="${pad.l - 6}" y="${pad.t - 3}" fill="#4a6fa5" font-size="9" text-anchor="end" font-family="ui-monospace, monospace">張</text>`);
+
+    // stepped line（藍色，較粗）
     let d = '';
     for (let k = 0; k < lotsPts.length; k++) {
       const pt = lotsPts[k];
-      if (k === 0) d += `M${x(pt.i).toFixed(1)},${ly(pt.lots).toFixed(1)} `;
-      else {
-        const prev = lotsPts[k - 1];
-        d += `L${x(pt.i).toFixed(1)},${ly(prev.lots).toFixed(1)} L${x(pt.i).toFixed(1)},${ly(pt.lots).toFixed(1)} `;
-      }
+      if (k === 0) { d += `M${x(pt.i).toFixed(1)},${ly(pt.lots).toFixed(1)}`; continue; }
+      const prev = lotsPts[k - 1];
+      d += ` L${x(pt.i).toFixed(1)},${ly(prev.lots).toFixed(1)} L${x(pt.i).toFixed(1)},${ly(pt.lots).toFixed(1)}`;
     }
-    svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#4a6fa5" stroke-width="1" opacity="0.9"/>`);
-    // Right-inner axis labels
+    svg.insertAdjacentHTML('beforeend', `<path d="${d}" fill="none" stroke="#4a6fa5" stroke-width="1.75"/>`);
+
+    // axis labels 最大最小
     svg.insertAdjacentHTML('beforeend', `
-      <text x="${W - pad.r + 4}" y="${ly(lMax) + 3}" fill="#4a6fa5" font-size="10" font-family="ui-monospace, monospace">${Math.round(lMax).toLocaleString()}</text>
-      <text x="${W - pad.r + 4}" y="${ly(lMin) + 3}" fill="#4a6fa5" font-size="10" font-family="ui-monospace, monospace">${Math.round(lMin).toLocaleString()}</text>
-      <text x="${W - pad.r + 4}" y="${pad.t - 2}" fill="#4a6fa5" font-size="9" font-family="ui-monospace, monospace">張</text>
+      <text x="${pad.l - 6}" y="${(ly(lMax) + 3.5).toFixed(1)}" fill="#4a6fa5" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${Math.round(lMax).toLocaleString()}</text>
+      <text x="${pad.l - 6}" y="${(ly(lMin) + 3.5).toFixed(1)}" fill="#4a6fa5" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${Math.round(lMin).toLocaleString()}</text>
     `);
   }
 
-  // ===== Price overlay (right axis) =====
+  // ===== 股價（右軸，虛線）=====
   const priceSeries = prices[code] || [];
-  // Map weight series dates to price by date lookup
   const priceByDate = new Map(priceSeries.map(p => [p.date, p.close]));
-  const pricePts = s.map((p, i) => ({ i, price: priceByDate.get(p.date) ?? null }))
-                    .filter(pt => pt.price !== null);
+  const pricePts = s.map((p, i) => ({ i, price: priceByDate.get(p.date) ?? null })).filter(pt => pt.price !== null);
 
   if (pricePts.length >= 2) {
     const prs = pricePts.map(p => p.price);
     const pMax = Math.max(...prs), pMin = Math.min(...prs);
     const pRange = pMax - pMin || 1;
     const py = v => pad.t + (1 - (v - pMin) / pRange) * h;
-    // Price path (thin gray)
-    let d = '';
-    for (let k = 0; k < pricePts.length; k++) {
-      const pt = pricePts[k];
-      d += `${k === 0 ? 'M' : 'L'}${x(pt.i).toFixed(1)},${py(pt.price).toFixed(1)} `;
-    }
-    svg.insertAdjacentHTML('beforeend', `<path d="${d.trim()}" fill="none" stroke="#b08968" stroke-width="1" stroke-dasharray="2,2" opacity="0.75"/>`);
-    // Right-outer axis labels (股價 NT$)
+    let d = pricePts.map((pt, k) => `${k === 0 ? 'M' : 'L'}${x(pt.i).toFixed(1)},${py(pt.price).toFixed(1)}`).join(' ');
+    svg.insertAdjacentHTML('beforeend', `<path d="${d}" fill="none" stroke="#b08968" stroke-width="1.25" stroke-dasharray="3,2" opacity="0.85"/>`);
     svg.insertAdjacentHTML('beforeend', `
-      <text x="${W - 4}" y="${py(pMax) + 3}" fill="#b08968" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${pMax.toFixed(pMax >= 100 ? 0 : 1)}</text>
-      <text x="${W - 4}" y="${py(pMin) + 3}" fill="#b08968" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">${pMin.toFixed(pMin >= 100 ? 0 : 1)}</text>
-      <text x="${W - 4}" y="${pad.t - 2}" fill="#b08968" font-size="9" text-anchor="end" font-family="ui-monospace, monospace">NT$</text>
+      <text x="${W - pad.r + 6}" y="${(py(pMax) + 3.5).toFixed(1)}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace">${pMax.toFixed(pMax >= 100 ? 0 : 1)}</text>
+      <text x="${W - pad.r + 6}" y="${(py(pMin) + 3.5).toFixed(1)}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace">${pMin.toFixed(pMin >= 100 ? 0 : 1)}</text>
+      <text x="${W - pad.r + 6}" y="${pad.t - 3}" fill="#b08968" font-size="9" font-family="ui-monospace, monospace">NT$</text>
     `);
-  } else if (!pricesJson) {
-    // prices JSON not loaded at all — silently skip
-  } else {
-    svg.insertAdjacentHTML('beforeend', `
-      <text x="${W - pad.r}" y="${pad.t + 10}" fill="#b08968" font-size="10" font-family="ui-monospace, monospace" text-anchor="end">股價無資料</text>
-    `);
+  } else if (pricesJson && !pricePts.length) {
+    svg.insertAdjacentHTML('beforeend', `<text x="${W - pad.r}" y="${pad.t + 12}" fill="#b08968" font-size="10" text-anchor="end" font-family="ui-monospace, monospace">股價無資料</text>`);
   }
 
-  // ===== Weight line (primary, on top) =====
-  const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.weight).toFixed(1)}`).join(' ');
-  svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.25"/>`);
-
+  // ===== Event dots（貼在張數線上）=====
   const events = detectEvents(s, code, isExited);
   for (const e of events) {
-    const i = s.findIndex(x => x.date === e.date);
-    if (i < 0) continue;
+    const idx = s.findIndex(p => p.date === e.date);
+    if (idx < 0) continue;
+    const lots = typeof s[idx].shares === 'number' ? s[idx].shares / 1000 : null;
+    const cy = lots !== null ? ly(lots) : pad.t + h / 2;
     const color = {ENTRY:'#0b6b3a', ADD:'#6ab04c', REDUCE:'#e17055', EXIT:'#8f2e2e', PEAK:'#2d3436'}[e.type] || '#999';
-    svg.insertAdjacentHTML('beforeend', `<circle cx="${x(i).toFixed(1)}" cy="${y(e.weight).toFixed(1)}" r="3.2" fill="${color}" stroke="white" stroke-width="1.2"/>`);
+    svg.insertAdjacentHTML('beforeend', `<circle cx="${x(idx).toFixed(1)}" cy="${cy.toFixed(1)}" r="4" fill="${color}" stroke="white" stroke-width="1.5"/>`);
   }
 
+  // 日期軸
   svg.insertAdjacentHTML('beforeend', `
-    <text x="${pad.l}" y="${H - 6}" font-size="10" fill="#888" font-family="ui-monospace, monospace">${fmt(s[0].date)}</text>
-    <text x="${W - pad.r}" y="${H - 6}" font-size="10" fill="#888" font-family="ui-monospace, monospace" text-anchor="end">${fmt(s[s.length-1].date)}</text>
+    <text x="${pad.l}" y="${H - 7}" font-size="10" fill="#aaa" font-family="ui-monospace, monospace">${fmt(s[0].date)}</text>
+    <text x="${W - pad.r}" y="${H - 7}" font-size="10" fill="#aaa" font-family="ui-monospace, monospace" text-anchor="end">${fmt(s[s.length-1].date)}</text>
   `);
 }
 
