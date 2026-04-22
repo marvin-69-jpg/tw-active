@@ -180,7 +180,7 @@
 <div id="view">載入中⋯</div>
 
 <div class="glossary">
-  <div><b>AUM</b>（資產規模）= 基金淨資產總值，這邊用 cmoney 揭露的現金部位÷現金權重反推（比「股數×收盤」更貼近實際規模，因為修正了應付/應收的抵銷）。</div>
+  <div><b>AUM</b>（資產規模）= 基金淨資產總值，用揭露的現金部位÷現金權重反推（比「股數×收盤」更貼近實際規模，因為修正了應付/應收的抵銷）。</div>
   <div><b>流通單位數</b> = AUM ÷ NAV。申購進來一單位，就是一張新 ETF 被憑空印出，換成現金進來給經理人去買 basket。</div>
   <div><b>日淨申購</b>（本頁估算）= Δ流通單位 × 當日 NAV。正數代表當天投資人買 ETF 的錢 &gt; 贖回，負數代表贖多於買。只是推估，沒有發行商官方公布的「當日初級市場流」那麼準。</div>
   <div><b>申購占成長比</b> = 累計淨申購 ÷ (當前 AUM − 起始 AUM)。占比高代表規模膨脹主要是申購進來的、不是持股漲出來的；占比低代表經理人靠選股真的漲出來。</div>
@@ -233,7 +233,6 @@ const d = await fetch(`./scale.json?v=${Date.now()}`, { cache: 'no-cache' }).the
 $('sub').innerHTML = `
   as-of <span class="mono">${fmtDate(d.as_of)}</span>
   · <span class="mono">${d.etfs.length}</span> 檔主動 ETF
-  · 資料源 cmoney shares + premium + FinMind 收盤
 `;
 
 const totalAUM = d.etfs.reduce((a, e) => a + e.aum_current, 0);
@@ -372,7 +371,7 @@ document.querySelectorAll('.tab:not([disabled])').forEach(t => {
 renderScale();
 
 $('footer').innerHTML = `
-  資料源：cmoney 每日持股揭露（CI 每日 push）+ FinMind 個股收盤 · 本頁只估算，非發行商初級市場官方流量
+  本頁為估算，非發行商初級市場官方流量
 `;
 </script>
 </body>
