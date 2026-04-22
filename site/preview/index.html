@@ -93,11 +93,87 @@
     .name { font-size: 12px; }
     .name .issuer { display: block; margin-left: 0; margin-top: 2px; }
   }
+  @media (max-width: 480px) {
+    .fc-row { grid-template-columns: 100px 3.8em 7em 1fr 2.8em; }
+  }
+
+  /* ── 資金流 TUI 卡片 ─────────────────────────────────── */
+  #flow-card {
+    background: #0d1117;
+    color: #c9d1d9;
+    font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
+    font-size: 15px;
+    line-height: 1.75;
+    padding: 18px 22px 16px;
+    margin-bottom: 22px;
+    border-radius: 8px;
+    border: 1px solid #21262d;
+    overflow: hidden;
+  }
+  .fc-head {
+    font-size: 17px;
+    font-weight: 700;
+    color: #f0f6fc;
+    margin-bottom: 3px;
+    letter-spacing: 0.01em;
+  }
+  .fc-head .fc-date { color: #58a6ff; }
+  .fc-head .fc-cov  { color: #6e7681; font-size: 13px; font-weight: 400; }
+  .fc-rule {
+    border: none;
+    border-top: 1px solid #21262d;
+    margin: 10px 0 8px;
+  }
+  .fc-rule-strong {
+    border: none;
+    border-top: 1px solid #30363d;
+    margin: 10px 0 8px;
+  }
+  .fc-label {
+    font-size: 11px;
+    color: #6e7681;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 5px;
+    margin-top: 2px;
+  }
+  .fc-rows { display: flex; flex-direction: column; gap: 1px; }
+  .fc-row {
+    display: grid;
+    grid-template-columns: 120px 4.2em 7.5em 1fr 3em;
+    align-items: center;
+    gap: 0 6px;
+    font-size: 14px;
+    line-height: 1.7;
+  }
+  .fc-row .r-name { color: #e6edf3; white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  .fc-row .r-code { color: #6e7681; }
+  .fc-row .r-ntd  { text-align: right; font-weight: 700; }
+  .fc-row .r-ntd.up { color: #f85149; }
+  .fc-row .r-ntd.dn { color: #3fb950; }
+  .fc-row .r-bar  { font-size: 12px; letter-spacing: -0.5px; }
+  .fc-row .r-fam  { color: #6e7681; font-size: 12px; text-align: right; }
+  .fc-nosell { color: #6e7681; font-size: 13px; padding: 2px 0 2px; }
+  .fc-foot {
+    font-size: 13px;
+    color: #8b949e;
+    margin-top: 2px;
+  }
+  .fc-foot .hi  { color: #f0f6fc; font-weight: 700; }
+  .fc-foot .pct { color: #f85149; }
+  .fc-foot-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 480px) {
+    #flow-card { font-size: 13px; padding: 14px 14px 12px; }
+    .fc-head { font-size: 15px; }
+    .fc-row  { font-size: 12px; grid-template-columns: 4.8em 3.6em 6.8em 1fr 2.8em; }
+  }
 </style>
 </head>
 <body>
 <h1>tw-active · 主動型 ETF</h1>
 <div class="sub" id="sub">—</div>
+
+<div id="flow-card"></div>
 
 <div class="sort-bar">
   <label for="sort">排序</label>
@@ -118,6 +194,101 @@
 <script type="module">
 const fmt = d => d ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : '—';
 const $ = id => document.getElementById(id);
+
+// ── 資金流 TUI 卡片 ──────────────────────────────────────
+async function renderFlowCard() {
+  const card = $('flow-card');
+  if (!card) return;
+  let flow;
+  try {
+    flow = await fetch(`./flow.json?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
+  } catch(e) { card.style.display = 'none'; return; }
+
+  const asOf = flow.as_of || '';
+  const covered = (flow.etfs_covered || []).length;
+  const inflow  = flow.inflow  || [];
+  const outflow = flow.outflow || [];
+  const totals  = flow.totals  || {};
+  const byEtf   = flow.by_etf  || [];
+
+  const month = parseInt(asOf.slice(4,6));
+  const day   = parseInt(asOf.slice(6,8));
+  const dateStr = `${month}/${day}`;
+
+  function fmtNtd(v) {
+    const sign = v >= 0 ? '+' : '-';
+    const abs  = Math.abs(v);
+    if (abs >= 1e8) { const n = abs/1e8; return `${sign}${n>=10?n.toFixed(0):n.toFixed(1)}億`; }
+    return `${sign}${(abs/1e4).toFixed(0)}萬`;
+  }
+
+  const consensusBuy  = inflow.filter(s => s.etfs_buy  >= 4).sort((a,b)=>b.ntd-a.ntd);
+  const singleBets    = inflow.filter(s => s.etfs_buy  < 4 && s.ntd >= 3e8).sort((a,b)=>b.ntd-a.ntd).slice(0,7);
+  const consensusSell = outflow.filter(s => s.etfs_sell >= 3).sort((a,b)=>a.ntd-b.ntd);
+
+  const ntdIn = totals.ntd_in || 0;
+  const byEtfSorted = [...byEtf].sort((a,b)=>b.ntd_in-a.ntd_in);
+  const dominant = byEtfSorted[0];
+  const dominantPct = dominant && ntdIn > 0 ? Math.round(dominant.ntd_in / ntdIn * 100) : 0;
+
+  const allBuy = [...consensusBuy, ...singleBets];
+  const maxNtd = allBuy.length ? Math.max(...allBuy.map(s=>s.ntd)) : 1;
+  const BAR_MAX = 14;
+
+  function barHtml(ntd, isUp) {
+    const filled = Math.max(1, Math.round(Math.abs(ntd) / maxNtd * BAR_MAX));
+    const empty  = BAR_MAX - filled;
+    const c = isUp ? '#f85149' : '#3fb950';
+    return `<span style="color:${c}">${'█'.repeat(filled)}</span><span style="color:#21262d">${'█'.repeat(empty)}</span>`;
+  }
+
+  function rowsHtml(stocks, isUp) {
+    return stocks.map(s => {
+      const ntd = fmtNtd(s.ntd).padStart(7);
+      const fam = isUp ? s.etfs_buy : s.etfs_sell;
+      return `<div class="fc-row">
+        <span class="r-name">${s.name.replace(/\s/g,'')}</span>
+        <span class="r-code">${s.code}</span>
+        <span class="r-ntd ${isUp?'up':'dn'}">${ntd}</span>
+        <span class="r-bar">${barHtml(s.ntd, isUp)}</span>
+        <span class="r-fam">${fam}家</span>
+      </div>`;
+    }).join('');
+  }
+
+  let html = `
+    <div class="fc-head">盤前指引 · <span class="fc-date">${dateStr}</span> · <span class="fc-cov">${covered}/21家已揭露</span></div>
+    <hr class="fc-rule-strong">`;
+
+  if (consensusBuy.length) {
+    html += `<div class="fc-label">共識買進 ≥4家</div><div class="fc-rows">${rowsHtml(consensusBuy, true)}</div>`;
+    if (singleBets.length) html += `<hr class="fc-rule">`;
+  }
+  if (singleBets.length) {
+    html += `<div class="fc-label">單一大注 ≥3億</div><div class="fc-rows">${rowsHtml(singleBets, true)}</div>`;
+  }
+
+  html += `<hr class="fc-rule">`;
+
+  if (consensusSell.length) {
+    html += `<div class="fc-label">共識賣 ≥3家</div><div class="fc-rows">${rowsHtml(consensusSell, false)}</div>`;
+  } else {
+    html += `<div class="fc-nosell">共識賣：無 — 沒有任何一檔被 3家以上同時減碼</div>`;
+  }
+
+  html += `<hr class="fc-rule-strong">`;
+
+  const netStr = fmtNtd(totals.net || 0);
+  if (dominantPct > 50 && dominant) {
+    html += `<div class="fc-foot"><span class="fc-foot-line">主動ETF 淨流入 <span class="hi">${netStr}</span> · <span class="pct">${dominantPct}% basket buy</span> ${dominant.etf}</span></div>`;
+  } else {
+    html += `<div class="fc-foot"><span class="fc-foot-line">主動ETF 淨流入 <span class="hi">${netStr}</span> · ${covered}/21家已揭露</span></div>`;
+  }
+
+  card.innerHTML = html;
+}
+renderFlowCard();
+// ─────────────────────────────────────────────────────────
 
 const idx = await fetch(`./etfs.json?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
 const etfs = idx.etfs || [];
