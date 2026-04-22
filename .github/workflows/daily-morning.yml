@@ -1,0 +1,77 @@
+name: daily-morning-post
+
+on:
+  schedule:
+    # 00:00 UTC = 08:00 TPE, Mon–Fri（台灣交易日早晨）
+    - cron: '0 0 * * 1-5'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: daily-morning
+  cancel-in-progress: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Install Chromium + ws
+        run: |
+          sudo apt-get install -y chromium-browser
+          npm install ws
+
+      - name: Generate post text
+        run: uv run tools/morning_post.py > /tmp/morning.txt && cat /tmp/morning.txt
+
+      - name: Screenshot flow page
+        run: |
+          python3 -m http.server 18765 --directory site/preview &
+          HTTP_PID=$!
+          sleep 2
+          # shot_flow.js tries /usr/bin/chromium-browser
+          node tools/shot_flow.js /tmp/shot_flow.png
+          kill $HTTP_PID 2>/dev/null || true
+
+      - name: Commit screenshot
+        id: commit
+        run: |
+          git config user.name "marvin-69-jpg"
+          git config user.email "274374385+marvin-69-jpg@users.noreply.github.com"
+          cp /tmp/shot_flow.png site/preview/shot_flow.png
+          git add site/preview/shot_flow.png
+          if git diff --cached --quiet; then
+            echo "no screenshot change"
+          else
+            git commit -m "chore(morning): flow screenshot $(date -u +%Y-%m-%d)"
+            git push
+          fi
+          echo "shot_url=https://raw.githubusercontent.com/marvin-69-jpg/tw-active/main/site/preview/shot_flow.png" >> "$GITHUB_OUTPUT"
+
+      - name: Write Threads credentials
+        env:
+          THREADS_TOKEN: ${{ secrets.THREADS_TOKEN }}
+          THREADS_USER_ID: ${{ secrets.THREADS_USER_ID }}
+        run: |
+          printf '%s' "$THREADS_TOKEN"   > ~/.threads-token
+          printf '%s' "$THREADS_USER_ID" > ~/.threads-user-id
+
+      - name: Post to Threads
+        run: |
+          sleep 10  # 等 raw.githubusercontent.com CDN 更新
+          uv run tools/threads.py post /tmp/morning.txt \
+            --image "${{ steps.commit.outputs.shot_url }}"
