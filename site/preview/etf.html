@@ -1263,9 +1263,9 @@ function renderPnlCard(code) {
       <div class="sub">vs 累計買入成本</div>
     </div>
     <div>
-      <div class="k">${exited ? '最終市值' : '目前市值'}</div>
-      <div class="v">${fmtNT(pnl.mv_now)}</div>
-      <div class="sub">${fmtLots(pnl.shares_latest)} 張 × NT$${pnl.latest_price}</div>
+      <div class="k">${exited ? '目前市值' : '目前市值'}</div>
+      <div class="v">${exited ? '—' : fmtNT(pnl.mv_now)}</div>
+      <div class="sub">${exited ? `已出清 · ${fmt(pnl.latest_date)} 收盤 NT$${pnl.latest_price}` : `${fmtLots(pnl.shares_latest)} 張 × NT$${pnl.latest_price}`}</div>
     </div>
     <div>
       <div class="k">累計買入成本</div>
@@ -1273,7 +1273,7 @@ function renderPnlCard(code) {
       <div class="sub">Σ 買入金額</div>
     </div>
     <div class="note">
-      算法：CF<sub>t</sub> = −Δshares × close<sub>t</sub>（買=負，賣=正）；總損益 = 目前市值 + Σ CF<sub>t</sub>；
+      算法：CF<sub>t</sub> = −Δshares × close<sub>t</sub>（買=負，賣=正）；${exited ? '已實現損益 = Σ CF<sub>t</sub>（含出清收入）' : '總損益 = 目前市值 + Σ CF<sub>t</sub>'}；
       報酬率 = 總損益 ÷ 累計買入成本。${pnl.total_delta_days} 個股數變動日，用 FinMind 該日收盤價當成交價近似。${missingNote}
     </div>
   `;
