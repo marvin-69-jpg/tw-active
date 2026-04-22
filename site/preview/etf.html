@@ -1190,10 +1190,11 @@ function selectStock(code) {
   const note = document.getElementById('new-note');
   if (note) note.style.display = 'none';
 
-  drawDetailChart(s, code);
+  const isExitedCode = data.exited_codes.includes(code);
+  drawDetailChart(s, code, isExitedCode);
   drawPnlCurve(s, code);
 
-  const events = detectEvents(s, code);
+  const events = detectEvents(s, code, isExitedCode);
   evDiv.innerHTML = '';
   for (const e of events) {
     const div = document.createElement('div');
@@ -1278,7 +1279,7 @@ function renderPnlCard(code) {
   `;
 }
 
-function detectEvents(s, code) {
+function detectEvents(s, code, isExited = false) {
   if (!s.length) return [];
   const events = [];
   // 共用 close series（「當下市值」用事件當天 close，不再需要 latestClose）
@@ -1343,6 +1344,16 @@ function detectEvents(s, code) {
   const peakIdx = s.findIndex(x => x.weight === maxW);
   events.push({ type: 'PEAK', date: s[peakIdx].date, weight: maxW });
 
+  if (isExited && s.length) {
+    const last = s[s.length - 1];
+    const close = closeForCode(last.date);
+    events.push({
+      type: 'EXIT', date: last.date, weight: last.weight,
+      shares: typeof last.shares === 'number' ? last.shares : null,
+      currentValue: (typeof last.shares === 'number' && close != null) ? last.shares * close : null,
+    });
+  }
+
   return events.sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -1359,6 +1370,12 @@ function renderEventNote(e) {
   }
   if (e.type === 'PEAK') {
     return `歷史權重高 ${e.weight.toFixed(2)}%`;
+  }
+  if (e.type === 'EXIT') {
+    const parts = ['全數出清'];
+    if (e.shares != null) parts.push(`${fmtLots(e.shares)} 張`);
+    if (e.currentValue != null) parts.push(`出清市值 ${fmtNTValue(e.currentValue)}`);
+    return parts.join(' / ');
   }
   // ADD / REDUCE
   const sign = e.dWeight > 0 ? '+' : '';
@@ -1474,7 +1491,7 @@ function drawPnlCurve(s, code) {
   `;
 }
 
-function drawDetailChart(s, code) {
+function drawDetailChart(s, code, isExited = false) {
   const svg = $('detail-chart');
   svg.innerHTML = '';
   if (!s.length) return;
@@ -1565,7 +1582,7 @@ function drawDetailChart(s, code) {
   const path = s.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.weight).toFixed(1)}`).join(' ');
   svg.insertAdjacentHTML('beforeend', `<path d="${path}" fill="none" stroke="#1a1a1a" stroke-width="1.25"/>`);
 
-  const events = detectEvents(s, code);
+  const events = detectEvents(s, code, isExited);
   for (const e of events) {
     const i = s.findIndex(x => x.date === e.date);
     if (i < 0) continue;
