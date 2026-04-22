@@ -964,31 +964,27 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
   };
 
   function cardRow(e, kind) {
-    const cls = kind === 'add' ? 'add' : 'red';
-    const close = closeOnOrBefore(e.code, ds.latest_date);
-    const tradeValue = close != null ? e.delta * close : null;    // 當天投入/收回
-    const currentValue = close != null ? e.shares * close : null;  // 當下市值（當天 close）
-    const dWeight = e.weight - e.prev_weight;
-    const sign = dWeight > 0 ? '+' : '';
-    // 四段式：張數 / pp / 投入金額 / 當下市值
-    const parts = [
-      `${fmtLotsDelta(e.delta)} 張`,
-      `${sign}${dWeight.toFixed(2)}pp`,
-    ];
-    if (tradeValue != null) parts.push(`投入 ${fmtNTValueSigned(tradeValue)}`);
-    if (currentValue != null) parts.push(`當下市值 ${fmtNTValue(currentValue)}`);
-    const primary = parts.join(' / ');
     const typeClass = kind === 'add' ? 'type-add' : 'type-red';
     const mainCls  = kind === 'add' ? 'add' : 'red';
-    const mainNum  = `${fmtLotsDelta(e.delta)} 張`;
+    const close = closeOnOrBefore(e.code, ds.latest_date);
+    const tradeValue = close != null ? e.delta * close : null;
+    const dWeight = e.weight - e.prev_weight;
     const subParts = [`${(dWeight > 0 ? '+' : '') + dWeight.toFixed(2)}pp`];
     if (tradeValue != null) subParts.push(`投入 ${fmtNTValueSigned(tradeValue)}`);
+    // 目前損益
+    const pnlEntry = (data.pnl || {})[e.code];
+    let pnlStr = '';
+    if (pnlEntry && pnlEntry.pnl != null) {
+      const sign = pnlEntry.pnl > 0 ? '+' : '';
+      const cls  = pnlEntry.pnl > 0 ? 'color:#c0392b' : pnlEntry.pnl < 0 ? 'color:#27ae60' : '';
+      pnlStr = `<span style="${cls}">損益 ${sign}${fmtNTValue(pnlEntry.pnl)}</span>`;
+    }
     return `
       <div class="daily-card ${typeClass}">
         <div class="head"><span class="name">${e.name}</span><span class="code">${e.code}</span></div>
-        <div class="delta-main ${mainCls}">${mainNum}</div>
+        <div class="delta-main ${mainCls}">${fmtLotsDelta(e.delta)} 張</div>
         <div class="delta-sub">${subParts.join(' · ')}</div>
-        <div class="shares-line">${fmtLots(e.prev_shares)} → ${fmtLots(e.shares)} 張 · ${e.weight}%</div>
+        <div class="shares-line">${fmtLots(e.prev_shares)} → ${fmtLots(e.shares)} 張 · ${e.weight}%${pnlStr ? ' · ' + pnlStr : ''}</div>
       </div>`;
   }
   function newCard(e) {
@@ -1002,11 +998,19 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
     if (tradeValue != null) parts.push(`當下市值 ${fmtNTValue(tradeValue)}`);
     const primary = parts.join(' / ');
     const newSub = tradeValue != null ? `投入 ${fmtNTValue(tradeValue)}` : '';
+    const newPnl = (data.pnl || {})[e.code];
+    let newPnlStr = '';
+    if (newPnl && newPnl.pnl != null) {
+      const sign = newPnl.pnl > 0 ? '+' : '';
+      const cls  = newPnl.pnl > 0 ? 'color:#2980b9' : newPnl.pnl < 0 ? 'color:#c0392b' : '';
+      newPnlStr = `<div class="shares-line"><span style="${cls}">損益 ${sign}${fmtNTValue(newPnl.pnl)}</span></div>`;
+    }
     return `
       <div class="daily-card type-new">
         <div class="head"><span class="name">${e.name}</span><span class="code">${e.code}</span></div>
         <div class="delta-main blue">新建倉 ${fmtLots(e.shares)} 張</div>
         <div class="delta-sub">${e.weight}%${newSub ? ' · ' + newSub : ''}</div>
+        ${newPnlStr}
       </div>`;
   }
   function exitCard(e) {
