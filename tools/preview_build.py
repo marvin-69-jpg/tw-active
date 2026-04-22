@@ -150,7 +150,7 @@ def _load_daily_shares_delta(etf: str) -> dict | None:
     }
 
 
-def _compute_stock_pnl(etf: str) -> tuple[dict, dict, list[str]] | None:
+def _compute_stock_pnl(etf: str, exited_set: set[str] | None = None) -> tuple[dict, dict, list[str]] | None:
     """Per-stock P&L from shares × close price.
 
     研究動機：權重% 被股價漲跌 confound，光看權重軌跡看不出實際賺賠。
@@ -160,6 +160,10 @@ def _compute_stock_pnl(etf: str) -> tuple[dict, dict, list[str]] | None:
       Total P&L_t = MV_t + Σ_{s≤t} CF_s    # 每日累計（未實現 + 已實現）
       cost_basis = Σ max(0, -CF_t)         # 累計買入成本
       return_pct = P&L_final / cost_basis
+
+    exited_set: 已出清的 code 集合。對這些 code，在 series 末尾注入 (exit_date, 0)
+    讓 delta 計算自動產生出清 CF，mv_now 自動變 0，損益反映實際出清價。
+    exit_date = 持股揭露最後日之後第一個有股價的交易日。
 
     假設：當日揭露的 shares 變動發生在那日盤中/收盤，用該日 close 當成交價。
     無股價的日子（FinMind 缺值）記 missing_price_days，P&L 略偏。
@@ -187,7 +191,24 @@ def _compute_stock_pnl(etf: str) -> tuple[dict, dict, list[str]] | None:
 
     prices_by_code = prices_data.get("prices") or {}
 
+    # 對 exited stocks 在 series 末尾注入 (exit_date, 0)：
+    #   exit_date = 持股揭露最後日之後第一個有股價的交易日（即實際出清日）
+    #   delta = -last_shares → CF = +last_shares × exit_close（出清收入）
+    #   mv_now 自動變 0，不再錯誤沿用舊收盤價
+    if exited_set:
+        for code, series in by_code.items():
+            if code not in exited_set:
+                continue
+            last_date = series[-1][0]
+            price_series_c = prices_by_code.get(code) or []
+            for p in price_series_c:
+                pd = p.get("date")
+                if pd and pd > last_date:
+                    series.append((pd, 0.0))
+                    break  # 只取最近的下一個交易日
+
     # 全交易日軸：所有股票 shares 紀錄日期的聯集（CMoney 每日都報 → 即 ETF 交易日集合）
+    # 注意：exited 注入的 exit_date 也會進這個集合，讓 P&L curve 能反映出清當日
     all_dates: list[str] = sorted({d for s in by_code.values() for d, _ in s})
 
     def _close_on_or_before(price_series: list[dict], d: str) -> float | None:
@@ -247,8 +268,10 @@ def _compute_stock_pnl(etf: str) -> tuple[dict, dict, list[str]] | None:
         pnl = mv_now + cash_flow
         pnl_pct = (pnl / cost_basis * 100.0) if cost_basis > 0 else None
 
+        is_exited_code = exited_set is not None and code in exited_set
         result[code] = {
             "has_prices": True,
+            "is_exited": is_exited_code,
             "shares_latest": latest_shares,
             "latest_date": latest_date,
             "latest_price": round(latest_price, 2),
@@ -464,7 +487,7 @@ def build(etf: str, min_days: int = 1) -> dict:
     exited_codes.sort(key=lambda c: exit_date.get(c, ""), reverse=True)
 
     name, issuer = ISSUER_OF.get(etf, (etf, ""))
-    pnl_tuple = _compute_stock_pnl(etf)
+    pnl_tuple = _compute_stock_pnl(etf, exited_set=set(exited_codes))
     if pnl_tuple is not None:
         pnl_summary, pnl_curves, pnl_dates = pnl_tuple
     else:
