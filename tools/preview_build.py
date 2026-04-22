@@ -354,7 +354,7 @@ def _load_shares_map(etf: str) -> dict[tuple[str, str], float]:
     return {(d, c): sh for d, c, _n, _w, sh in _iter_shares_rows(etf)}
 
 
-def build(etf: str, min_days: int = 30) -> dict:
+def build(etf: str, min_days: int = 1) -> dict:
     rows, src = load_latest_raw(etf)
     shares_map = _load_shares_map(etf)
     # rows: [date, name, weight(%), code]
@@ -494,7 +494,7 @@ def build(etf: str, min_days: int = 30) -> dict:
 def main() -> int:
     ap = argparse.ArgumentParser(description="Build preview JSON from raw/cmoney/")
     ap.add_argument("etf", help="ETF code, e.g. 00981A")
-    ap.add_argument("--min-days", type=int, default=30, help="default 30")
+    ap.add_argument("--min-days", type=int, default=1, help="default 1 (show all)")
     ap.add_argument("--out", help="output path; default site/preview/<etf lower>.json")
     args = ap.parse_args()
 
