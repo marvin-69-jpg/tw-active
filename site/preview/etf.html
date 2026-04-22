@@ -407,56 +407,82 @@
   .dot.peak { background: #2d3436; }
 
   /* Daily single-day delta panel */
-  .daily-wrap { display: flex; flex-direction: column; gap: 20px; }
+  .daily-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+  /* Section header — 色塊背景，一眼分辨類型 */
   .daily-section h3 {
     margin: 0 0 8px;
+    display: inline-flex; align-items: center; gap: 6px;
     font-family: ui-monospace, monospace;
-    font-size: 10px; font-weight: 600;
-    color: var(--ink-soft); letter-spacing: 0.08em; text-transform: uppercase;
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 3px 10px 3px 8px;
+    border-radius: 3px;
+    color: #fff;
   }
-  .daily-section h3 .n-total {
-    color: var(--ink); margin-left: 5px; font-size: 10px; font-weight: 400;
-  }
-  .daily-section h3 .more {
-    color: var(--ink-soft); margin-left: 5px; font-size: 10px; font-weight: 400;
-  }
+  .daily-section.s-add  h3 { background: #c0392b; }
+  .daily-section.s-red  h3 { background: #27ae60; }
+  .daily-section.s-new  h3 { background: #2980b9; }
+  .daily-section.s-exit h3 { background: #888; }
+  .daily-section h3 .n-total { font-weight: 400; font-size: 11px; opacity: 0.85; }
+  .daily-section h3 .more    { font-weight: 400; font-size: 10px; opacity: 0.75; }
+
   .daily-section .empty {
     font-family: ui-monospace, monospace;
-    font-size: 11px; color: var(--ink-soft);
-    padding: 4px 0;
+    font-size: 11px; color: var(--ink-soft); padding: 2px 0;
   }
   .daily-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 8px 12px;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 8px 10px;
   }
+
+  /* Card */
   .daily-card {
     border: 1px solid var(--rule);
-    border-left: 3px solid var(--rule);
-    padding: 9px 11px;
+    border-top: 3px solid transparent;
+    padding: 10px 12px 8px;
     background: var(--paper);
     font-family: ui-monospace, monospace;
-    font-size: 11px;
-    display: flex; flex-direction: column; gap: 4px;
+    display: flex; flex-direction: column; gap: 3px;
     cursor: pointer;
+    transition: box-shadow .12s;
   }
-  .daily-card .head { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
-  .daily-card .code { font-size: 10px; color: var(--ink-soft); }
+  .daily-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+  .daily-card.type-add  { border-top-color: #c0392b; }
+  .daily-card.type-red  { border-top-color: #27ae60; }
+  .daily-card.type-new  { border-top-color: #2980b9; }
+  .daily-card.exit      { border-top-color: #aaa; opacity: 0.75; }
+
+  /* Card 內容三層 */
+  .daily-card .head {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 4px;
+    margin-bottom: 2px;
+  }
   .daily-card .name {
     font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
-    color: var(--ink); font-size: 14px; font-weight: 600;
+    color: var(--ink); font-size: 14px; font-weight: 700;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   }
-  .daily-card .delta { font-size: 15px; font-weight: 700; letter-spacing: -0.01em; }
-  .daily-card .delta.add  { color: #d63031; }   /* 加碼：紅 */
-  .daily-card .delta.red  { color: #00b894; }   /* 減碼：綠 */
-  .daily-card .delta.blue { color: #0984e3; }   /* 新建倉：藍 */
-  .daily-card .delta.gray { color: #888; }       /* 出清：灰 */
+  .daily-card .code { font-size: 10px; color: var(--ink-soft); flex-shrink: 0; }
+
+  /* 主數字：Δ 張數 */
+  .daily-card .delta-main {
+    font-size: 20px; font-weight: 800; letter-spacing: -0.02em; line-height: 1.1;
+  }
+  .daily-card .delta-main.add  { color: #c0392b; }
+  .daily-card .delta-main.red  { color: #27ae60; }
+  .daily-card .delta-main.blue { color: #2980b9; }
+  .daily-card .delta-main.gray { color: #888; }
+
+  /* 次要資訊：pp + 金額 */
+  .daily-card .delta-sub {
+    font-size: 11px; color: var(--ink); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+
+  /* 輔助說明：張數變化 + 目前權重 */
   .daily-card .shares-line { color: var(--ink-soft); font-size: 10px; }
-  /* 左 border 色塊標示類型 */
-  .daily-card.type-add  { border-left-color: #d63031; }
-  .daily-card.type-red  { border-left-color: #00b894; }
-  .daily-card.type-new  { border-left-color: #0984e3; }
-  .daily-card.exit      { border-left-color: #aaa; opacity: 0.75; }
 
   /* P&L ranking panel */
   .pnl-rank-wrap { display: flex; flex-direction: column; gap: 22px; }
@@ -630,9 +656,9 @@
 
     /* Daily: 縮小卡片寬度 */
     .daily-grid { grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 8px 10px; }
-    .daily-card { padding: 7px 9px; font-size: 11px; }
+    .daily-card { padding: 8px 10px; }
     .daily-card .name { font-size: 13px; }
-    .daily-card .delta { font-size: 13px; }
+    .daily-card .delta-main { font-size: 17px; }
   }
 
   /* ============= Narrow mobile ≤ 380px (iPhone SE) ============= */
@@ -953,13 +979,15 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
     if (currentValue != null) parts.push(`當下市值 ${fmtNTValue(currentValue)}`);
     const primary = parts.join(' / ');
     const typeClass = kind === 'add' ? 'type-add' : 'type-red';
+    const mainCls  = kind === 'add' ? 'add' : 'red';
+    const mainNum  = `${fmtLotsDelta(e.delta)} 張`;
+    const subParts = [`${(dWeight > 0 ? '+' : '') + dWeight.toFixed(2)}pp`];
+    if (tradeValue != null) subParts.push(`投入 ${fmtNTValueSigned(tradeValue)}`);
     return `
       <div class="daily-card ${typeClass}">
-        <div class="head">
-          <span class="name">${e.name}</span>
-          <span class="code">${e.code}</span>
-        </div>
-        <div class="delta ${cls}">${primary}</div>
+        <div class="head"><span class="name">${e.name}</span><span class="code">${e.code}</span></div>
+        <div class="delta-main ${mainCls}">${mainNum}</div>
+        <div class="delta-sub">${subParts.join(' · ')}</div>
         <div class="shares-line">${fmtLots(e.prev_shares)} → ${fmtLots(e.shares)} 張 · ${e.weight}%</div>
       </div>`;
   }
@@ -973,13 +1001,12 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
     if (tradeValue != null) parts.push(`投入 ${fmtNTValue(tradeValue)}`);
     if (tradeValue != null) parts.push(`當下市值 ${fmtNTValue(tradeValue)}`);
     const primary = parts.join(' / ');
+    const newSub = tradeValue != null ? `投入 ${fmtNTValue(tradeValue)}` : '';
     return `
       <div class="daily-card type-new">
-        <div class="head">
-          <span class="name">${e.name}</span>
-          <span class="code">${e.code}</span>
-        </div>
-        <div class="delta blue">${primary}</div>
+        <div class="head"><span class="name">${e.name}</span><span class="code">${e.code}</span></div>
+        <div class="delta-main blue">新建倉 ${fmtLots(e.shares)} 張</div>
+        <div class="delta-sub">${e.weight}%${newSub ? ' · ' + newSub : ''}</div>
       </div>`;
   }
   function exitCard(e) {
@@ -993,31 +1020,30 @@ document.querySelectorAll('#holdings-table th.sortable').forEach(th => {
     if (tradeValue != null) parts.push(`收回約 ${fmtNTValue(tradeValue)}`);
     parts.push('當下市值 0');
     const primary = parts.join(' / ');
+    const exitSub = tradeValue != null ? `收回約 ${fmtNTValue(tradeValue)}` : '';
     return `
       <div class="daily-card exit">
-        <div class="head">
-          <span class="name">${e.name}</span>
-          <span class="code">${e.code}</span>
-        </div>
-        <div class="delta gray">${primary}</div>
+        <div class="head"><span class="name">${e.name}</span><span class="code">${e.code}</span></div>
+        <div class="delta-main gray">出清 ${fmtLots(e.prev_shares)} 張</div>
+        <div class="delta-sub">${exitSub}</div>
       </div>`;
   }
 
-  function section(title, items, renderer, nTotal) {
+  function section(title, items, renderer, nTotal, sClass) {
     const more = (nTotal != null && nTotal > items.length)
-      ? `<span class="more">（另 ${nTotal - items.length} 檔同類）</span>` : '';
+      ? `<span class="more">+${nTotal - items.length}</span>` : '';
     const nTag = nTotal != null ? `<span class="n-total">${nTotal}</span>` : '';
     const body = items.length
       ? `<div class="daily-grid">${items.map(renderer).join('')}</div>`
       : `<div class="empty">—</div>`;
-    return `<div class="daily-section"><h3>${title}${nTag}${more}</h3>${body}</div>`;
+    return `<div class="daily-section ${sClass}"><h3>${title}${nTag}${more}</h3>${body}</div>`;
   }
 
   dailyWrap.innerHTML = [
-    section('加碼', ds.top_adds, e => cardRow(e, 'add'), ds.n_adds_total),
-    section('減碼', ds.top_reductions, e => cardRow(e, 'red'), ds.n_reductions_total),
-    section('新建倉', ds.new_positions, newCard, ds.n_new_total),
-    section('出清', ds.exits, exitCard, ds.n_exits_total),
+    section('加碼', ds.top_adds, e => cardRow(e, 'add'), ds.n_adds_total, 's-add'),
+    section('減碼', ds.top_reductions, e => cardRow(e, 'red'), ds.n_reductions_total, 's-red'),
+    section('新建倉', ds.new_positions, newCard, ds.n_new_total, 's-new'),
+    section('出清', ds.exits, exitCard, ds.n_exits_total, 's-exit'),
   ].join('');
 
   // 點卡片 → 切到 單股進出場
