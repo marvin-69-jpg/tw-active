@@ -10,6 +10,7 @@ on:
       - 'tools/preview_all.py'
       - 'tools/preview_build.py'
       - 'tools/preview_prices.py'
+      - 'tools/preview_flow.py'
       - '.github/workflows/daily-preview.yml'
   workflow_dispatch:
 
@@ -81,6 +82,13 @@ jobs:
           set -eo pipefail
           CODES=$(ls raw/cmoney/shares/ | grep -E '^[0-9]{5}[A-Z]\.json$' | sed 's/\.json$//' | tr '\n' ' ')
           uv run tools/preview_all.py $CODES
+
+      - name: Rebuild cross-ETF fund flow JSON
+        # 跨 ETF 聚合 Δshares × close → site/preview/flow.json
+        # 必須在 preview_prices 和 pass2 後跑（吃 <etf>-prices.json）
+        run: |
+          set -eo pipefail
+          uv run tools/preview_flow.py
 
       - name: Summary
         if: always()
