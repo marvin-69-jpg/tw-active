@@ -387,100 +387,113 @@ function renderFlows() {
   }
   const series = etf.series;
 
-  // Auto-detect drawdown periods: AUM drops >5% from rolling peak, min 5 days long
-  function findDrawdowns(ser, threshold = 0.05, minDays = 5) {
-    const periods = [];
-    let peakAum = ser[0].aum, peakIdx = 0, inDD = false, ddStart = 0;
-    for (let i = 1; i < ser.length; i++) {
-      const aum = ser[i].aum;
-      if (!inDD) {
-        if (aum > peakAum) { peakAum = aum; peakIdx = i; }
-        else if ((peakAum - aum) / peakAum >= threshold) { inDD = true; ddStart = peakIdx; }
-      } else {
-        if (aum >= peakAum) {
-          if (i - ddStart >= minDays) periods.push({ si: ddStart, ei: i });
-          inDD = false; peakAum = aum; peakIdx = i;
-        }
-      }
-    }
-    if (inDD && ser.length - ddStart >= minDays) periods.push({ si: ddStart, ei: ser.length - 1 });
-    return periods;
-  }
-  const drawdowns = findDrawdowns(series);
+  // Aggregate inflows by month; also track month-end AUM for drawdown detection
+  const monthMap = {};
+  series.forEach(p => {
+    const ym = p.date.slice(0, 6);
+    if (!monthMap[ym]) monthMap[ym] = { inflow: 0, aum: p.aum };
+    monthMap[ym].inflow += p.inflow;
+    monthMap[ym].aum = p.aum; // last day of month wins
+  });
+  const monthly = Object.entries(monthMap).sort().map(([ym, v]) => ({ ym, ...v }));
 
-  // Chart dimensions — wider and taller
-  const W = 900, H = 280, PAD_L = 54, PAD_R = 16, PAD_T = 20, PAD_B = 40;
+  // Mark drawdown months: month-end AUM >5% below rolling peak
+  let peakAum = 0;
+  monthly.forEach(m => {
+    if (m.aum > peakAum) peakAum = m.aum;
+    m.drawdown = peakAum > 0 && (peakAum - m.aum) / peakAum >= 0.05;
+  });
+
+  // Chart — portrait-friendly proportions, renders well on 375px
+  const N = monthly.length;
+  const W = 420, H = 300, PAD_L = 52, PAD_R = 12, PAD_T = 16, PAD_B = 56;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
+  const slotW = chartW / N;
+  const barW = Math.max(6, slotW * 0.72);
 
-  const inflows = series.map(p => p.inflow);
-  const maxAbs = Math.max(...inflows.map(Math.abs), 1);
-  const yScale = v => PAD_T + chartH * (1 - (v / maxAbs + 1) / 2);
+  const maxAbsM = Math.max(...monthly.map(m => Math.abs(m.inflow)), 1);
+  const yScale = v => PAD_T + chartH * (1 - (v / maxAbsM + 1) / 2);
   const y0 = yScale(0);
-  const xScale = i => PAD_L + (i / (series.length - 1)) * chartW;
+  const xCenter = i => PAD_L + slotW * i + slotW / 2;
 
-  // Drawdown bands (auto-detected)
-  const bands = drawdowns.map(dr => {
-    const x1 = xScale(dr.si);
-    const x2 = xScale(dr.ei);
-    return `<rect x="${x1}" y="${PAD_T}" width="${x2 - x1}" height="${chartH}" fill="#c0392b" opacity="0.07"/>`;
+  // Drawdown bg bands
+  const bands = monthly.map((m, i) => {
+    if (!m.drawdown) return '';
+    const x = xCenter(i) - slotW / 2;
+    return `<rect x="${x.toFixed(1)}" y="${PAD_T}" width="${slotW.toFixed(1)}" height="${chartH}" fill="#c0392b" opacity="0.08"/>`;
   }).join('');
 
   // Bars
-  const barW = Math.max(1.5, chartW / series.length - 0.8);
-  const bars = series.map((p, i) => {
-    const v = p.inflow;
-    const x = xScale(i);
-    const fill = v >= 0 ? '#b8860b' : '#c0392b';
+  const bars = monthly.map((m, i) => {
+    const v = m.inflow;
+    const x = xCenter(i);
+    const fill = m.drawdown ? '#c0392b' : (v >= 0 ? '#b8860b' : '#c0392b');
+    const opacity = m.drawdown ? '1' : '0.78';
     if (v >= 0) {
-      const h = Math.max(1, (v / maxAbs) * (chartH / 2));
-      return `<rect x="${x - barW / 2}" y="${y0 - h}" width="${barW}" height="${h}" fill="${fill}" opacity="0.82"/>`;
+      const h = Math.max(2, (v / maxAbsM) * (chartH / 2));
+      return `<rect x="${(x - barW/2).toFixed(1)}" y="${(y0 - h).toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" opacity="${opacity}" rx="1"/>`;
     } else {
-      const h = Math.max(1, (-v / maxAbs) * (chartH / 2));
-      return `<rect x="${x - barW / 2}" y="${y0}" width="${barW}" height="${h}" fill="${fill}" opacity="0.82"/>`;
+      const h = Math.max(2, (-v / maxAbsM) * (chartH / 2));
+      return `<rect x="${(x - barW/2).toFixed(1)}" y="${y0.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}" opacity="${opacity}" rx="1"/>`;
     }
   }).join('');
 
-  // X-axis ticks (monthly labels where month changes)
-  let lastMonth = '';
-  const ticks = series.map((p, i) => {
-    const ym = p.date.slice(0, 6);
-    if (ym === lastMonth) return '';
-    lastMonth = ym;
-    const x = xScale(i);
-    const lbl = `${p.date.slice(0,4)}-${p.date.slice(4,6)}`;
-    return `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0 + 4}" stroke="#bbb" stroke-width="0.5"/>
-            <text x="${x}" y="${H - 6}" text-anchor="middle" font-size="8" fill="#999">${lbl}</text>`;
+  // Value labels on top/bottom of bars (only for drawdown months)
+  const valLabels = monthly.map((m, i) => {
+    if (!m.drawdown) return '';
+    const v = m.inflow;
+    const x = xCenter(i);
+    const abs = Math.abs(v);
+    const txt = abs >= 10 ? `${Math.round(abs)}` : abs.toFixed(1);
+    const sign = v >= 0 ? '+' : '−';
+    const y = v >= 0
+      ? (y0 - (v / maxAbsM) * (chartH / 2) - 4)
+      : (y0 + (-v / maxAbsM) * (chartH / 2) + 11);
+    return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="#c0392b">${sign}${txt}</text>`;
   }).join('');
 
-  // Y-axis labels (3 levels: max, 0, -max)
-  const yLabels = [maxAbs, 0, -maxAbs].map(v => {
+  // X-axis labels (rotated, show year-month)
+  const xLabels = monthly.map((m, i) => {
+    const x = xCenter(i);
+    const lbl = `${m.ym.slice(2,4)}-${m.ym.slice(4,6)}`;
+    return `<text transform="rotate(-55,${x.toFixed(1)},${(H - 8).toFixed(1)})" x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="end" font-size="9" fill="#999">${lbl}</text>`;
+  }).join('');
+
+  // Y-axis labels
+  const ySteps = [maxAbsM, maxAbsM/2, 0, -maxAbsM/2, -maxAbsM];
+  const yLabels = ySteps.map(v => {
     const y = yScale(v);
     const abs = Math.round(Math.abs(v));
     const txt = v === 0 ? '0' : `${v > 0 ? '+' : '−'}${abs}`;
-    return `<text x="${PAD_L - 5}" y="${y + 3.5}" text-anchor="end" font-size="8.5" fill="#aaa">${txt}</text>`;
+    return `<text x="${(PAD_L - 5).toFixed(1)}" y="${(y + 3.5).toFixed(1)}" text-anchor="end" font-size="8.5" fill="#bbb">${txt}</text>
+            <line x1="${PAD_L}" y1="${y.toFixed(1)}" x2="${(W - PAD_R).toFixed(1)}" y2="${y.toFixed(1)}" stroke="#eee" stroke-width="0.5"/>`;
   }).join('');
 
-  const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible;display:block">
-    ${bands}
-    <line x1="${PAD_L}" y1="${y0}" x2="${W - PAD_R}" y2="${y0}" stroke="#ddd" stroke-width="0.8"/>
-    ${bars}
-    ${ticks}
+  // Y-axis unit label
+  const unitLabel = `<text x="${PAD_L}" y="${PAD_T - 5}" font-size="8" fill="#bbb">億元</text>`;
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:560px;height:auto;overflow:visible;display:block">
     ${yLabels}
+    ${bands}
+    <line x1="${PAD_L}" y1="${y0.toFixed(1)}" x2="${(W-PAD_R).toFixed(1)}" y2="${y0.toFixed(1)}" stroke="#ccc" stroke-width="1"/>
+    ${bars}
+    ${valLabels}
+    ${xLabels}
+    ${unitLabel}
   </svg>`;
 
   $('view').innerHTML = `
     <div class="flows-wrap">
-      <div class="flows-title" style="font-size:10px">
-        00981A 統一主動台股增長 · <b>日淨申購流量</b>（億元）· ${fmtDate(series[0].date)} – ${fmtDate(series[series.length-1].date)}
+      <div class="flows-title" style="font-size:11px;margin-bottom:6px">
+        00981A · <b>月淨申購流量</b>（億元）<span style="color:var(--ink-soft);font-size:10px">· ${monthly[0].ym.slice(0,4)}-${monthly[0].ym.slice(4,6)} – ${monthly[monthly.length-1].ym.slice(0,4)}-${monthly[monthly.length-1].ym.slice(4,6)}</span>
       </div>
-      <div class="flows-legend" style="font-size:9px;margin-bottom:4px">
-        <span><svg width="8" height="8"><rect width="8" height="8" fill="#b8860b" opacity="0.82"/></svg>&nbsp;淨申購</span>
-        <span><svg width="8" height="8"><rect width="8" height="8" fill="#c0392b" opacity="0.82"/></svg>&nbsp;淨贖回</span>
-        <span><svg width="8" height="8"><rect width="8" height="8" fill="#c0392b" opacity="0.12"/></svg>&nbsp;AUM 跌幅 &gt;5% 區間（自動偵測）</span>
+      <div style="font-size:9px;color:var(--ink-soft);margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap">
+        <span><svg width="9" height="9" style="vertical-align:middle"><rect width="9" height="9" fill="#b8860b" rx="1"/></svg> 淨申購（資金流入）</span>
+        <span><svg width="9" height="9" style="vertical-align:middle"><rect width="9" height="9" fill="#c0392b" rx="1"/></svg> 淨贖回 / 大跌月份（AUM 跌幅 &gt;5%）</span>
       </div>
       ${svg}
-      <div style="margin-top:6px;font-size:9px;color:var(--ink-soft)">日淨申購 = Δ流通單位 × 當日 NAV（估算）。NAV = 每單位淨值，AUM = NAV × 流通單位數。</div>
+      <div style="margin-top:10px;font-size:9px;color:var(--ink-soft);line-height:1.6">月淨申購 = Σ（Δ流通單位 × 當日 NAV）。紅色月份 = 當月月底 AUM 低於歷史高點 5% 以上（自動偵測）。NAV = 每單位淨值，AUM = NAV × 流通單位數。</div>
     </div>
   `;
 }
