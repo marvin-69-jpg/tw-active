@@ -21,11 +21,17 @@ const OUT = process.argv[2] || "/tmp/shot_flow.png";
 const LOAD_WAIT_MS = 7000;
 
 const CHROMIUM_BIN = (() => {
-  for (const b of ["/usr/bin/chromium-browser", "/usr/bin/chromium"]) {
+  for (const b of [
+    "/usr/bin/google-chrome-stable",
+    "/usr/bin/google-chrome",
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+  ]) {
     try { fs.accessSync(b, fs.constants.X_OK); return b; } catch(e) {}
   }
-  return "chromium";
+  return "google-chrome-stable";
 })();
+console.error("using browser:", CHROMIUM_BIN);
 
 const browser = spawn(CHROMIUM_BIN, [
   "--headless=new", "--no-sandbox", "--disable-gpu",
