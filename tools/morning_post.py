@@ -68,12 +68,19 @@ def generate_text(flow: dict) -> str:
         key=lambda x: x["ntd"],
         reverse=True,
     )
+    def etf_codes(stock: dict, kind: str) -> str:
+        """從 stock['etfs'] 取 kind=add/new/reduce/exit 的 ETF 代號清單"""
+        codes = [e["etf"] for e in stock.get("etfs", []) if e.get("kind") in ("add", "new")] \
+            if kind == "buy" else \
+            [e["etf"] for e in stock.get("etfs", []) if e.get("kind") in ("reduce", "exit")]
+        return "、".join(codes) if codes else ""
+
     if consensus:
         lines.append(f"{CONSENSUS_BUY_MIN_FAMILIES} 家以上共識買進：")
         for s in consensus:
-            lines.append(
-                f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])}（{s['etfs_buy']} 家）"
-            )
+            codes = etf_codes(s, "buy")
+            codes_str = f"（{codes}）" if codes else f"（{s['etfs_buy']} 家）"
+            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} {codes_str}")
         lines.append("")
 
     # ── 單一大注（1~3 家，金額達門檻）───────────────────────
@@ -90,9 +97,9 @@ def generate_text(flow: dict) -> str:
     if single_bets:
         lines.append("單一大注：")
         for s in single_bets:
-            lines.append(
-                f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])}（{s['etfs_buy']} 家）"
-            )
+            codes = etf_codes(s, "buy")
+            codes_str = f"（{codes}）" if codes else f"（{s['etfs_buy']} 家）"
+            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} {codes_str}")
         lines.append("")
 
     # ── 共識賣 ───────────────────────────────────────────────
@@ -103,9 +110,9 @@ def generate_text(flow: dict) -> str:
     if consensus_sell:
         lines.append("共識賣：")
         for s in consensus_sell:
-            lines.append(
-                f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])}（{s['etfs_sell']} 家）"
-            )
+            codes = etf_codes(s, "sell")
+            codes_str = f"（{codes}）" if codes else f"（{s['etfs_sell']} 家）"
+            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} {codes_str}")
     else:
         lines.append(
             f"共識賣：沒有，沒有任何一檔被 {CONSENSUS_SELL_MIN_FAMILIES} 家以上同時減碼。"

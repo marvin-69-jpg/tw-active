@@ -30,16 +30,11 @@ jobs:
           curl -LsSf https://astral.sh/uv/install.sh | sh
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Install ws
-        run: npm install ws
-
       - name: Generate post text
         run: uv run tools/morning_post.py > /tmp/morning.txt && cat /tmp/morning.txt
 
-      - name: Screenshot flow page
-        run: |
-          # shot_flow.js reads flow.json directly and loads via file://, no HTTP server needed
-          node tools/shot_flow.js /tmp/shot_flow.png site/preview/flow.json
+      - name: Generate flow card image
+        run: uv run tools/gen_flow_card.py /tmp/shot_flow.png site/preview/flow.json
 
       - name: Commit screenshot
         id: commit
