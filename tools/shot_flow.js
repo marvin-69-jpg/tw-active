@@ -12,15 +12,14 @@
 
 const WebSocket = require("ws");
 const http = require("http");
-const { execSync, spawn } = require("child_process");
+const { spawn } = require("child_process");
 const fs = require("fs");
 
-const PORT = 19252;           // CDP remote debugging port
-const PREVIEW_PORT = 18765;   // local preview HTTP server
+const PORT = 19252;
+const PREVIEW_PORT = 18765;
 const OUT = process.argv[2] || "/tmp/shot_flow.png";
-const LOAD_WAIT_MS = 7000;    // wait for JS fetch + render (CI needs more time)
+const LOAD_WAIT_MS = 7000;
 
-// Try both common Chromium binary names
 const CHROMIUM_BIN = (() => {
   for (const b of ["/usr/bin/chromium-browser", "/usr/bin/chromium"]) {
     try { fs.accessSync(b, fs.constants.X_OK); return b; } catch(e) {}
@@ -28,18 +27,13 @@ const CHROMIUM_BIN = (() => {
   return "chromium";
 })();
 
-try { execSync(`kill $(lsof -ti:${PORT}) 2>/dev/null`, { shell: true }); } catch(e) {}
-
 const browser = spawn(CHROMIUM_BIN, [
-  "--headless=new",
-  "--no-sandbox",
-  "--disable-gpu",
-  `--remote-debugging-port=${PORT}`,
-  "--window-size=1080,1920",  // tall window so full card fits
+  "--headless=new", "--no-sandbox", "--disable-gpu",
+  `--remote-debugging-port=${PORT}`, "--window-size=1080,1920",
 ], { detached: true, stdio: "ignore" });
 browser.unref();
 
-function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 
 async function getWsUrl() {
   for (let i = 0; i < 20; i++) {
@@ -74,9 +68,8 @@ async function cdp(ws, method, params = {}) {
   const ws = new WebSocket(wsUrl);
   await new Promise(r => ws.on("open", r));
 
-  // 430px wide → enough for footer line, 2.5x DPR → clean on mobile/Threads
   await cdp(ws, "Emulation.setDeviceMetricsOverride", {
-    width: 430, height: 900, deviceScaleFactor: 2.5, mobile: true,
+    width: 480, height: 900, deviceScaleFactor: 2.5, mobile: true,
   });
 
   await cdp(ws, "Page.navigate", {
@@ -84,27 +77,35 @@ async function cdp(ws, method, params = {}) {
   });
   await sleep(LOAD_WAIT_MS);
 
-  // Get bounding box of #flow-card
-  const { root: { nodeId: rootId } } = await cdp(ws, "DOM.getDocument");
-  const { nodeIds } = await cdp(ws, "DOM.querySelectorAll", {
-    nodeId: rootId, selector: "#flow-card",
+  // Diagnostic: log page title + flow-card status
+  const { result: titleR } = await cdp(ws, "Runtime.evaluate", {
+    expression: `document.title + ' | flow-card: ' + (document.getElementById('flow-card') ? 'found (h=' + document.getElementById('flow-card').offsetHeight + ')' : 'MISSING')`
+  });
+  console.error("page check:", titleR.value);
+
+  // Get bounding rect via Runtime.evaluate (more reliable than DOM API in headless)
+  const { result: rectR } = await cdp(ws, "Runtime.evaluate", {
+    expression: `JSON.stringify((function(){ const el=document.getElementById('flow-card'); if(!el) return null; const r=el.getBoundingClientRect(); return {x:r.left,y:r.top,w:r.width,h:r.height}; })())`
   });
 
-  if (!nodeIds.length) {
-    console.error("✗ #flow-card not found");
-    process.exit(1);
-  }
+  let clip;
+  const rectVal = rectR.value ? JSON.parse(rectR.value) : null;
 
-  const box = await cdp(ws, "DOM.getBoxModel", { nodeId: nodeIds[0] });
-  const [x1, y1, x2, , , , , y2] = box.model.border;
-  const MARGIN = 16;
-  const clip = {
-    x: Math.max(0, x1 - MARGIN),
-    y: Math.max(0, y1 - MARGIN),
-    width:  (x2 - x1) + MARGIN * 2,
-    height: (y2 - y1) + MARGIN * 2,
-    scale: 1,
-  };
+  if (rectVal && rectVal.w > 0 && rectVal.h > 0) {
+    const M = 16;
+    clip = {
+      x: Math.max(0, rectVal.x - M),
+      y: Math.max(0, rectVal.y - M),
+      width:  rectVal.w + M * 2,
+      height: rectVal.h + M * 2,
+      scale: 1,
+    };
+    console.error(`flow-card rect: ${JSON.stringify(rectVal)}`);
+  } else {
+    // Fallback: screenshot top portion of page (card should be near top)
+    console.error("WARNING: flow-card not found or zero-size, falling back to top-of-page crop");
+    clip = { x: 0, y: 60, width: 480, height: 600, scale: 1 };
+  }
 
   // Scroll card into view
   await cdp(ws, "Runtime.evaluate", {
@@ -112,12 +113,9 @@ async function cdp(ws, method, params = {}) {
   });
   await sleep(200);
 
-  const shot = await cdp(ws, "Page.captureScreenshot", {
-    format: "png",
-    clip,
-  });
+  const shot = await cdp(ws, "Page.captureScreenshot", { format: "png", clip });
   fs.writeFileSync(OUT, Buffer.from(shot.data, "base64"));
-  console.log(`saved: ${OUT}  (${clip.width}×${clip.height})`);
+  console.log(`saved: ${OUT}  (${clip.width.toFixed(0)}×${clip.height.toFixed(0)})`);
 
   ws.close();
   process.kill(-browser.pid, "SIGTERM");
