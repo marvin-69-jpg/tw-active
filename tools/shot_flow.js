@@ -19,7 +19,8 @@ const os = require("os");
 
 const OUT = process.argv[2] || "/tmp/shot_flow.png";
 const FLOW_JSON = process.argv[3] || path.join(__dirname, "../site/preview/flow.json");
-const PORT = 19252;
+const PORT = 19252;     // Chrome CDP port
+const HTTP_PORT = 19253; // mini HTML server port
 const LOAD_WAIT_MS = 4000;
 const CDP_TIMEOUT_MS = 20000;
 
@@ -203,16 +204,21 @@ async function cdp(ws, method, params = {}) {
   // Read flow.json and generate standalone HTML
   const flow = JSON.parse(fs.readFileSync(FLOW_JSON, "utf8"));
   const html = buildHtml(flow);
-  const tmpHtml = path.join(os.tmpdir(), "flow_card.html");
-  fs.writeFileSync(tmpHtml, html, "utf8");
-  console.error("wrote:", tmpHtml);
+
+  // Serve HTML via Node's built-in http (avoids file:// restrictions in CI)
+  const htmlServer = http.createServer((req, res) => {
+    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+    res.end(html);
+  });
+  await new Promise(r => htmlServer.listen(HTTP_PORT, "127.0.0.1", r));
+  console.error(`html server: http://127.0.0.1:${HTTP_PORT}/`);
 
   // Launch Chrome
   const browser = spawn(CHROMIUM_BIN, [
     "--headless=new",
     "--no-sandbox",
     "--disable-gpu",
-    "--disable-dev-shm-usage",       // critical for CI containers
+    "--disable-dev-shm-usage",         // critical for CI/Docker containers
     "--disable-software-rasterizer",
     `--remote-debugging-port=${PORT}`,
     "--window-size=520,900",
@@ -229,8 +235,14 @@ async function cdp(ws, method, params = {}) {
       width: 492, height: 900, deviceScaleFactor: 2.5, mobile: false,
     });
 
-    await cdp(ws, "Page.navigate", { url: `file://${tmpHtml}` });
+    await cdp(ws, "Page.navigate", { url: `http://127.0.0.1:${HTTP_PORT}/` });
     await sleep(LOAD_WAIT_MS);
+
+    // Diagnostics
+    const { result: diagR } = await cdp(ws, "Runtime.evaluate", {
+      expression: `document.title + " | len=" + document.body.innerHTML.length + " | fc=" + !!document.getElementById("flow-card")`
+    });
+    console.error("page:", diagR.value);
 
     // Get bounding rect of flow-card
     const { result: rectR } = await cdp(ws, "Runtime.evaluate", {
@@ -245,6 +257,7 @@ async function cdp(ws, method, params = {}) {
       const M = 14;
       clip = { x: Math.max(0, rv.x - M), y: Math.max(0, rv.y - M), width: rv.w + M * 2, height: rv.h + M * 2, scale: 1 };
     } else {
+      // Fallback: full-width top crop
       clip = { x: 0, y: 0, width: 492, height: 700, scale: 1 };
     }
 
@@ -254,7 +267,7 @@ async function cdp(ws, method, params = {}) {
 
     ws.close();
   } finally {
+    htmlServer.close();
     try { process.kill(-browser.pid, "SIGTERM"); } catch(e) {}
-    try { fs.unlinkSync(tmpHtml); } catch(e) {}
   }
 })().catch(e => { console.error(e); process.exit(1); });
