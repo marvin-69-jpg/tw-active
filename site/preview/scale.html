@@ -406,7 +406,7 @@ function renderFlows() {
 
   // Chart — portrait-friendly proportions, renders well on 375px
   const N = monthly.length;
-  const W = 420, H = 300, PAD_L = 52, PAD_R = 12, PAD_T = 16, PAD_B = 56;
+  const W = 420, H = 280, PAD_L = 52, PAD_R = 12, PAD_T = 16, PAD_B = 38;
   const chartW = W - PAD_L - PAD_R;
   const chartH = H - PAD_T - PAD_B;
   const slotW = chartW / N;
@@ -453,11 +453,12 @@ function renderFlows() {
     return `<text x="${x.toFixed(1)}" y="${y.toFixed(1)}" text-anchor="middle" font-size="9" font-weight="600" fill="#c0392b">${sign}${txt}</text>`;
   }).join('');
 
-  // X-axis labels (rotated, show year-month)
+  // X-axis labels — vertical, each anchored at bar center bottom
   const xLabels = monthly.map((m, i) => {
     const x = xCenter(i);
+    const y = H - PAD_B + 4;
     const lbl = `${m.ym.slice(2,4)}-${m.ym.slice(4,6)}`;
-    return `<text transform="rotate(-55,${x.toFixed(1)},${(H - 8).toFixed(1)})" x="${x.toFixed(1)}" y="${(H - 8).toFixed(1)}" text-anchor="end" font-size="9" fill="#999">${lbl}</text>`;
+    return `<text transform="translate(${x.toFixed(1)},${y}) rotate(-90)" text-anchor="end" font-size="8.5" fill="#999">${lbl}</text>`;
   }).join('');
 
   // Y-axis labels
