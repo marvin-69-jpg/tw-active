@@ -99,73 +99,74 @@
 
   /* ── 資金流 TUI 卡片 ─────────────────────────────────── */
   #flow-card {
-    background: #0d1117;
-    color: #c9d1d9;
+    background: var(--panel);
+    color: var(--ink);
     font-family: ui-monospace, 'JetBrains Mono', 'SF Mono', Menlo, Consolas, monospace;
-    font-size: 15px;
-    line-height: 1.75;
-    padding: 18px 22px 16px;
+    font-size: 14px;
+    line-height: 1.7;
+    padding: 16px 20px 14px;
     margin-bottom: 22px;
-    border-radius: 8px;
-    border: 1px solid #21262d;
+    border: 1px solid var(--rule-strong);
     overflow: hidden;
   }
   .fc-head {
-    font-size: 17px;
+    font-size: 16px;
     font-weight: 700;
-    color: #f0f6fc;
+    color: var(--ink);
     margin-bottom: 3px;
     letter-spacing: 0.01em;
   }
-  .fc-head .fc-date { color: #58a6ff; }
-  .fc-head .fc-cov  { color: #6e7681; font-size: 13px; font-weight: 400; }
+  .fc-head .fc-date { color: var(--ink); }
+  .fc-head .fc-cov  { color: var(--ink-soft); font-size: 12px; font-weight: 400; }
   .fc-rule {
     border: none;
-    border-top: 1px solid #21262d;
-    margin: 10px 0 8px;
+    border-top: 1px solid var(--rule);
+    margin: 9px 0 7px;
   }
   .fc-rule-strong {
     border: none;
-    border-top: 1px solid #30363d;
+    border-top: 1px solid var(--rule-strong);
     margin: 10px 0 8px;
   }
   .fc-label {
-    font-size: 11px;
-    color: #6e7681;
+    font-size: 10px;
+    color: var(--ink-soft);
     letter-spacing: 0.12em;
     text-transform: uppercase;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     margin-top: 2px;
   }
-  .fc-rows { display: flex; flex-direction: column; gap: 1px; }
+  .fc-rows { display: flex; flex-direction: column; gap: 0; }
   .fc-row {
     display: grid;
-    grid-template-columns: 120px 4.2em 7.5em 1fr 3em;
+    grid-template-columns: 120px 4.2em 7em 1fr 3em;
     align-items: center;
     gap: 0 6px;
-    font-size: 14px;
-    line-height: 1.7;
-  }
-  .fc-row .r-name { color: #e6edf3; white-space: nowrap; overflow: hidden; text-overflow: clip; }
-  .fc-row .r-code { color: #6e7681; }
-  .fc-row .r-ntd  { text-align: right; font-weight: 700; }
-  .fc-row .r-ntd.up { color: #f85149; }
-  .fc-row .r-ntd.dn { color: #3fb950; }
-  .fc-row .r-bar  { font-size: 12px; letter-spacing: -0.5px; }
-  .fc-row .r-fam  { color: #6e7681; font-size: 12px; text-align: right; }
-  .fc-nosell { color: #6e7681; font-size: 13px; padding: 2px 0 2px; }
-  .fc-foot {
     font-size: 13px;
-    color: #8b949e;
+    line-height: 1.75;
+    border-bottom: 1px solid var(--rule);
+  }
+  .fc-rows .fc-row:last-child { border-bottom: none; }
+  .fc-row .r-name { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: clip; }
+  .fc-row .r-code { color: var(--ink-soft); }
+  .fc-row .r-ntd  { text-align: right; font-weight: 700; }
+  .fc-row .r-ntd.up { color: var(--up); }
+  .fc-row .r-ntd.dn { color: var(--down); }
+  .fc-row .r-bar  { font-size: 11px; letter-spacing: -0.5px; }
+  .fc-row .r-fam  { color: var(--ink-soft); font-size: 11px; text-align: right; }
+  .fc-nosell { color: var(--ink-soft); font-size: 12px; padding: 2px 0; }
+  .fc-foot {
+    font-size: 12px;
+    color: var(--ink-soft);
     margin-top: 2px;
   }
-  .fc-foot .hi  { color: #f0f6fc; font-weight: 700; }
-  .fc-foot .pct { color: #f85149; }
+  .fc-foot .hi  { color: var(--ink); font-weight: 700; }
+  .fc-foot .pct { color: var(--up); }
   .fc-foot-line { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   @media (max-width: 480px) {
-    #flow-card { font-size: 13px; padding: 14px 14px 12px; }
-    .fc-head { font-size: 15px; }
-    .fc-row  { font-size: 12px; grid-template-columns: 4.8em 3.6em 6.8em 1fr 2.8em; }
+    #flow-card { font-size: 12px; padding: 12px 12px 10px; }
+    .fc-head { font-size: 14px; }
+    .fc-row  { font-size: 11px; grid-template-columns: 100px 3.8em 6.5em 1fr 2.8em; }
   }
 </style>
 </head>
@@ -238,8 +239,8 @@ async function renderFlowCard() {
   function barHtml(ntd, isUp) {
     const filled = Math.max(1, Math.round(Math.abs(ntd) / maxNtd * BAR_MAX));
     const empty  = BAR_MAX - filled;
-    const c = isUp ? '#f85149' : '#3fb950';
-    return `<span style="color:${c}">${'█'.repeat(filled)}</span><span style="color:#21262d">${'█'.repeat(empty)}</span>`;
+    const c = isUp ? '#b8860b' : '#4a7c4a';
+    return `<span style="color:${c}">${'█'.repeat(filled)}</span><span style="color:#e0ddd2">${'█'.repeat(empty)}</span>`;
   }
 
   function rowsHtml(stocks, isUp) {
