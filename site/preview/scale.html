@@ -142,6 +142,21 @@
     color: var(--ink-soft); font-size: 11px;
   }
 
+  /* ── tooltip ── */
+  #flow-tip {
+    position: fixed;
+    background: #1a1a1a;
+    color: #fafaf7;
+    padding: 7px 11px;
+    font-size: 11px;
+    border-radius: 3px;
+    pointer-events: none;
+    display: none;
+    z-index: 200;
+    white-space: nowrap;
+    line-height: 1.6;
+  }
+
   /* ── flows chart ── */
   .flows-wrap { margin-top: 4px; }
   .flows-title { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; }
@@ -176,6 +191,7 @@
 </head>
 <body>
 
+<div id="flow-tip"></div>
 <div class="breadcrumb"><a href="./">← 回主動 ETF 列表</a></div>
 <h1>主動型 ETF · 規模與申購</h1>
 <div class="sub" id="sub">—</div>
@@ -379,6 +395,30 @@ document.querySelectorAll('.sort-btn').forEach(b => {
   });
 });
 
+function showFlowTip(evt, ym, inflow, aum) {
+  const tip = document.getElementById('flow-tip');
+  const sign = inflow >= 0 ? '+' : '−';
+  const abs = Math.abs(inflow);
+  const val = abs >= 10 ? Math.round(abs) : abs.toFixed(1);
+  const label = inflow >= 0 ? '申購' : '贖回';
+  tip.innerHTML = `<b>${ym.slice(0,4)}-${ym.slice(4,6)}</b>　${sign}${val} 億　${label}<br><span style="color:#aaa;font-size:10px">月底 AUM ${Math.round(aum)} 億元</span>`;
+  tip.style.display = 'block';
+  positionFlowTip(evt);
+}
+function positionFlowTip(evt) {
+  const tip = document.getElementById('flow-tip');
+  const offset = 14;
+  const x = evt.clientX + offset;
+  const y = evt.clientY - tip.offsetHeight / 2;
+  // 避免超出右邊視窗
+  const maxX = window.innerWidth - tip.offsetWidth - 8;
+  tip.style.left = Math.min(x, maxX) + 'px';
+  tip.style.top = Math.max(4, y) + 'px';
+}
+function hideFlowTip() {
+  document.getElementById('flow-tip').style.display = 'none';
+}
+
 function renderFlows() {
   const etf = d.etfs.find(e => e.code === '00981A');
   if (!etf || !etf.series || !etf.series.length) {
@@ -474,6 +514,16 @@ function renderFlows() {
   // Y-axis unit label
   const unitLabel = `<text x="${PAD_L}" y="${PAD_T - 5}" font-size="8" fill="#bbb">億元</text>`;
 
+  // Transparent hit areas for hover tooltip (full slot height, on top of bars)
+  const hitAreas = monthly.map((m, i) => {
+    const x = xCenter(i) - slotW / 2;
+    return `<rect x="${x.toFixed(1)}" y="${PAD_T}" width="${slotW.toFixed(1)}" height="${chartH}"
+      fill="transparent" style="cursor:crosshair"
+      onmouseenter="showFlowTip(event,'${m.ym}',${m.inflow.toFixed(4)},${m.aum.toFixed(2)})"
+      onmousemove="positionFlowTip(event)"
+      onmouseleave="hideFlowTip()"/>`;
+  }).join('');
+
   const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;max-width:560px;height:auto;overflow:visible;display:block">
     ${yLabels}
     ${bands}
@@ -482,6 +532,7 @@ function renderFlows() {
     ${valLabels}
     ${xLabels}
     ${unitLabel}
+    ${hitAreas}
   </svg>`;
 
   $('view').innerHTML = `
