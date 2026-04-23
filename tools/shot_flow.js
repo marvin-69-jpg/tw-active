@@ -1,28 +1,24 @@
 /**
- * shot_flow.js — CDP screenshot of TUI flow card
+ * shot_flow.js — screenshot of TUI flow card
  *
  * Usage:
  *   node tools/shot_flow.js [output_path] [flow_json_path]
  *
- * Generates a standalone HTML from flow.json (no HTTP server needed),
- * loads it via file://, and screenshots the #flow-card element.
+ * Builds standalone HTML from flow.json, serves it via Node http,
+ * then takes screenshot with Chrome's built-in --screenshot flag.
+ * No CDP required.
  *
- * Deps: ws  (npm install ws)
+ * Deps: none (uses only Node.js builtins + pre-installed Chrome)
  */
 
-const WebSocket = require("ws");
+const { execSync, spawn } = require("child_process");
 const http = require("http");
-const { spawn } = require("child_process");
 const fs = require("fs");
 const path = require("path");
-const os = require("os");
 
 const OUT = process.argv[2] || "/tmp/shot_flow.png";
 const FLOW_JSON = process.argv[3] || path.join(__dirname, "../site/preview/flow.json");
-const PORT = 19252;     // Chrome CDP port
-const HTTP_PORT = 19253; // mini HTML server port
-const LOAD_WAIT_MS = 4000;
-const CDP_TIMEOUT_MS = 20000;
+const HTTP_PORT = 19253;
 
 const CHROMIUM_BIN = (() => {
   for (const b of [
@@ -53,8 +49,8 @@ function buildHtml(flow) {
   function fmtNtd(v) {
     const sign = v >= 0 ? "+" : "-";
     const abs = Math.abs(v);
-    if (abs >= 1e8) { const n = abs / 1e8; return `${sign}${n >= 10 ? n.toFixed(0) : n.toFixed(1)}億`; }
-    return `${sign}${(abs / 1e4).toFixed(0)}萬`;
+    if (abs >= 1e8) { const n = abs / 1e8; return `${sign}${n >= 10 ? n.toFixed(0) : n.toFixed(1)}&#x5104;`; }
+    return `${sign}${(abs / 1e4).toFixed(0)}&#x842C;`;
   }
 
   const consensusBuy  = inflow.filter(s => s.etfs_buy >= 4).sort((a, b) => b.ntd - a.ntd);
@@ -74,85 +70,73 @@ function buildHtml(flow) {
     const filled = Math.max(1, Math.round(Math.abs(ntd) / maxNtd * BAR_MAX));
     const empty  = BAR_MAX - filled;
     const c = isUp ? "#b8860b" : "#4a7c4a";
-    return `<span style="color:${c}">${"█".repeat(filled)}</span><span style="color:#e0ddd2">${"█".repeat(empty)}</span>`;
+    return `<span style="color:${c}">${"\u2588".repeat(filled)}</span><span style="color:#e0ddd2">${"\u2588".repeat(empty)}</span>`;
   }
 
   function rows(stocks, isUp) {
     return stocks.map(s => {
       const fam = isUp ? s.etfs_buy : s.etfs_sell;
+      const name = s.name.replace(/\s/g, "").replace(/&/g, "&amp;").replace(/</g, "&lt;");
       return `<div class="row">
-        <span class="nm">${s.name.replace(/\s/g, "")}</span>
+        <span class="nm">${name}</span>
         <span class="cd">${s.code}</span>
         <span class="nt ${isUp ? "up" : "dn"}">${fmtNtd(s.ntd)}</span>
         <span class="br">${bar(s.ntd, isUp)}</span>
-        <span class="fm">${fam}家</span>
+        <span class="fm">${fam}&#x5BB6;</span>
       </div>`;
     }).join("");
   }
 
-  let body = `<div class="hd">盤前指引 · <span class="dt">${month}/${day}</span> · <span class="cv">${covered}/21家已揭露</span></div>
+  let body = `<div class="hd">&#x76E4;&#x524D;&#x6307;&#x5F15; &middot; <span class="dt">${month}/${day}</span> &middot; <span class="cv">${covered}/21&#x5BB6;&#x5DF2;&#x63ED;&#x9732;</span></div>
 <hr class="rs">`;
 
   if (consensusBuy.length) {
-    body += `<div class="lb">共識買進 ≥4家</div><div class="rows">${rows(consensusBuy, true)}</div>`;
+    body += `<div class="lb">&#x5171;&#x8B58;&#x8CB7;&#x9032; &ge;4&#x5BB6;</div><div class="rows">${rows(consensusBuy, true)}</div>`;
     if (singleBets.length) body += `<hr class="r">`;
   }
   if (singleBets.length) {
-    body += `<div class="lb">單一大注 ≥3億</div><div class="rows">${rows(singleBets, true)}</div>`;
+    body += `<div class="lb">&#x55AE;&#x4E00;&#x5927;&#x6CE8; &ge;3&#x5104;</div><div class="rows">${rows(singleBets, true)}</div>`;
   }
   body += `<hr class="r">`;
 
   if (consensusSell.length) {
-    body += `<div class="lb">共識賣 ≥3家</div><div class="rows">${rows(consensusSell, false)}</div>`;
+    body += `<div class="lb">&#x5171;&#x8B58;&#x8CE3; &ge;3&#x5BB6;</div><div class="rows">${rows(consensusSell, false)}</div>`;
   } else {
-    body += `<div class="ns">共識賣：無 — 沒有任何一檔被 3家以上同時減碼</div>`;
+    body += `<div class="ns">&#x5171;&#x8B58;&#x8CE3;&#xFF1A;&#x7121; &mdash; &#x6C92;&#x6709;&#x4EFB;&#x4F55;&#x4E00;&#x6A94;&#x88AB; 3&#x5BB6;&#x4EE5;&#x4E0A;&#x540C;&#x6642;&#x6E1B;&#x78BC;</div>`;
   }
 
   body += `<hr class="rs">`;
   const netStr = fmtNtd(totals.net || 0);
   if (dominantPct > 50 && dominant) {
-    body += `<div class="ft">主動ETF 淨流入 <b>${netStr}</b> · <span class="pct">${dominantPct}% basket buy</span> ${dominant.etf}</div>`;
+    body += `<div class="ft">&#x4E3B;&#x52D5;ETF &#x6DE8;&#x6D41;&#x5165; <b>${netStr}</b> &middot; <span class="pct">${dominantPct}% basket buy</span> ${dominant.etf}</div>`;
   } else {
-    body += `<div class="ft">主動ETF 淨流入 <b>${netStr}</b> · ${covered}/21家已揭露</div>`;
+    body += `<div class="ft">&#x4E3B;&#x52D5;ETF &#x6DE8;&#x6D41;&#x5165; <b>${netStr}</b> &middot; ${covered}/21&#x5BB6;&#x5DF2;&#x63ED;&#x9732;</div>`;
   }
 
   return `<!DOCTYPE html>
-<html lang="zh-Hant">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-* { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: #fafaf7; padding: 16px; }
-#flow-card {
-  background: #fff;
-  border: 1px solid #1a1a1a;
-  padding: 16px 20px 14px;
-  font-family: ui-monospace,"JetBrains Mono","SF Mono",Menlo,Consolas,monospace;
-  font-size: 14px;
-  line-height: 1.7;
-  width: 460px;
-}
-.hd { font-size: 16px; font-weight: 700; color: #1a1a1a; margin-bottom: 3px; }
-.dt { color: #1a1a1a; }
-.cv { color: #6b6b6b; font-size: 12px; font-weight: 400; }
-hr.r  { border: none; border-top: 1px solid #e0ddd2; margin: 8px 0; }
-hr.rs { border: none; border-top: 1px solid #1a1a1a; margin: 10px 0 8px; }
-.lb { font-size: 10px; color: #6b6b6b; letter-spacing: .12em; text-transform: uppercase; margin-bottom: 4px; }
-.rows { display: flex; flex-direction: column; }
-.row { display: grid; grid-template-columns: 120px 4.2em 7em 1fr 3em; align-items: center; gap: 0 6px; font-size: 13px; line-height: 1.75; border-bottom: 1px solid #e0ddd2; }
-.rows .row:last-child { border-bottom: none; }
-.nm { color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: clip; }
-.cd { color: #6b6b6b; }
-.nt { text-align: right; font-weight: 700; }
-.nt.up { color: #b8860b; }
-.nt.dn { color: #4a7c4a; }
-.br { font-size: 11px; letter-spacing: -.5px; }
-.fm { color: #6b6b6b; font-size: 11px; text-align: right; }
-.ns { color: #6b6b6b; font-size: 12px; padding: 2px 0; }
-.ft { font-size: 12px; color: #6b6b6b; margin-top: 2px; }
-.ft b { color: #1a1a1a; font-weight: 700; }
-.pct { color: #b8860b; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#fafaf7;padding:16px;font-family:monospace}
+#flow-card{background:#fff;border:1px solid #1a1a1a;padding:16px 20px 14px;font-family:monospace;font-size:14px;line-height:1.7;width:460px}
+.hd{font-size:16px;font-weight:700;color:#1a1a1a;margin-bottom:3px}
+.dt{color:#1a1a1a}.cv{color:#6b6b6b;font-size:12px;font-weight:400}
+hr.r{border:none;border-top:1px solid #e0ddd2;margin:8px 0}
+hr.rs{border:none;border-top:1px solid #1a1a1a;margin:10px 0 8px}
+.lb{font-size:10px;color:#6b6b6b;letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.rows{display:flex;flex-direction:column}
+.row{display:grid;grid-template-columns:120px 4.2em 7em 1fr 3em;align-items:center;gap:0 6px;font-size:13px;line-height:1.75;border-bottom:1px solid #e0ddd2}
+.rows .row:last-child{border-bottom:none}
+.nm{color:#1a1a1a;white-space:nowrap;overflow:hidden;text-overflow:clip}
+.cd{color:#6b6b6b}.nt{text-align:right;font-weight:700}
+.nt.up{color:#b8860b}.nt.dn{color:#4a7c4a}
+.br{font-size:11px;letter-spacing:-.5px}
+.fm{color:#6b6b6b;font-size:11px;text-align:right}
+.ns{color:#6b6b6b;font-size:12px;padding:2px 0}
+.ft{font-size:12px;color:#6b6b6b;margin-top:2px}
+.ft b{color:#1a1a1a;font-weight:700}.pct{color:#b8860b}
 </style>
 </head>
 <body>
@@ -161,113 +145,74 @@ hr.rs { border: none; border-top: 1px solid #1a1a1a; margin: 10px 0 8px; }
 </html>`;
 }
 
-// ── CDP helpers ──────────────────────────────────────────────────
+// ── Serve HTML via Node.js http ──────────────────────────────────
 
-const sleep = ms => new Promise(r => setTimeout(r, ms));
-
-async function getWsUrl() {
-  for (let i = 0; i < 25; i++) {
-    try {
-      const data = await new Promise((res, rej) => {
-        http.get(`http://127.0.0.1:${PORT}/json`, r => {
-          let b = ""; r.on("data", d => b += d); r.on("end", () => res(b));
-        }).on("error", rej);
-      });
-      const tabs = JSON.parse(data);
-      if (tabs[0]?.webSocketDebuggerUrl) return tabs[0].webSocketDebuggerUrl;
-    } catch(e) {}
-    await sleep(300);
-  }
-  throw new Error("CDP: no ws url after retries");
-}
-
-async function cdp(ws, method, params = {}) {
+async function startServer(html) {
   return new Promise((res, rej) => {
-    const timer = setTimeout(() => rej(new Error(`CDP timeout: ${method}`)), CDP_TIMEOUT_MS);
-    const id = Math.floor(Math.random() * 1e9);
-    ws.once("message", function handler(raw) {
-      const msg = JSON.parse(raw);
-      if (msg.id === id) {
-        clearTimeout(timer);
-        msg.error ? rej(msg.error) : res(msg.result);
-      } else {
-        ws.once("message", handler);
-      }
+    const server = http.createServer((req, resp) => {
+      resp.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+      resp.end(html, "utf8");
     });
-    ws.send(JSON.stringify({ id, method, params }));
+    server.listen(HTTP_PORT, "127.0.0.1", () => res(server));
+    server.on("error", rej);
   });
 }
 
 // ── Main ─────────────────────────────────────────────────────────
 
 (async () => {
-  // Read flow.json and generate standalone HTML
   const flow = JSON.parse(fs.readFileSync(FLOW_JSON, "utf8"));
   const html = buildHtml(flow);
 
-  // Serve HTML via Node's built-in http (avoids file:// restrictions in CI)
-  const htmlServer = http.createServer((req, res) => {
-    res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
-    res.end(html);
-  });
-  await new Promise(r => htmlServer.listen(HTTP_PORT, "127.0.0.1", r));
+  const server = await startServer(html);
   console.error(`html server: http://127.0.0.1:${HTTP_PORT}/`);
 
-  // Launch Chrome
-  const browser = spawn(CHROMIUM_BIN, [
-    "--headless=new",
-    "--no-sandbox",
-    "--disable-gpu",
-    "--disable-dev-shm-usage",         // critical for CI/Docker containers
-    "--disable-software-rasterizer",
-    `--remote-debugging-port=${PORT}`,
-    "--window-size=520,900",
-  ], { detached: true, stdio: "ignore" });
-  browser.unref();
+  const url = `http://127.0.0.1:${HTTP_PORT}/`;
 
-  let ws;
-  try {
-    const wsUrl = await getWsUrl();
-    ws = new WebSocket(wsUrl);
-    await new Promise(r => ws.on("open", r));
-
-    await cdp(ws, "Emulation.setDeviceMetricsOverride", {
-      width: 492, height: 900, deviceScaleFactor: 2.5, mobile: false,
+  // Chrome --screenshot mode: much simpler than CDP, no WebSocket needed.
+  // Use async spawn so Node.js event loop stays alive to serve HTTP requests.
+  const tmpOut = OUT + ".full.png";
+  await new Promise((res, rej) => {
+    const browser = spawn(CHROMIUM_BIN, [
+      "--headless=new",
+      "--no-sandbox",
+      "--disable-gpu",
+      "--disable-dev-shm-usage",
+      "--disable-software-rasterizer",
+      "--disable-extensions",
+      "--no-first-run",
+      "--hide-scrollbars",
+      `--window-size=492,900`,
+      `--screenshot=${tmpOut}`,
+      url,
+    ], { stdio: ["ignore", "ignore", "pipe"] });
+    const timer = setTimeout(() => { browser.kill(); rej(new Error("Chrome timeout")); }, 30000);
+    browser.on("close", code => {
+      clearTimeout(timer);
+      code === 0 ? res() : rej(new Error(`Chrome exited ${code}`));
     });
+  });
 
-    await cdp(ws, "Page.navigate", { url: `http://127.0.0.1:${HTTP_PORT}/` });
-    await sleep(LOAD_WAIT_MS);
+  server.close();
 
-    // Diagnostics
-    const { result: diagR } = await cdp(ws, "Runtime.evaluate", {
-      expression: `document.title + " | len=" + document.body.innerHTML.length + " | fc=" + !!document.getElementById("flow-card")`
-    });
-    console.error("page:", diagR.value);
-
-    // Get bounding rect of flow-card
-    const { result: rectR } = await cdp(ws, "Runtime.evaluate", {
-      expression: `JSON.stringify((function(){ const el=document.getElementById("flow-card"); if(!el) return null; const r=el.getBoundingClientRect(); return {x:r.left,y:r.top,w:r.width,h:r.height}; })())`
-    });
-
-    let clip;
-    const rv = rectR.value ? JSON.parse(rectR.value) : null;
-    console.error("rect:", rv);
-
-    if (rv && rv.w > 0 && rv.h > 0) {
-      const M = 14;
-      clip = { x: Math.max(0, rv.x - M), y: Math.max(0, rv.y - M), width: rv.w + M * 2, height: rv.h + M * 2, scale: 1 };
-    } else {
-      // Fallback: full-width top crop
-      clip = { x: 0, y: 0, width: 492, height: 700, scale: 1 };
-    }
-
-    const shot = await cdp(ws, "Page.captureScreenshot", { format: "png", clip });
-    fs.writeFileSync(OUT, Buffer.from(shot.data, "base64"));
-    console.log(`saved: ${OUT}  (${clip.width.toFixed(0)}×${clip.height.toFixed(0)})`);
-
-    ws.close();
-  } finally {
-    htmlServer.close();
-    try { process.kill(-browser.pid, "SIGTERM"); } catch(e) {}
+  if (!fs.existsSync(tmpOut)) {
+    throw new Error(`Screenshot file not created: ${tmpOut}`);
   }
+
+  // Trim to card area using ImageMagick (if available), else use as-is
+  // The card starts at roughly x=16,y=16 and is width=460
+  try {
+    // Try to auto-trim whitespace and crop to content
+    execSync(
+      `convert "${tmpOut}" -trim -bordercolor "#fafaf7" -border 12 "${OUT}"`,
+      { stdio: "ignore" }
+    );
+    console.log(`saved (trimmed): ${OUT}`);
+  } catch(e) {
+    // ImageMagick not available — just use the full screenshot
+    fs.copyFileSync(tmpOut, OUT);
+    console.log(`saved (full): ${OUT}`);
+  }
+  try { fs.unlinkSync(tmpOut); } catch(e) {}
+
 })().catch(e => { console.error(e); process.exit(1); });
