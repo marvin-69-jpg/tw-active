@@ -142,6 +142,25 @@
     color: var(--ink-soft); font-size: 11px;
   }
 
+  /* ── flows chart ── */
+  .flows-wrap { margin-top: 4px; }
+  .flows-title { font-size: 11px; color: var(--ink-soft); margin-bottom: 6px; }
+  .flows-title b { color: var(--ink); }
+  .chart-svg { width: 100%; display: block; overflow: visible; }
+  .flows-legend { display: flex; gap: 16px; font-size: 10px; color: var(--ink-soft); margin-top: 6px; flex-wrap: wrap; }
+  .flows-legend span { display: flex; align-items: center; gap: 4px; }
+  .leg-box { display: inline-block; width: 12px; height: 10px; border-radius: 1px; }
+  .flows-kpi {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 8px; margin: 12px 0;
+    border: 1px solid var(--rule); background: var(--panel); padding: 10px 12px;
+  }
+  .flows-kpi .cell { font-size: 11px; color: var(--ink-soft); }
+  .flows-kpi .cell .val { display: block; font-family: ui-monospace, monospace; font-size: 14px; color: var(--ink); margin-top: 2px; }
+  .flows-kpi .cell .val.pos { color: var(--up); }
+  .flows-kpi .cell .val.neg { color: #c0392b; }
+  @media (max-width: 640px) { .flows-kpi { grid-template-columns: repeat(2, 1fr); } }
+
   @media (max-width: 640px) {
     body { padding: 18px 12px 32px; font-size: 12px; }
     h1 { font-size: 17px; }
@@ -165,7 +184,7 @@
 
 <div class="tabs" id="tabs">
   <button class="tab active" data-view="scale">規模時序</button>
-  <button class="tab" data-view="flows" disabled>今日申購榜（Phase 2）</button>
+  <button class="tab" data-view="flows">申購 × 大跌</button>
   <button class="tab" data-view="alpha" disabled>自肥 alpha（Phase 3）</button>
 </div>
 
@@ -360,11 +379,130 @@ document.querySelectorAll('.sort-btn').forEach(b => {
   });
 });
 
-document.querySelectorAll('.tab:not([disabled])').forEach(t => {
+const DRAWDOWNS = [
+  { start: '20250911', end: '20251028', label: '9-10月 −8.4%', peak: '213.8 億', trough: '195.9 億', recover: '212.7 億', op: '換股，清金融轉 AI 供應鏈' },
+  { start: '20260114', end: '20260130', label: '1月戰爭 −9.1%', peak: '519.3 億', trough: '472.1 億', recover: '575.2 億（+10.8%）', op: '清倉，0050 砍 11,000 張，等底再補' },
+  { start: '20260302', end: '20260310', label: '3月美伊衝突 −5.7%', peak: '643.8 億', trough: '607.1 億', recover: '890.6 億（+46.7%）', op: '抄底，大跌當天進場買' },
+];
+
+function renderFlows() {
+  const etf = d.etfs.find(e => e.code === '00981A');
+  if (!etf || !etf.series || !etf.series.length) {
+    $('view').innerHTML = '<div style="padding:24px;color:var(--ink-soft)">00981A 資料載入失敗</div>';
+    return;
+  }
+  const series = etf.series;
+
+  // Chart dimensions
+  const W = 800, H = 180, PAD_L = 48, PAD_R = 12, PAD_T = 12, PAD_B = 36;
+  const chartW = W - PAD_L - PAD_R;
+  const chartH = H - PAD_T - PAD_B;
+
+  // Inflow range
+  const inflows = series.map(p => p.inflow);
+  const maxAbs = Math.max(...inflows.map(Math.abs), 1);
+  const yScale = v => PAD_T + chartH * (1 - (v / maxAbs + 1) / 2); // 0 in middle
+  const y0 = yScale(0);
+  const xScale = i => PAD_L + (i / (series.length - 1)) * chartW;
+
+  // Drawdown bands
+  const bands = DRAWDOWNS.map(dr => {
+    const si = series.findIndex(p => p.date >= dr.start);
+    const ei = series.findIndex(p => p.date > dr.end);
+    if (si < 0) return '';
+    const x1 = xScale(si);
+    const x2 = ei < 0 ? xScale(series.length - 1) : xScale(ei);
+    return `<rect x="${x1}" y="${PAD_T}" width="${x2 - x1}" height="${chartH}" fill="#c0392b" opacity="0.08"/>`;
+  }).join('');
+
+  // Bars
+  const barW = Math.max(1, Math.floor(chartW / series.length) - 0.5);
+  const bars = series.map((p, i) => {
+    const v = p.inflow;
+    const x = xScale(i);
+    const fill = v >= 0 ? '#b8860b' : '#c0392b';
+    if (v >= 0) {
+      const h = Math.max(1, (v / maxAbs) * (chartH / 2));
+      return `<rect x="${x - barW / 2}" y="${y0 - h}" width="${barW}" height="${h}" fill="${fill}" opacity="0.85"/>`;
+    } else {
+      const h = Math.max(1, (-v / maxAbs) * (chartH / 2));
+      return `<rect x="${x - barW / 2}" y="${y0}" width="${barW}" height="${h}" fill="${fill}" opacity="0.85"/>`;
+    }
+  }).join('');
+
+  // X-axis ticks: one per quarter approx
+  const tickEvery = Math.max(1, Math.floor(series.length / 8));
+  const ticks = series.map((p, i) => {
+    if (i % tickEvery !== 0) return '';
+    const x = xScale(i);
+    const lbl = `${p.date.slice(0,4)}-${p.date.slice(4,6)}`;
+    return `<line x1="${x}" y1="${y0}" x2="${x}" y2="${y0 + 4}" stroke="#aaa" stroke-width="0.5"/>
+            <text x="${x}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#888">${lbl}</text>`;
+  }).join('');
+
+  // Drawdown labels
+  const drLabels = DRAWDOWNS.map(dr => {
+    const si = series.findIndex(p => p.date >= dr.start);
+    const ei = series.findIndex(p => p.date > dr.end);
+    if (si < 0) return '';
+    const x1 = xScale(si);
+    const x2 = ei < 0 ? xScale(series.length - 1) : xScale(ei);
+    const xm = (x1 + x2) / 2;
+    return `<text x="${xm}" y="${PAD_T + 10}" text-anchor="middle" font-size="8.5" fill="#c0392b" font-weight="600">${dr.label}</text>`;
+  }).join('');
+
+  // Y-axis labels
+  const yLabels = [maxAbs, 0, -maxAbs].map(v => {
+    const y = yScale(v);
+    const txt = v === 0 ? '0' : `${v >= 0 ? '+' : ''}${Math.round(v)} 億`;
+    return `<text x="${PAD_L - 4}" y="${y + 4}" text-anchor="end" font-size="9" fill="#888">${txt}</text>`;
+  }).join('');
+
+  const svg = `<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto;overflow:visible">
+    ${bands}
+    <line x1="${PAD_L}" y1="${y0}" x2="${W - PAD_R}" y2="${y0}" stroke="#ccc" stroke-width="0.8"/>
+    ${bars}
+    ${ticks}
+    ${drLabels}
+    ${yLabels}
+  </svg>`;
+
+  // KPI cards for each drawdown
+  const cards = DRAWDOWNS.map(dr => `
+    <div class="flows-kpi" style="margin-bottom:12px;border:1px solid var(--rule);background:var(--panel);padding:10px 12px;border-radius:2px">
+      <div style="font-size:11px;font-weight:600;color:#c0392b;margin-bottom:8px">${dr.label}</div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;font-size:11px">
+        <div><span style="color:var(--ink-soft)">前 AUM</span><br><b>${dr.peak}</b></div>
+        <div><span style="color:var(--ink-soft)">谷底 AUM</span><br><b>${dr.trough}</b></div>
+        <div><span style="color:var(--ink-soft)">回升後 AUM</span><br><b>${dr.recover}</b></div>
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--ink-soft)">操作：<span style="color:var(--ink)">${dr.op}</span></div>
+    </div>
+  `).join('');
+
+  $('view').innerHTML = `
+    <div class="flows-wrap">
+      <div class="flows-title">00981A 統一主動台股增長 · <b>日淨申購流量</b>（億元）· ${fmtDate(series[0].date)} – ${fmtDate(series[series.length-1].date)}</div>
+      <div class="flows-legend">
+        <span><svg width="10" height="10"><rect width="10" height="10" fill="#b8860b" opacity="0.85"/></svg> 淨申購（資金流入）</span>
+        <span><svg width="10" height="10"><rect width="10" height="10" fill="#c0392b" opacity="0.85"/></svg> 淨贖回（資金流出）</span>
+        <span><svg width="10" height="10"><rect width="10" height="10" fill="#c0392b" opacity="0.12"/></svg> 大跌區間</span>
+      </div>
+      ${svg}
+      <div style="margin-top:16px;font-size:12px;font-weight:600;margin-bottom:8px">三次大跌期間操作摘要</div>
+      ${cards}
+      <div style="margin-top:8px;font-size:10px;color:var(--ink-soft)">NAV = 每單位淨值（net asset value），AUM = 總資產規模 = NAV × 流通單位數。日淨申購為估算值（Δ流通單位 × 當日 NAV）。</div>
+    </div>
+  `;
+}
+
+document.querySelectorAll('.tab').forEach(t => {
   t.addEventListener('click', () => {
     document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
     t.classList.add('active');
-    if (t.dataset.view === 'scale') renderScale();
+    const view = t.dataset.view;
+    if (view === 'scale') { $('sort-row').style.display = ''; renderScale(); }
+    else if (view === 'flows') { $('sort-row').style.display = 'none'; renderFlows(); }
   });
 });
 
