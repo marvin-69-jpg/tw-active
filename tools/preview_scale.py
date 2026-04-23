@@ -59,6 +59,32 @@ from pathlib import Path
 _CASH_MARKERS = {"C_NTD", "M_NTD", "PFUR_NTD", "RDI_NTD"}
 
 
+def _load_pcf(etf: str) -> dict[str, float]:
+    """raw/pcf/<ETF>.json → {date: inflow_yi}（官方申購/贖回，億元）。
+
+    ezmoney GetPCF 儲存格式：{YYYYMMDD: {"diff_unit": X, "p_unit": Y, "inflow_yi": Z} | null}
+    只有 00981A / 00988A 有資料，其他 ETF 回空 dict（fallback 到估算）。
+
+    注意：PCF 日期對應 query date（結算日 T+1），比實際申購日晚 1 天。
+    在月度聚合下這 1 天偏移對同月資料互相抵消，月邊界有等同估算的誤差。
+    """
+    path = Path(f"raw/pcf/{etf}.json")
+    if not path.exists():
+        return {}
+    try:
+        raw = json.loads(path.read_text())
+    except Exception:
+        return {}
+    out: dict[str, float] = {}
+    for date_str, v in raw.items():
+        if v is not None and isinstance(v, dict):
+            try:
+                out[date_str] = float(v["inflow_yi"])
+            except Exception:
+                pass
+    return out
+
+
 def _load_shares(etf: str) -> list | None:
     path = Path(f"raw/cmoney/shares/{etf}.json")
     if not path.exists():
@@ -143,6 +169,7 @@ def build_etf(etf: str) -> dict | None:
     nav = _load_nav(etf)
     meta = _load_meta(etf)
     px = _load_prices(etf)
+    pcf = _load_pcf(etf)  # 官方申購/贖回（有資料的 ETF 才有）
     if not shares or not nav:
         return None
 
@@ -210,17 +237,26 @@ def build_etf(etf: str) -> dict | None:
     if len(series) < 2:
         return None
 
-    # derive per-day net inflow = Δunits × NAV
+    # derive per-day net inflow = Δunits × NAV（估算），PCF 官方資料優先覆蓋
     prev_units = None
     inflow_cum = 0.0
+    pcf_days = 0
     top_in = {"date": None, "inflow": float("-inf")}
     top_out = {"date": None, "inflow": float("inf")}
     for p in series:
         if prev_units is None:
             p["inflow"] = 0.0
+            p["inflow_source"] = "pcf" if p["date"] in pcf else "est"
         else:
             d_units = p["units"] - prev_units   # 億
-            inflow = d_units * p["nav"]          # 億元
+            est_inflow = d_units * p["nav"]      # 億元（估算）
+            if p["date"] in pcf:
+                inflow = pcf[p["date"]]
+                p["inflow_source"] = "pcf"
+                pcf_days += 1
+            else:
+                inflow = est_inflow
+                p["inflow_source"] = "est"
             p["inflow"] = inflow
             inflow_cum += inflow
             if inflow > top_in["inflow"]:
@@ -250,6 +286,7 @@ def build_etf(etf: str) -> dict | None:
         "inflow_share_of_growth": inflow_share,
         "nav_current": series[-1]["nav"],
         "units_current": series[-1]["units"],
+        "pcf_days": pcf_days,          # 幾天用官方 PCF（0 = 全估算）
         "top_inflow_day": top_in if top_in["date"] else None,
         "top_outflow_day": top_out if top_out["date"] else None,
         "series": series,
