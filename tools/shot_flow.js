@@ -18,7 +18,7 @@ const fs = require("fs");
 const PORT = 19252;           // CDP remote debugging port
 const PREVIEW_PORT = 18765;   // local preview HTTP server
 const OUT = process.argv[2] || "/tmp/shot_flow.png";
-const LOAD_WAIT_MS = 4500;    // wait for JS fetch + render
+const LOAD_WAIT_MS = 7000;    // wait for JS fetch + render (CI needs more time)
 
 // Try both common Chromium binary names
 const CHROMIUM_BIN = (() => {

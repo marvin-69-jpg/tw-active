@@ -42,8 +42,11 @@ jobs:
         run: |
           python3 -m http.server 18765 --directory site/preview &
           HTTP_PID=$!
-          sleep 2
-          # shot_flow.js tries /usr/bin/chromium-browser
+          # 等 HTTP server 真的起來
+          for i in $(seq 1 15); do
+            curl -sf http://127.0.0.1:18765/flow.json -o /dev/null && break
+            sleep 1
+          done
           node tools/shot_flow.js /tmp/shot_flow.png
           kill $HTTP_PID 2>/dev/null || true
 
