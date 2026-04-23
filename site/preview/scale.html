@@ -418,6 +418,10 @@ function positionFlowTip(evt) {
 function hideFlowTip() {
   document.getElementById('flow-tip').style.display = 'none';
 }
+// module scope → global，讓 SVG inline onmouseenter 能找到
+window.showFlowTip = showFlowTip;
+window.positionFlowTip = positionFlowTip;
+window.hideFlowTip = hideFlowTip;
 
 function renderFlows() {
   const etf = d.etfs.find(e => e.code === '00981A');
