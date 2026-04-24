@@ -40,6 +40,16 @@ CLI：
 - `tools/preview_flow.py` — 從 raw/cmoney/shares/ 計算資金流向，產 site/preview/flow.json（供 morning_post 用）
 - `tools/preview_scale.py` — 跨 ETF 規模/申購/飛輪分析，產 site/preview/scale.json（讀 shares+premium+meta+prices+pcf）
 
+**查詢工具（ad-hoc，讀同一份資料層）**：
+
+| 指令 | 用途 |
+|---|---|
+| `./tools/query_holdings.py 00981A 2454 [--from YYYYMMDD] [--tail N]` | 單 ETF × 單股票歷史持倉 + 浮損益 |
+| `./tools/query_stock.py 2454` | 某個股被哪幾家 ETF 持有（合計張數） |
+| `./tools/query_movers.py 00981A --from YYYYMMDD [--top N]` | 某 ETF 某時段加碼/減碼排行 + 金額 |
+
+加 `--json` 供下游使用。
+
 ---
 
 ## Debug SOP：Pages 資料看起來沒更新
