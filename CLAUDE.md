@@ -41,11 +41,11 @@ reports/       ← 每日 research report（搬家後重新開始）
   threads/     ← Threads murmur 短版
 schema/        ← wiki ingest/query/lint 規則
 tools/         ← fundclear.py, twquote.py, etfdaily.py, managerwatch.py,
-                 mopsetf.py, datastore.py, signals.py, peoplefuse.py,
+                 mopsetf.py,
                  threads.py, wiki.py, memory.py, site_build.py
 docs/tools/    ← 每個自研 data fetcher 的研究筆記（破解/finding/穩定度）
 .claude/skills/← 各工具操作手冊（fundclear/twquote/etfdaily/managerwatch/
-                 mopsetf/datastore/signals/peoplefuse）+ browser/ingest/research（通用）
+                 mopsetf）+ browser/ingest/research（通用）
 site/          ← GitHub Pages 前端（共識圈視覺化）
 index.md       ← wiki 目錄
 log.md         ← 操作記錄
@@ -89,7 +89,6 @@ log.md         ← 操作記錄
 | **基金月報 Top 10** | SITCA **IN2629** | `managerwatch` | — |
 | **基金季報 ≥1% 持股** | SITCA **IN2630** | `managerwatch` | — |
 | **歷史月報 Top 5**（ETF、SITCA filter bug 時） | MOPS `t78sb39_q3` | `mopsetf` | — |
-| **SQLite 合流 query**（經理人 × ETF 交叉） | 本地 `raw/store.db` | `datastore` / `signals` | — |
 
 詳見 [`docs/tools/README.md`](docs/tools/README.md) 與各 `.claude/skills/<name>/SKILL.md`。
 
