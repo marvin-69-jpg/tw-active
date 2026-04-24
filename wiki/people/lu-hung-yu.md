@@ -20,7 +20,6 @@ updated: 2026-04-19
 
 ## 資料
 
-下方 AUTO 區塊由 `./tools/peoplefuse.py render lu-hung-yu` 渲染，**手動修改會被下次 render 覆寫**。
 
 <!-- AUTO:START peoplefuse v1 | generated 2026-04-19T04:37Z -->
 
