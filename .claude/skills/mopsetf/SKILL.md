@@ -59,15 +59,6 @@ for m in 202511 202512 202601 202602; do
 done
 ```
 
-### Pattern 2：整批 backfill 進 SQLite（走 datastore）
-
-```bash
-./tools/datastore.py backfill mops-monthly --from 202511 --to 202602
-```
-
-- datastore 會跑 mopsetf CLI → `holdings_fund_monthly` 表
-- fund_name 已 normalize（`證券投資信託基金` → `基金`），`active_etf_monthly` view 自動包含
-
 ### Pattern 3：同月 SITCA vs MOPS 交叉比對
 
 ```bash
@@ -104,6 +95,4 @@ done
 
 ## 資料落地
 
-1. JSON stdout → pipe 到 `raw/mops/monthly_<ym>.json`（archive）
-2. SQLite → `./tools/datastore.py ingest mops-monthly --month <ym>` → `holdings_fund_monthly`
-3. view `active_etf_monthly` 自動過濾到 13 檔 whitelist 基金（fund_name normalize 已對齊）
+JSON stdout → pipe 到 `raw/mops/monthly_<ym>.json`（archive）。

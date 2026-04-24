@@ -37,6 +37,8 @@ CLI：
 - `tools/preview_build.py` — Layer 2，讀 raw/cmoney/ 產 site/preview/
 - `tools/preview_prices.py` — Layer 3，吃 site/preview/<etf>.json 產 <etf>-prices.json
 - `tools/preview_all.py` — batch 版：上述兩層 + etfs.json 合成
+- `tools/preview_flow.py` — 從 raw/cmoney/shares/ 計算資金流向，產 site/preview/flow.json（供 morning_post 用）
+- `tools/preview_scale.py` — 跨 ETF 規模/申購/飛輪分析，產 site/preview/scale.json（讀 shares+premium+meta+prices+pcf）
 
 ---
 

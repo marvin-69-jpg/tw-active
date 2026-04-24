@@ -22,6 +22,9 @@ uv run python3 tools/memory.py <subcommand>
 | `stats` | 記憶分佈概覽 |
 | `recall <query>` | 跨 memory/ + wiki/ 搜尋，brain-first lookup |
 | `brief` | Session 啟動 briefing — 壓縮輸出 agent 目前知道的一切 |
+| `reconsolidate <file> [<file>...]` | 對剛讀過的 memory 檔做 staleness 偵測（retrieval-triggered update） |
+| `link [--apply] [--file <name>]` | 找記憶之間的語意相關性，補 cross-link（圖式豐富化） |
+| `dedup-check (--file <path> \| --name <n> --description <d>)` | 寫新記憶前的 RPE gate：確認沒有重複 |
 
 可選參數：
 - `--memory-dir PATH` — 記憶目錄（預設 `/home/node/.claude/projects/-home-node/memory/`）

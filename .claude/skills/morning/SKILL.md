@@ -31,6 +31,8 @@ uv run python3 -c "import json; d=json.load(open('site/preview/flow.json')); pri
 
 # Step 2：產文案，直接貼給使用者
 uv run tools/morning_post.py
+# 附字數資訊（debug 用）
+uv run tools/morning_post.py --preview
 ```
 
 文案格式：
