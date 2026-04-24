@@ -1,6 +1,6 @@
 # Preview Pipeline Skill
 
-觸發：「preview」「Pages 資料沒更新」「as_of 停在舊日期」「flows stale」「winners 沒動」「股價 overlay 怪」「preview_build」「preview_prices」「daily-preview」「pages-deploy 沒 trigger」
+觸發：「preview」「Pages 資料沒更新」「as_of 停在舊日期」「flows stale」「股價 overlay 怪」「preview_build」「preview_prices」「daily-preview」「pages-deploy 沒 trigger」
 
 **研究筆記**：`docs/tools/cmoney_raw.md`（raw 結構 + 四層鏈 + debug SOP）、`docs/tools/preview_prices.md`（FinMind fetcher + cache key 教訓）—— 本 SKILL.md 是操作手冊
 
@@ -14,7 +14,7 @@ Pages 上的 `as_of` 不是單一 workflow 推的，是**四層堆疊**。任一
 Layer 1  外部 CI → raw/cmoney/{<ETF>/batch_*, shares/*, premium/*, dividend/*, meta/*}
    ↓           （push 路徑觸發 daily-preview）
 Layer 2  .github/workflows/daily-preview.yml → tools/preview_build.py
-   ↓           → site/preview/<etf>.json、etfs.json、flows.json、winners.json
+   ↓           → site/preview/<etf>.json、etfs.json、flow.json、scale.json
 Layer 3  同 workflow → tools/preview_prices.py（FinMind）
    ↓           → site/preview/<etf>-prices.json
 Layer 4  .github/workflows/pages-deploy.yml（site/** 路徑觸發）
@@ -36,7 +36,7 @@ export GH_TOKEN=$(cat /home/node/.gh-token-marvin)
 CLI：
 - `tools/preview_build.py` — Layer 2，讀 raw/cmoney/ 產 site/preview/
 - `tools/preview_prices.py` — Layer 3，吃 site/preview/<etf>.json 產 <etf>-prices.json
-- `tools/preview_all.py` — batch 版：上述兩層 + etfs.json / flows.json / winners.json 合成
+- `tools/preview_all.py` — batch 版：上述兩層 + etfs.json 合成
 
 ---
 
