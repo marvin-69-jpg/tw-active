@@ -38,7 +38,7 @@ Pages 上的 `as_of` 不是單一 workflow 推出來的，是四層堆疊，任�
 Layer 1  外部 CI → raw/cmoney/{<ETF>/batch_*, shares/*, premium/*, dividend/*, meta/*}
    ↓           （push 路徑觸發 daily-preview）
 Layer 2  .github/workflows/daily-preview.yml → tools/preview_build.py
-   ↓           → site/preview/<etf>.json、etfs.json、flows.json、winners.json
+   ↓           → site/preview/<etf>.json、etfs.json、flow.json、scale.json
 Layer 3  同 workflow → tools/preview_prices.py
    ↓           → site/preview/<etf>-prices.json（FinMind 股價）
 Layer 4  .github/workflows/pages-deploy.yml（由 site/** 路徑觸發）
