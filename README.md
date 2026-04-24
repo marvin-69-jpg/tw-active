@@ -89,34 +89,7 @@ parse                          本地 HTML 解析（test only）
 
 > **主動 ETF 全歷史持股**（21 檔回溯至 2025-05）的抓取實作獨立於另一 repo，跑完 push 回本 repo 的 `raw/cmoney/` 供下游消費。
 
-### 二、儲存與 query
-
-#### `datastore` — SQLite 時序儲存
-> 把上面所有 primary source 正規化進 `raw/store.db`，支援跨來源合流 query。
-```
-init                              建表
-ingest holdings-fund <path>       寫入基金月報
-ingest holdings-etf-daily <path>  寫入 ETF 日持股
-ingest top5-mops <path>           寫入 MOPS 歷史月報
-backfill months <from> <to>       批次月範圍 ingest
-query manager <name>              經理人管的所有基金與 ETF
-query holding <code>              某檔股票被誰持有
-stats                             coverage / 筆數 / 日期範圍
-migrate                           schema drift 修復
-whitelist                         active_etf_* view 基金白名單
-```
-
-#### `signals` — 經理人策略訊號偵測
-> 9 種訊號的機器化實作，跑在 `datastore` 之上。
-```
-detect <n>      偵測單一訊號（4/5/7/8/9）
-all             跑全部可機器化的訊號
-explain <n>     印訊號邏輯與 SQL
-stats           coverage 與訊號清單
-```
-訊號範例：`#4 多基金共識`、`#5 單檔重壓`、`#7 經理人跨產品加碼`、`#8 雙軌落差`、`#9 季度出場`。
-
-### 三、Wiki 維護
+### 二、Wiki 維護
 
 #### `wiki` — Obsidian wiki 管理
 ```
