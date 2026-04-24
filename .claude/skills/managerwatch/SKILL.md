@@ -29,6 +29,7 @@ cd /home/node/tw-active
 |---|---|
 | `./tools/managerwatch.py companies` | SITCA 投信代碼清單 |
 | `./tools/managerwatch.py classes` | 基金分類代碼（AL11 = 國內主動 ETF 股票型） |
+| `./tools/managerwatch.py catalog` | 本專案 19 檔觀測清單（13 基金 + 6 ETF，加 `--json`） |
 | `./tools/managerwatch.py sitca monthly --month 202603 --class AL11` | 當月某類型全部基金 Top 10 |
 | `./tools/managerwatch.py sitca monthly --month 202603 --by comid --comid A0009 --class AA1` | 某投信所有基金 Top 10 |
 | `./tools/managerwatch.py sitca quarterly --quarter 202512 --class AL11` | 季報 ≥1% 全持股 |

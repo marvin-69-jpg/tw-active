@@ -31,9 +31,10 @@
 
    **Match（CLI）** → 用 CLI 找 related pages：
    ```bash
-   cd /home/node/agent-memory-research && export PATH="/home/node/.local/bin:$PATH"
-   uv run python3 tools/wiki.py match <keyword1> <keyword2> ...
+   cd /home/node/tw-active && export PATH="/home/node/.local/bin:$PATH"
+   uv run python3 tools/wiki.py --wiki-dir wiki --index index.md --log log.md match <keyword1> <keyword2> ...
    ```
+   > `wiki.py` 預設路徑指向 `agent-memory-research/`，在 tw-active 用必須加 `--wiki-dir wiki --index index.md --log log.md`（以下所有 `wiki.py` 呼叫同）。
    用 Extract 抽出的每個 entity 作為 keyword。CLI 回傳 ranked list，取代手動掃 index.md。
 
    **Plan** → 根據 match 結果 + extract 結果，列出要新建 / 更新的 pages
@@ -43,7 +44,7 @@
 
    **Verify（CLI）** → 跑 lint 檢查 bidirectional links：
    ```bash
-   uv run python3 tools/wiki.py lint
+   uv run python3 tools/wiki.py --wiki-dir wiki --index index.md --log log.md lint
    ```
    修完所有 errors（missing backlinks）再繼續。
 
@@ -84,7 +85,7 @@
 
 5. **Commit & push**
    ```bash
-   cd /home/node/agent-memory-research
+   cd /home/node/tw-active
    git add -A
    git commit -m "ingest: <作者> — <標題> (<日期>)"
    git push
@@ -116,7 +117,7 @@
 | `wiki.py lint` | Execute 後 | 驗證 bidirectional links、meta-page staleness |
 | `wiki.py status` | 任何時候 | 快速 overview（page count、last ingest、tag 分佈） |
 
-所有指令前都要 `cd /home/node/agent-memory-research && export PATH="/home/node/.local/bin:$PATH"`。
+所有指令前都要 `cd /home/node/tw-active && export PATH="/home/node/.local/bin:$PATH"`，`wiki.py` 一律加 `--wiki-dir wiki --index index.md --log log.md`（預設指向 agent-memory-research）。
 
 ---
 
