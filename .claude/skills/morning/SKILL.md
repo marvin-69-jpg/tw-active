@@ -52,17 +52,6 @@ uv run tools/morning_post.py
 
 ---
 
-## 附圖流程（可選）
-
-```bash
-uv run tools/gen_flow_card.py /tmp/flow_card.png
-# → 輸出 /tmp/flow_card.png（1080px 寬）
-```
-
-用 Read 工具讀圖給使用者看確認，確認後讓使用者自行貼文。
-
----
-
 ## flow.json 過期時
 
 flow.json 的 `as_of` 不是今天 → 需重建：
