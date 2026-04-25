@@ -41,11 +41,11 @@ reports/       ← 每日 research report（搬家後重新開始）
   threads/     ← Threads murmur 短版
 schema/        ← wiki ingest/query/lint 規則
 tools/         ← fundclear.py, twquote.py, etfdaily.py, managerwatch.py,
-                 mopsetf.py, papers.py,
+                 mopsetf.py, papers.py, active_share.py,
                  threads.py, wiki.py, memory.py, site_build.py
 docs/tools/    ← 每個自研 data fetcher 的研究筆記（破解/finding/穩定度）
 .claude/skills/← 各工具操作手冊（fundclear/twquote/etfdaily/managerwatch/
-                 mopsetf/papers）+ browser/ingest/research（通用）
+                 mopsetf/papers/active_share）+ browser/ingest/research（通用）
 site/          ← GitHub Pages 前端（共識圈視覺化）
 index.md       ← wiki 目錄
 log.md         ← 操作記錄

@@ -56,10 +56,27 @@ $$\text{AS} = \frac{1}{2} \sum_i \left| w_{\text{fund},i} - w_{\text{bench},i} \
   - 預測 1：規模 > 50 億的主動 ETF AS 會 < 70%（大部位被迫往大型股集中）
   - 預測 2：科技類（00989A、00991A、00992A）AS 會比較高（自選成分多）
   - 預測 3：高息類（00984A、00998A）AS 會接近 00919/00713 等被動高息 ETF（投資宇宙重疊度高）
+
+### 第一次實作結果（2026-04-25 snapshot, vs industry-mean）
+
+工具：[`tools/active_share.py`](../../tools/active_share.py)（[skill](../../.claude/skills/active_share/SKILL.md) / [docs](../../docs/tools/active_share.md)）。
+
+**這版用 21 檔 industry-mean 當 benchmark**（不是 Cremers-Petajisto 原版的 0050），數字不能直接套 60/80 門檻，但「相對排序」清楚。
+
+- **17 檔 TW-focused vs 4 檔外股導向**：00986A / 00988A / 00990A / 00997A 的 TW 曝險都 < 25%，是主動 ETF 包裝買美股或全球股，不是台股策略 → AS 比較不適用，從統計排除
+- **三胞胎 cluster**：00981A ↔ 00995A AS = **20.5%**、加 00994A 三檔 pairwise AS 全 < 26%，幾乎同一個 portfolio
+- **5 檔大型權值股共識圈**：00400A / 00981A / 00991A / 00994A / 00995A 互相 AS 都 < 36%，這是規模遞減壓力下「不約而同往台積電/聯發科靠」的 textbook signature
+- **異類**：00984A（高息）跟其他大多數 AS = 73–79%、00993A 也偏離主流；它們的策略真的不一樣，AS 是中性 detector，不論好壞
+- **AS vs industry-mean 排序**：
+  - 最獨立：00993A 60.4%、00984A 60.0%、00982A 48.2%、00987A 47.6%
+  - 最像主動共識：00995A 29.3%、00994A 32.5%、00400A 34.6%、00980A 34.8%、00981A 35.6%
+
+**對「規模遞減 → closet 化」假說的初步啟示**：5 檔權值股 cluster 中包含目前規模較大的幾檔（00981A、00995A 等）——和 PSTZ 2014 / Cremers-Petajisto 路徑預期方向一致。不過單一 snapshot 不夠，要做時序：規模膨脹 → AS 收斂的因果。
 - **配息平準金當 closet 的「掩護」**——若一檔主動 ETF 實質是 closet 但 fee 是 1.2%（高於 0050 的 0.32%），唯一把費差「賺回來」的方式是高息——但高息又透過收益平準金 / 資本利得分配虛胖，投資人看到的「殖利率」掩護了實質的 closet+fee drag。詳見 [[wiki/mechanisms/income-equalization]]（待建）
 
 ## Timeline
 
+- **2026-04-25** — 跑出第一版 AS 計算（`tools/active_share.py`，industry-mean base）。發現 00981A/00994A/00995A 三胞胎 cluster + 5 檔權值股共識圈 + 00984A/00993A 是異類。Compiled Truth 補進實證結果
 - **2026-04-25** — 抓 Cremers-Petajisto 2009 RFS metadata（PDF paywall），開此 mechanism page；計畫做台灣主動 ETF 的 AS 計算 prototype（[[raw/papers/rfs_cremers_petajisto_2009]]）
 
 ## Related
