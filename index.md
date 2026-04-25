@@ -8,7 +8,7 @@
 - `wiki/etfs/` — 個別 ETF
 - `wiki/issuers/` — 投信發行商
 - `wiki/people/` — 經理人、決策者、研究者
-- `wiki/mechanisms/` — 機制（申贖、配息、追蹤誤差⋯，預留）
+- `wiki/mechanisms/` — 機制（申贖、配息、追蹤誤差⋯）
 - `wiki/regulations/` — 法規（預留）
 - `wiki/events/` — 事件（預留）
 
@@ -48,6 +48,10 @@
 - [[wiki/etfs/00984d|00984D — 主動聯博全球非投]]
 - [[wiki/etfs/00985d|00985D — 主動貝萊德優投等]]
 - [[wiki/etfs/00986d|00986D — 主動復華金融債息]]
+
+## Mechanisms
+
+- [[wiki/mechanisms/diseconomies-of-scale|規模遞減（Diseconomies of Scale）]]
 
 ## Issuers
 
