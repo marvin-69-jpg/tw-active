@@ -95,7 +95,7 @@ def generate_text(flow: dict) -> str:
     )[:SINGLE_BET_MAX_SHOW]
 
     if single_bets:
-        lines.append("單一大注：")
+        lines.append("集中加碼：")
         for s in single_bets:
             codes = etf_codes(s, "buy")
             codes_str = f"（{codes}）" if codes else f"（{s['etfs_buy']} 家）"
