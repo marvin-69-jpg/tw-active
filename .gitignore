@@ -18,3 +18,4 @@ raw/store.db-shm
 
 # preview_prices 跨 ETF 共用的 per-stock cache（可從 FinMind 重抓）
 .cache/
+raw/papers/*.pdf
