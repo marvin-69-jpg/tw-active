@@ -50,6 +50,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).parent.parent
 SHARES_DIR = REPO_ROOT / "raw" / "cmoney" / "shares"
+PASSIVE_SHARES_DIR = REPO_ROOT / "raw" / "cmoney" / "shares-passive"
 META_DIR = REPO_ROOT / "raw" / "cmoney" / "meta"
 VOL_CACHE = REPO_ROOT / ".cache" / "volumes"
 OUT_PATH = REPO_ROOT / "site" / "preview" / "frontrunning.json"
@@ -79,9 +80,9 @@ def _is_tw_stock(code: str) -> bool:
     return bool(_TW_CODE_RE.fullmatch(code))
 
 
-def load_shares(etf: str) -> dict[str, dict[str, dict]]:
+def load_shares(etf: str, base_dir: Path | None = None) -> dict[str, dict[str, dict]]:
     """Read raw/cmoney/shares/<etf>.json → {date: {code: {name, shares, weight}}}."""
-    p = SHARES_DIR / f"{etf}.json"
+    p = (base_dir or SHARES_DIR) / f"{etf}.json"
     if not p.exists():
         return {}
     try:
@@ -365,6 +366,8 @@ def main() -> int:
     p.add_argument("--no-fetch", action="store_true", help="不抓 FinMind，用現有 cache")
     p.add_argument("--sleep", type=float, default=0.2, help="FinMind 請求間隔（秒）")
     p.add_argument("--json", action="store_true", help="JSON 輸出")
+    p.add_argument("--with-passive-control", action="store_true",
+                   help="同時跑 raw/cmoney/shares-passive/ 當對照組，分離主動 ETF 特有效應")
     args = p.parse_args()
 
     # 1) load shares
@@ -405,6 +408,23 @@ def main() -> int:
     # 6) analyze
     summary = analyze(events, vols, aum)
 
+    # 7) optional: passive control group
+    passive_summary = None
+    if args.with_passive_control and PASSIVE_SHARES_DIR.exists():
+        passive_etfs = sorted(f.stem for f in PASSIVE_SHARES_DIR.glob("*.json"))
+        passive_shares = {etf: load_shares(etf, PASSIVE_SHARES_DIR) for etf in passive_etfs}
+        passive_shares = {k: v for k, v in passive_shares.items() if v}
+        passive_events = build_events(passive_shares, args.min_pct, args.min_shares)
+        sys.stderr.write(f"passive events: {len(passive_events)} from {len(passive_shares)} ETFs\n")
+        # ensure volumes for passive event stocks (cache hit usually because same TW universe)
+        passive_codes = {e["code"] for e in passive_events}
+        if args.no_fetch:
+            passive_vols = {c: load_volume_cache(c) for c in passive_codes}
+        else:
+            passive_vols = ensure_volumes(passive_codes, earliest, latest, args.sleep)
+        passive_summary = analyze(passive_events, passive_vols, aum)
+        summary["passive_control"] = passive_summary
+
     if args.json:
         OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
         OUT_PATH.write_text(json.dumps(summary, indent=2, ensure_ascii=False))
@@ -443,6 +463,21 @@ def main() -> int:
               f"{t.get('mean','-'):>8} {t.get('median','-'):>7} "
               f"{t1.get('mean','-'):>9} {t1.get('median','-'):>9}")
     print()
+    if passive_summary is not None:
+        print("\n## Passive ETF 對照組 vs Active（同方法、同 baseline）\n")
+        print(f"{'group':<12} {'n_evt':>6} {'T_mean':>8} {'T_med':>7} {'T+1_mean':>9} {'T+1_med':>9}")
+        a_p = summary["pooled"]
+        p_p = passive_summary["pooled"]
+        print(f"{'active':<12} {a_p['T']['n']:>6} {a_p['T']['mean']:>8} {a_p['T']['median']:>7} "
+              f"{a_p['T+1']['mean']:>9} {a_p['T+1']['median']:>9}")
+        print(f"{'passive':<12} {p_p['T']['n']:>6} {p_p['T']['mean']:>8} {p_p['T']['median']:>7} "
+              f"{p_p['T+1']['mean']:>9} {p_p['T+1']['median']:>9}")
+        delta_t_med = a_p['T']['median'] - p_p['T']['median']
+        delta_t1_med = a_p['T+1']['median'] - p_p['T+1']['median']
+        print(f"\n  active - passive median: T = {delta_t_med:+.2f}, T+1 = {delta_t1_med:+.2f}")
+        print(f"  → 主動 ETF 揭露的 abnormal vol 比同期被動 ETF 揭露多出 {delta_t_med:+.0%} (T median)")
+        print()
+
     print(f"saved → {OUT_PATH.relative_to(REPO_ROOT)}")
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
