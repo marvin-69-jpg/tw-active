@@ -1,0 +1,263 @@
+{
+  "method": {
+    "min_pct": 5.0,
+    "min_shares": 100000,
+    "baseline_window": 20,
+    "window_aligned": true,
+    "metrics": [
+      "excess_volume_shares = max(r_T-1, 0) × baseline_med_vol",
+      "manager_drag = |Δshares| × max(r_T-1, 0)",
+      "annualized = sum(metric) × (365 / days_span)",
+      "per_aum_kshares_per_yi = annual_shares / 1000 / AUM_yi",
+      "passive events restricted to active window for apples-to-apples"
+    ]
+  },
+  "active": {
+    "pooled": {
+      "label": "active",
+      "n_etfs": 17,
+      "total_aum_yi": 4735.0,
+      "total_events": 2057,
+      "total_events_per_year": 5810.0,
+      "median_days_span": 114,
+      "aum_weighted_excess_kshares_per_yi": 44813.6,
+      "aum_weighted_drag_kshares_per_yi": 775.0
+    },
+    "by_etf": {
+      "00400A": {
+        "aum_yi": 180.47,
+        "n_events": 46,
+        "days_span": 14,
+        "events_per_year": 1199.0,
+        "annual_excess_volume_shares": 34957076914.0,
+        "annual_manager_drag": 416006327.0,
+        "per_aum_excess_kshares": 193700.2,
+        "per_aum_manager_drag_kshares": 2305.1
+      },
+      "00401A": {
+        "aum_yi": 30.65,
+        "n_events": 1,
+        "days_span": 1,
+        "events_per_year": 365.0,
+        "annual_excess_volume_shares": 0.0,
+        "annual_manager_drag": 0.0,
+        "per_aum_excess_kshares": 0.0,
+        "per_aum_manager_drag_kshares": 0.0
+      },
+      "00980A": {
+        "aum_yi": 143.13,
+        "n_events": 117,
+        "days_span": 331,
+        "events_per_year": 129.0,
+        "annual_excess_volume_shares": 979122534.0,
+        "annual_manager_drag": 17075465.0,
+        "per_aum_excess_kshares": 6840.8,
+        "per_aum_manager_drag_kshares": 119.3
+      },
+      "00981A": {
+        "aum_yi": 2120.76,
+        "n_events": 541,
+        "days_span": 330,
+        "events_per_year": 598.0,
+        "annual_excess_volume_shares": 15356582155.0,
+        "annual_manager_drag": 914187548.0,
+        "per_aum_excess_kshares": 7241.1,
+        "per_aum_manager_drag_kshares": 431.1
+      },
+      "00982A": {
+        "aum_yi": 388.55,
+        "n_events": 400,
+        "days_span": 331,
+        "events_per_year": 441.0,
+        "annual_excess_volume_shares": 4727638144.0,
+        "annual_manager_drag": 369673086.0,
+        "per_aum_excess_kshares": 12167.4,
+        "per_aum_manager_drag_kshares": 951.4
+      },
+      "00984A": {
+        "aum_yi": 66.34,
+        "n_events": 366,
+        "days_span": 267,
+        "events_per_year": 500.0,
+        "annual_excess_volume_shares": 5541403408.0,
+        "annual_manager_drag": 110984413.0,
+        "per_aum_excess_kshares": 83530.3,
+        "per_aum_manager_drag_kshares": 1673.0
+      },
+      "00985A": {
+        "aum_yi": 102.74,
+        "n_events": 165,
+        "days_span": 277,
+        "events_per_year": 217.0,
+        "annual_excess_volume_shares": 5937638933.0,
+        "annual_manager_drag": 110503992.0,
+        "per_aum_excess_kshares": 57792.9,
+        "per_aum_manager_drag_kshares": 1075.6
+      },
+      "00987A": {
+        "aum_yi": 29.53,
+        "n_events": 18,
+        "days_span": 67,
+        "events_per_year": 98.0,
+        "annual_excess_volume_shares": 3584736714.0,
+        "annual_manager_drag": 50679730.0,
+        "per_aum_excess_kshares": 121393.0,
+        "per_aum_manager_drag_kshares": 1716.2
+      },
+      "00988A": {
+        "aum_yi": 229.87,
+        "n_events": 12,
+        "days_span": 159,
+        "events_per_year": 28.0,
+        "annual_excess_volume_shares": 698190693.0,
+        "annual_manager_drag": 12926293.0,
+        "per_aum_excess_kshares": 3037.3,
+        "per_aum_manager_drag_kshares": 56.2
+      },
+      "00990A": {
+        "aum_yi": 263.43,
+        "n_events": 24,
+        "days_span": 123,
+        "events_per_year": 71.0,
+        "annual_excess_volume_shares": 1411016628.0,
+        "annual_manager_drag": 29794114.0,
+        "per_aum_excess_kshares": 5356.3,
+        "per_aum_manager_drag_kshares": 113.1
+      },
+      "00991A": {
+        "aum_yi": 336.63,
+        "n_events": 128,
+        "days_span": 134,
+        "events_per_year": 349.0,
+        "annual_excess_volume_shares": 7680757843.0,
+        "annual_manager_drag": 292717277.0,
+        "per_aum_excess_kshares": 22816.6,
+        "per_aum_manager_drag_kshares": 869.6
+      },
+      "00992A": {
+        "aum_yi": 485.5,
+        "n_events": 104,
+        "days_span": 114,
+        "events_per_year": 333.0,
+        "annual_excess_volume_shares": 4235429447.0,
+        "annual_manager_drag": 249888702.0,
+        "per_aum_excess_kshares": 8723.9,
+        "per_aum_manager_drag_kshares": 514.7
+      },
+      "00993A": {
+        "aum_yi": 124.74,
+        "n_events": 107,
+        "days_span": 66,
+        "events_per_year": 592.0,
+        "annual_excess_volume_shares": 13476382969.0,
+        "annual_manager_drag": 299250678.0,
+        "per_aum_excess_kshares": 108035.8,
+        "per_aum_manager_drag_kshares": 2399.0
+      },
+      "00994A": {
+        "aum_yi": 38.07,
+        "n_events": 1,
+        "days_span": 1,
+        "events_per_year": 365.0,
+        "annual_excess_volume_shares": 99200264655.0,
+        "annual_manager_drag": 751510097.0,
+        "per_aum_excess_kshares": 2605733.2,
+        "per_aum_manager_drag_kshares": 19740.2
+      },
+      "00995A": {
+        "aum_yi": 49.6,
+        "n_events": 14,
+        "days_span": 40,
+        "events_per_year": 128.0,
+        "annual_excess_volume_shares": 12019023703.0,
+        "annual_manager_drag": 29771026.0,
+        "per_aum_excess_kshares": 242319.0,
+        "per_aum_manager_drag_kshares": 600.2
+      },
+      "00996A": {
+        "aum_yi": 39.31,
+        "n_events": 11,
+        "days_span": 26,
+        "events_per_year": 154.0,
+        "annual_excess_volume_shares": 2387245600.0,
+        "annual_manager_drag": 14816350.0,
+        "per_aum_excess_kshares": 60728.7,
+        "per_aum_manager_drag_kshares": 376.9
+      },
+      "00997A": {
+        "aum_yi": 105.68,
+        "n_events": 2,
+        "days_span": 3,
+        "events_per_year": 243.0,
+        "annual_excess_volume_shares": 0.0,
+        "annual_manager_drag": 0.0,
+        "per_aum_excess_kshares": 0.0,
+        "per_aum_manager_drag_kshares": 0.0
+      }
+    }
+  },
+  "passive": {
+    "pooled": {
+      "label": "passive",
+      "n_etfs": 5,
+      "total_aum_yi": 27246.4,
+      "total_events": 152,
+      "total_events_per_year": 284.0,
+      "median_days_span": 273,
+      "aum_weighted_excess_kshares_per_yi": 346.6,
+      "aum_weighted_drag_kshares_per_yi": 382.2
+    },
+    "by_etf": {
+      "0050": {
+        "aum_yi": 16612.06,
+        "n_events": 24,
+        "days_span": 297,
+        "events_per_year": 29.0,
+        "annual_excess_volume_shares": 2409069981.0,
+        "annual_manager_drag": 2052665442.0,
+        "per_aum_excess_kshares": 145.0,
+        "per_aum_manager_drag_kshares": 123.6
+      },
+      "0056": {
+        "aum_yi": 5835.74,
+        "n_events": 64,
+        "days_span": 189,
+        "events_per_year": 124.0,
+        "annual_excess_volume_shares": 4930587752.0,
+        "annual_manager_drag": 7230818768.0,
+        "per_aum_excess_kshares": 844.9,
+        "per_aum_manager_drag_kshares": 1239.1
+      },
+      "006208": {
+        "aum_yi": 3887.81,
+        "n_events": 21,
+        "days_span": 297,
+        "events_per_year": 26.0,
+        "annual_excess_volume_shares": 1801338284.0,
+        "annual_manager_drag": 1115741934.0,
+        "per_aum_excess_kshares": 463.3,
+        "per_aum_manager_drag_kshares": 287.0
+      },
+      "00692": {
+        "aum_yi": 500.4,
+        "n_events": 23,
+        "days_span": 107,
+        "events_per_year": 78.0,
+        "annual_excess_volume_shares": 236710160.0,
+        "annual_manager_drag": 10899241.0,
+        "per_aum_excess_kshares": 473.0,
+        "per_aum_manager_drag_kshares": 21.8
+      },
+      "00891": {
+        "aum_yi": 410.36,
+        "n_events": 20,
+        "days_span": 273,
+        "events_per_year": 27.0,
+        "annual_excess_volume_shares": 67166950.0,
+        "annual_manager_drag": 3574692.0,
+        "per_aum_excess_kshares": 163.7,
+        "per_aum_manager_drag_kshares": 8.7
+      }
+    }
+  }
+}
