@@ -307,30 +307,52 @@ def _compute_stock_pnl(etf: str, exited_set: set[str] | None = None) -> tuple[di
     return result, curves, all_dates
 
 
-ISSUER_OF = {
-    # minimal mapping for preview caption; extend as needed
-    "00981A": ("主動統一台股增長", "統一投信"),
-    "00982A": ("主動統一台股動能", "統一投信"),
-    "00980A": ("主動群益台灣強棒", "群益投信"),
-    "00988A": ("主動野村臺灣優選", "野村投信"),
-    "00983A": ("主動國泰台灣領航", "國泰投信"),
-    "00984A": ("主動凱基台灣優勢", "凱基投信"),
-    "00985A": ("主動富邦台灣中小", "富邦投信"),
-    "00986A": ("主動中信台灣老將", "中信投信"),
-    "00987A": ("主動元大台灣優質", "元大投信"),
-    "00989A": ("主動群益科技高息", "群益投信"),
-    "00990A": ("主動永豐高息優選", "永豐投信"),
-    "00991A": ("主動兆豐台灣指數", "兆豐投信"),
-    "00992A": ("主動野村台灣股息", "野村投信"),
-    "00993A": ("主動富邦台灣智慧", "富邦投信"),
-    "00994A": ("主動永豐科技百強", "永豐投信"),
-    "00995A": ("主動國泰息收雙王", "國泰投信"),
-    "00996A": ("主動中信台灣多元", "中信投信"),
-    "00997A": ("主動元大台灣先驅", "元大投信"),
-    "00998A": ("主動群益潛力旗艦", "群益投信"),
-    "00400A": ("主動宏遠複合", "宏遠投信"),
-    "00401A": ("主動凱基多資產", "凱基投信"),
+# 投信全名 → 簡稱（cmoney meta 第 11 欄是 "○○證券投資信託股份有限公司"，
+# 顯示時要短化）。新增投信時更新這張表
+_ISSUER_SHORT = {
+    "統一證券投資信託股份有限公司": "統一投信",
+    "群益證券投資信託股份有限公司": "群益投信",
+    "國泰證券投資信託股份有限公司": "國泰投信",
+    "中信證券投資信託股份有限公司": "中信投信",
+    "中國信託證券投資信託股份有限公司": "中信投信",
+    "凱基證券投資信託股份有限公司": "凱基投信",
+    "野村證券投資信託股份有限公司": "野村投信",
+    "富邦證券投資信託股份有限公司": "富邦投信",
+    "元大證券投資信託股份有限公司": "元大投信",
+    "永豐證券投資信託股份有限公司": "永豐投信",
+    "兆豐證券投資信託股份有限公司": "兆豐投信",
+    "兆豐國際證券投資信託股份有限公司": "兆豐投信",
+    "復華證券投資信託股份有限公司": "復華投信",
+    "安聯證券投資信託股份有限公司": "安聯投信",
+    "摩根證券投資信託股份有限公司": "摩根投信",
+    "台新證券投資信託股份有限公司": "台新投信",
+    "宏遠證券投資信託股份有限公司": "宏遠投信",
+    "第一金證券投資信託股份有限公司": "第一金投信",
 }
+
+
+def load_etf_meta(etf: str) -> tuple[str, str]:
+    """從 raw/cmoney/meta/<ETF>.json 讀 (中文名, 投信簡稱)。
+
+    cmoney meta Title 順序：[年度, 股票代號, 股票名稱, 追蹤指數, 指數追蹤方式,
+    ETF類型, 槓桿/反向, 資產規模(億), 資產種類, 流通單位數(千), 發行商, 發行日期,
+    管理費, 保管費, 總費用, 配息制度, 計價幣別]
+    """
+    p = Path(f"raw/cmoney/meta/{etf}.json")
+    if not p.exists():
+        return etf, ""
+    try:
+        d = json.loads(p.read_text())
+    except Exception:
+        return etf, ""
+    rows = d.get("Data") or []
+    if not rows:
+        return etf, ""
+    r = rows[0]
+    name = r[2] if len(r) > 2 else etf
+    issuer_full = r[10] if len(r) > 10 else ""
+    issuer = _ISSUER_SHORT.get(issuer_full, issuer_full)
+    return name or etf, issuer
 
 
 def load_latest_raw(etf: str) -> tuple[list[list], str]:
@@ -486,7 +508,7 @@ def build(etf: str, min_days: int = 1) -> dict:
     # 按實際出清日倒序（最近出清的排前面）
     exited_codes.sort(key=lambda c: exit_date.get(c, ""), reverse=True)
 
-    name, issuer = ISSUER_OF.get(etf, (etf, ""))
+    name, issuer = load_etf_meta(etf)
     pnl_tuple = _compute_stock_pnl(etf, exited_set=set(exited_codes))
     if pnl_tuple is not None:
         pnl_summary, pnl_curves, pnl_dates = pnl_tuple
