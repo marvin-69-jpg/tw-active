@@ -53,6 +53,7 @@
 
 - [[wiki/mechanisms/diseconomies-of-scale|規模遞減（Diseconomies of Scale）]]
 - [[wiki/mechanisms/closet-indexing|影子指數化 / Active Share]]
+- [[wiki/mechanisms/etf-transparency-frontrunning|強制每日揭露 vs 主動經理人 IP 保護]]
 
 ## Issuers
 
