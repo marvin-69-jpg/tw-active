@@ -6,13 +6,15 @@
 
 ## CLI
 
-所有操作都透過 `tools/memory.py`：
+所有操作都透過 `tools/memory.py`（tw-active 有自己的 copy）：
 
 ```bash
-cd /home/node/agent-memory-research
+cd /home/node/tw-active
 export PATH="/home/node/.local/bin:$PATH"
 uv run python3 tools/memory.py <subcommand>
 ```
+
+> `memory.py` 的 `--wiki-dir` 預設指向 `agent-memory-research/wiki/`。在 tw-active 想讓 `recall` 掃本 repo 的 wiki，加 `--wiki-dir wiki`；`improve`/`consolidate` 的 promote 目標要檢查 tw-active 自己的 CLAUDE.md 時加 `--claude-md CLAUDE.md`。
 
 | Subcommand | 用途 |
 |------------|------|
@@ -37,7 +39,7 @@ uv run python3 tools/memory.py <subcommand>
 **觸發**：session 開始，讀完 MEMORY.md 之後。
 
 ```bash
-cd /home/node/agent-memory-research && export PATH="/home/node/.local/bin:$PATH" && uv run python3 tools/memory.py improve
+cd /home/node/tw-active && export PATH="/home/node/.local/bin:$PATH" && uv run python3 tools/memory.py improve
 ```
 
 ### 處理輸出
@@ -87,7 +89,7 @@ consolidate 報告說有 PROMOTE 候選時：
    - 開 PR 到對應的 repo
    - feedback 記憶保留（作為歷史記錄）
 
-**注意**：CLAUDE.md（`/home/node/CLAUDE.md`）是 root-owned symlink，無法直接改。promote 的目標是各專案自己的 CLAUDE.md（例如 `/home/node/agent-memory-research/CLAUDE.md`）。
+**注意**：CLAUDE.md（`/home/node/CLAUDE.md`）是 root-owned symlink，無法直接改。promote 的目標是各專案自己的 CLAUDE.md（在 tw-active context 即 `/home/node/tw-active/CLAUDE.md`）。
 
 ---
 
@@ -96,7 +98,7 @@ consolidate 報告說有 PROMOTE 候選時：
 使用者問的問題可能跟過去研究或記憶有關時。
 
 ```bash
-cd /home/node/agent-memory-research && export PATH="/home/node/.local/bin:$PATH" && uv run python3 tools/memory.py recall <keywords>
+cd /home/node/tw-active && export PATH="/home/node/.local/bin:$PATH" && uv run python3 tools/memory.py recall <keywords>
 ```
 
 - 同時搜尋 memory/（auto-memory）和 wiki/（研究 wiki）
@@ -111,7 +113,7 @@ cd /home/node/agent-memory-research && export PATH="/home/node/.local/bin:$PATH"
 新 session 開始時，在 `improve` 之後跑，快速掌握全局。
 
 ```bash
-cd /home/node/agent-memory-research && export PATH="/home/node/.local/bin:$PATH" && uv run python3 tools/memory.py brief
+cd /home/node/tw-active && export PATH="/home/node/.local/bin:$PATH" && uv run python3 tools/memory.py brief
 ```
 
 - 輸出 auto-memory 分佈 + 每條記憶的 name/description
