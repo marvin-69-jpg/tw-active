@@ -97,8 +97,32 @@ ETF 跟 mutual fund 的核心差異之一是**揭露顆粒度與頻率**：
 - 但有兩個 caveats：(a) 2× 量級在樣本誤差內；(b) 0056 一檔 single-handedly 占 passive pooled drag ~70%，passive baseline 高度依賴單一樣本
 - **修正後敘事**：H1 翻盤後 H4 給回一些 bite——主動 ETF 累積 IP-leak cost 比被動高 2 倍，但量級遠小於 v2 之前期待的「壓倒性」差距。真正乾淨的測法是 same-stock matched pairs（H4'）
 
+**H4'（matched-pair refinement）**：H1 v2 的 active < passive 是不是 stock-mix confound？對同檔股票分別算 active vs passive 揭露日 abnormal vol 配對
+- 資料：frontrunning events，window-aligned；vol cache 共用
+- **v1（2026-04-25, [`tools/matched_pairs.py`](../../tools/matched_pairs.py) / [docs](../../docs/tools/matched_pairs.md)）**——28 檔同時被 active 與 passive 加碼（每側 ≥2 events）的 overlap 股票做 paired comparison。
+- **86%**（24/28）股票 passive median > active median
+- median of (active - passive) = **-0.99**；mean = -1.41；p25/p75 = -1.91/-0.40
+- → **H1 v2 結論成立並強化**：stock mix 不是 confound，主動 ETF 揭露日 per-event abnormal vol 真的較弱，與股票特性無關
+- 觀察：權值/金融股（國巨 11×、台灣大 5×、中信金 6×、台塑 3×）passive 揭露日 abnormal vol 巨大；同檔股票被主動加碼那天卻很 boring
+- 解釋：被動 ETF rebalance 集中（quarterly, 同指數多家同步）+ 事先公告（index 編製方）+ 每事件 Δshares 大；主動高頻小幅多元 + 21 家投信不一致 → noise cancellation
+
 **H5（揭露時點 micro-timing 影響）**：盤後（vs 盤前 vs T+1 早盤）揭露的投信，front-running window 大小不同 → effect size 不同
 - 需要先做 timestamp inventory（各家投信揭露時點）
+
+## Synthesis（H1+H4+H4' 整合敘事，2026-04-25）
+
+研究三輪後，原本「主動 ETF 強制揭露 → 經理人 IP leak → 額外 front-running cost」的 Haeberle 框架在台灣 **不直接成立**。具體：
+
+1. **per-event 揭露日 abnormal vol**（H1 v2 + H4'）：主動 < 被動，且 stock mix 不是 confound
+2. **年化累積 cost / AUM**（H4）：主動 ≈ 2× 被動，driver 是 events/yr 高出 20×
+3. **真正大的 transparency cost 在被動端**：揭露透明性的 implied cost 在台灣主要透過 **被動 ETF 機制**（index reconstitution effect、AP 套利集中、indexer 同步性）放大；主動 ETF per-event 反而較溫和
+
+**對研究方向的 implication**：台灣主動 ETF 的「結構性 cost / 設計問題」如果存在，主因不太可能是揭露透明度。應該轉去看：
+- fee 結構與實際 active 程度的不對稱（→ closet-indexing wiki）
+- 配息平準金的揭露 lag（→ income-equalization wiki, 待建）
+- 規模膨脹後的策略變形（→ diseconomies-of-scale wiki，路徑可能是 alpha decay 而非 IP leak）
+
+反向也成立：**「被動 ETF 揭露日的 abnormal vol」自己值得開新 mechanism page**（index reconstitution effect 在台灣的實證），這是 H1 v2 + H4' 意外送的 finding。
 
 ## Timeline
 
@@ -106,6 +130,7 @@ ETF 跟 mutual fund 的核心差異之一是**揭露顆粒度與頻率**：
 - **2026-04-25** — 實作 H1 prototype（`tools/frontrunning.py` v0）。2057 events 跨 17 檔 TW-focused 主動 ETF，揭露日中位數 abnormal vol = 1.31，T → T+1 → T+2 衰減 pattern 清楚。新建倉效應強於加碼既有部位
 - **2026-04-25** — H1 v2 加被動 ETF 對照組（dump 0050/0056/006208/00692/00891 到 raw/cmoney/shares-passive/，frontrunning.py 加 `--with-passive-control` flag）。**反直覺結果**：passive pooled T median = 2.12 > active 1.31。揭露 → abnormal vol 是 generic ETF 機制，主動 ETF 反而較弱。H1 嚴格意義不成立，敘事 angle 從「主動 ETF 揭露 cost 更高」翻轉為「比 passive rebalance cost 較低」
 - **2026-04-25** — 實作 H4（`tools/cumulative_drag.py`）。把 H1 v2 events 改成「年化、AUM-normalize」accumulator：active drag/AUM = 775 vs passive 382 → ratio = 2.03×，driver 是 events/yr 高 20.5×。**H4 weakly supported**：主動 cumulative IP-leak cost 比被動高 2 倍，但量級遠小於 v1 翻盤前期待。0056 一檔主導 passive baseline，passive 樣本應再擴充。下一步精細化 = same-stock matched pairs（H4'）
+- **2026-04-25** — 實作 H4'（`tools/matched_pairs.py`）。28 檔同時被 active 與 passive 加碼的 overlap 股票做 same-stock paired comparison：**86%（24/28）passive median > active median**，median diff = -0.99。**H1 v2 結論強化**——stock mix 不是 confound，配對控制掉股票特性後 active per-event abnormal vol 仍系統性比 passive 弱。國巨 11×、台灣大 5× 顯示權值/金融股被 passive ETF 加碼那天 vol 巨大（疑似 index reconstitution events）。對 mechanism page 整體敘事做 synthesis：Haeberle 框架在台灣不直接成立，真正大的 transparency cost 在被動端，主動 ETF 結構性問題可能要轉去看 fee / 配息平準金 / 規模等其他路徑
 
 ## Related
 
