@@ -27,6 +27,9 @@ uv run tools/frontrunning.py --min-pct 10 --min-shares 500000
 
 # 只用 cache 不抓網路
 uv run tools/frontrunning.py --no-fetch
+
+# 加被動 ETF 對照組（v2，須先 dump 5 檔到 raw/cmoney/shares-passive/）
+uv run tools/frontrunning.py --with-passive-control
 ```
 
 ## 輸出
@@ -55,9 +58,9 @@ H1 預期 mean ratio > 1.0；衰減（T → T+1 → T+2）也是 expected patter
 ## 已知局限（重要）
 
 1. **Δshares > 0 是 noisy events**——混了主動加碼與 AP creation 兩條 channel，沒分離
-2. **反向因果風險**——「volume 已先漲 → manager 看到買單跟進」也會產生 ratio > 1。要分離需看 T-1 → T 的 timing；目前只看 ≥ T
-3. **沒有對照組**——passive ETF 加碼相同股票時的 abnormal vol 對照組留 v2
-4. **Baseline window 固定 20 trading days**——對波動行情可能 bias
+2. **反向因果風險**——「volume 已先漲 → manager 看到買單跟進」也會產生 ratio > 1。要分離需看 T-1 → T 的 timing
+3. **Baseline window 固定 20 trading days**——對波動行情可能 bias
+4. **v2 反直覺結果**——passive control T median = 2.12 > active 1.31。揭露 → vol 是 generic ETF 機制，主動 ETF 反而較弱。詳見 docs/tools/frontrunning.md
 
 ## 跟其他工具的關係
 
