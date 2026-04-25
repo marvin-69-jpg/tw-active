@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>tw-active · 主動 ETF 經理人資金流</title>
+<style>
+  :root {
+    --ink: #1a1a1a;
+    --ink-soft: #6b6b6b;
+    --paper: #fafaf7;
+    --panel: #fff;
+    --rule: #e0ddd2;
+    --rule-strong: #1a1a1a;
+    --up: #b8860b;
+    --down: #4a7c4a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+    background: var(--paper);
+    color: var(--ink);
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 28px 20px 48px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  a { color: inherit; }
+  h1 {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+    font-size: 20px; font-weight: 600; margin: 0 0 4px;
+  }
+  .sub {
+    color: var(--ink-soft); font-size: 12px;
+    padding-bottom: 12px; margin-bottom: 14px;
+    border-bottom: 1px solid var(--rule-strong);
+  }
+  .sub .mono { font-family: ui-monospace, monospace; color: var(--ink); }
+  .breadcrumb { margin-bottom: 8px; font-size: 11px; color: var(--ink-soft); }
+
+  /* 上層 segment：本週 / 昨日 */
+  .seg {
+    display: inline-flex; gap: 0; margin-bottom: 14px;
+    border: 1px solid var(--rule-strong);
+  }
+  .seg button {
+    padding: 8px 16px; font-size: 12px; cursor: pointer;
+    background: transparent; border: none; font-family: inherit;
+    color: var(--ink-soft); white-space: nowrap;
+  }
+  .seg button.active { background: var(--ink); color: var(--paper); }
+
+  .totals {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+    border: 1px solid var(--rule);
+    background: var(--panel);
+    padding: 10px 12px;
+  }
+  .totals .cell { font-size: 11px; color: var(--ink-soft); }
+  .totals .cell .val {
+    display: block; font-family: ui-monospace, monospace;
+    font-size: 16px; color: var(--ink); margin-top: 2px;
+  }
+  .totals .cell .val.up { color: var(--up); }
+  .totals .cell .val.down { color: var(--down); }
+
+  /* 下層 tab：流入 / 流出 / 分 ETF */
+  .tabs {
+    display: flex; gap: 4px; border-bottom: 1px solid var(--rule-strong);
+    margin-bottom: 12px; overflow-x: auto;
+  }
+  .tab {
+    padding: 8px 14px; font-size: 12px; cursor: pointer;
+    background: transparent; border: none; border-bottom: 2px solid transparent;
+    font-family: inherit; color: var(--ink-soft); white-space: nowrap;
+  }
+  .tab.active { color: var(--ink); border-bottom-color: var(--rule-strong); }
+
+  table {
+    width: 100%; border-collapse: collapse; font-size: 12px;
+  }
+  th, td {
+    padding: 7px 6px; text-align: right; border-bottom: 1px solid var(--rule);
+    white-space: nowrap;
+  }
+  th { font-weight: 500; color: var(--ink-soft); font-size: 11px; }
+  th.l, td.l { text-align: left; }
+  td.code { font-family: ui-monospace, monospace; font-weight: 600; }
+  td.name {
+    font-family: ui-sans-serif, system-ui, "PingFang TC", "Noto Sans TC", sans-serif;
+  }
+  .ntd.up { color: var(--up); }
+  .ntd.down { color: var(--down); }
+
+  tr.head-row { cursor: pointer; }
+  tr.head-row:hover { background: var(--panel); }
+  tr.head-row td.caret::after { content: '▸'; color: var(--ink-soft); }
+  tr.head-row.open td.caret::after { content: '▾'; }
+
+  tr.detail td {
+    background: var(--panel); padding: 0 6px 6px 24px;
+    font-size: 11px; color: var(--ink-soft); text-align: left;
+  }
+  tr.detail .chip {
+    display: inline-block; margin: 2px 8px 2px 0; padding: 2px 6px;
+    border: 1px solid var(--rule); border-radius: 2px;
+    font-family: ui-monospace, monospace;
+  }
+  tr.detail .chip.up { color: var(--up); border-color: var(--up); opacity: 0.9; }
+  tr.detail .chip.down { color: var(--down); border-color: var(--down); opacity: 0.9; }
+
+  .note {
+    margin-top: 16px; padding: 10px 12px; border: 1px dashed var(--rule);
+    font-size: 11px; color: var(--ink-soft); background: var(--panel);
+  }
+  footer {
+    margin-top: 24px; padding-top: 12px; border-top: 1px solid var(--rule);
+    color: var(--ink-soft); font-size: 11px;
+  }
+
+  @media (max-width: 640px) {
+    body { padding: 18px 12px 32px; font-size: 12px; }
+    h1 { font-size: 17px; }
+    .totals { grid-template-columns: repeat(2, 1fr); }
+    .totals .cell .val { font-size: 14px; }
+    th, td { padding: 6px 4px; font-size: 11px; }
+    td.name { max-width: 90px; overflow: hidden; text-overflow: ellipsis; }
+    .hide-sm { display: none; }
+    .seg button { padding: 8px 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="breadcrumb"><a href="../">← 回主動 ETF 列表</a></div>
+<h1>主動型 ETF · 經理人資金流</h1>
+<div class="sub" id="sub">—</div>
+
+<div class="seg" id="seg">
+  <button class="active" data-scope="weekly">本週彙總</button>
+  <button data-scope="daily">昨日明細</button>
+</div>
+
+<div class="totals" id="totals">—</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" data-view="inflow">資金流入</button>
+  <button class="tab" data-view="outflow">資金流出</button>
+  <button class="tab" data-view="by_etf">分 ETF 小計</button>
+</div>
+
+<div id="view">—</div>
+
+<div class="note" id="note"></div>
+
+<footer id="footer">—</footer>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const fmtDate = d => d ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}` : '—';
+function fmtNtd(v) {
+  if (v == null) return '—';
+  const abs = Math.abs(v);
+  const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+  if (abs >= 1e8) return `${sign}${(abs / 1e8).toFixed(2)} 億`;
+  if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(1)} 百萬`;
+  return `${sign}${Math.round(abs / 1e4)} 萬`;
+}
+function fmtShares(v) {
+  if (v == null) return '—';
+  const abs = Math.abs(v);
+  const sign = v > 0 ? '+' : (v < 0 ? '−' : '');
+  if (abs >= 1e6) return `${sign}${(abs / 1e6).toFixed(2)} 百萬股`;
+  if (abs >= 1000) return `${sign}${Math.round(abs / 1000)} 張`;
+  return `${sign}${Math.round(abs)} 股`;
+}
+
+const sources = {};
+async function loadScope(scope) {
+  if (sources[scope]) return sources[scope];
+  const file = scope === 'weekly' ? '../preview/weekly_flow.json' : '../preview/flow.json';
+  sources[scope] = await fetch(`${file}?v=${Date.now()}`, { cache: 'no-cache' }).then(r => r.json());
+  return sources[scope];
+}
+
+let currentScope = 'weekly';
+let currentView = 'inflow';
+
+function renderSub(d, scope) {
+  const totalEtfs = d.etfs_covered.length + d.etfs_lagging.length;
+  if (scope === 'weekly') {
+    const w1 = fmtDate(d.week_monday), w5 = fmtDate(d.week_friday);
+    return `
+      <span class="mono">${w1}</span> ~ <span class="mono">${w5}</span>（5 個交易日累積）
+      · 起點 <span class="mono">${fmtDate(d.start_date)}</span> → 終點 <span class="mono">${fmtDate(d.as_of)}</span>
+      · <span class="mono">${d.etfs_covered.length}</span>/<span class="mono">${totalEtfs}</span> 家主動 ETF 已揭露
+      · 涉及 <span class="mono">${d.totals.n_stocks_touched}</span> 檔個股
+    `;
+  }
+  return `
+    as-of <span class="mono">${fmtDate(d.as_of)}</span> vs 前日 <span class="mono">${fmtDate(d.prev_date)}</span>
+    · <span class="mono">${d.etfs_covered.length}</span>/<span class="mono">${totalEtfs}</span> 家主動 ETF 已揭露
+    · 涉及 <span class="mono">${d.totals.n_stocks_touched}</span> 檔個股
+  `;
+}
+
+function renderTotals(d, scope) {
+  const labelIn = scope === 'weekly' ? '本週流入' : '主動 ETF 流入';
+  const labelOut = scope === 'weekly' ? '本週流出' : '主動 ETF 流出';
+  const labelNet = scope === 'weekly' ? '本週淨流入' : '主動 ETF 淨流入';
+  return `
+    <div class="cell">${labelIn}<span class="val up">${fmtNtd(d.totals.ntd_in)}</span></div>
+    <div class="cell">${labelOut}<span class="val down">${fmtNtd(d.totals.ntd_out)}</span></div>
+    <div class="cell">${labelNet}<span class="val ${d.totals.net >= 0 ? 'up' : 'down'}">${fmtNtd(d.totals.net)}</span></div>
+    <div class="cell">涵蓋 / 總計<span class="val">${d.etfs_covered.length} / ${d.etfs_covered.length + d.etfs_lagging.length} 家</span></div>
+  `;
+}
+
+function renderFlowTable(rows, mode) {
+  if (!rows.length) return `<div style="padding:20px;text-align:center;color:var(--ink-soft)">無符合門檻的資金${mode === 'inflow' ? '流入' : '流出'}</div>`;
+  const header = `
+    <table>
+      <thead>
+        <tr>
+          <th class="l" style="width:20px"></th>
+          <th class="l" style="width:50px">代號</th>
+          <th class="l">名稱</th>
+          <th>台幣金額</th>
+          <th class="hide-sm">股數變動</th>
+          <th>買家</th>
+          <th>賣家</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  const body = rows.map((s, i) => {
+    const chips = s.etfs.map(e => {
+      const cls = e.ntd > 0 ? 'up' : 'down';
+      return `<span class="chip ${cls}">${e.etf} ${fmtNtd(e.ntd)}</span>`;
+    }).join('');
+    const ntdClass = s.ntd > 0 ? 'up' : 'down';
+    return `
+      <tr class="head-row" data-idx="${i}">
+        <td class="caret"></td>
+        <td class="code l">${s.code}</td>
+        <td class="name l">${s.name}</td>
+        <td class="ntd ${ntdClass}">${fmtNtd(s.ntd)}</td>
+        <td class="hide-sm">${fmtShares(s.delta_shares)}</td>
+        <td>${s.etfs_buy || '—'}</td>
+        <td>${s.etfs_sell || '—'}</td>
+      </tr>
+      <tr class="detail" data-idx="${i}" style="display:none">
+        <td colspan="7">${chips}</td>
+      </tr>
+    `;
+  }).join('');
+  return header + body + '</tbody></table>';
+}
+
+function renderByEtf(rows, scope) {
+  const dateCol = scope === 'weekly' ? '<th class="hide-sm">期間</th>' : '';
+  const header = `
+    <table>
+      <thead>
+        <tr>
+          <th class="l" style="width:80px">ETF</th>
+          <th>流入</th>
+          <th>流出</th>
+          <th>淨流入</th>
+          <th class="hide-sm">異動檔數</th>
+          ${dateCol}
+        </tr>
+      </thead>
+      <tbody>
+  `;
+  const body = rows.map(e => {
+    const dateCell = scope === 'weekly'
+      ? `<td class="hide-sm" style="font-size:11px;color:var(--ink-soft)">${fmtDate(e.start_date)}→${fmtDate(e.end_date)}</td>`
+      : '';
+    return `
+      <tr>
+        <td class="code l"><a href="../preview/etf.html?code=${e.etf}">${e.etf}</a></td>
+        <td class="ntd up">${fmtNtd(e.ntd_in)}</td>
+        <td class="ntd down">${fmtNtd(e.ntd_out)}</td>
+        <td class="ntd ${e.net >= 0 ? 'up' : 'down'}">${fmtNtd(e.net)}</td>
+        <td class="hide-sm">${e.n_moves}</td>
+        ${dateCell}
+      </tr>
+    `;
+  }).join('');
+  return header + body + '</tbody></table>';
+}
+
+function renderView(d, view, scope) {
+  if (view === 'inflow')  $('view').innerHTML = renderFlowTable(d.inflow, 'inflow');
+  else if (view === 'outflow') $('view').innerHTML = renderFlowTable(d.outflow, 'outflow');
+  else if (view === 'by_etf')  $('view').innerHTML = renderByEtf(d.by_etf, scope);
+
+  $('view').querySelectorAll('tr.head-row').forEach(tr => {
+    tr.addEventListener('click', () => {
+      const idx = tr.dataset.idx;
+      const detail = $('view').querySelector(`tr.detail[data-idx="${idx}"]`);
+      const open = tr.classList.toggle('open');
+      detail.style.display = open ? 'table-row' : 'none';
+    });
+  });
+}
+
+function renderNote(d, scope) {
+  const thr = d.thresholds || {};
+  const lagText = d.etfs_lagging.length ? d.etfs_lagging.join(' ') : '（全部到齊）';
+  if (scope === 'weekly') {
+    return `
+      <b>資料意義</b>：21 檔台灣主動型 ETF 經理人手上股數整週的累積變動，不是全台股市場的資金流。
+      公式：(終點 shares − 起點 shares) × 終點收盤價，跨 ETF 加總後按個股聚合。
+      過濾門檻 |Δshares / 起點 shares| ≥ ${thr.shares_pct}% 且當期最大權重 ≥ ${thr.weight_floor_pp}pp。
+      <br /><br />
+      <b>注意</b>：每檔 ETF 用各自最新揭露日為終點，跨 ETF 比較略有 baseline 差（最多差幾天）。
+      整週都未揭露的 ETF：<span class="mono">${lagText}</span>。
+      00981A 大額申購會 basket buy 把每檔被動加成（買方非主觀決策）。
+    `;
+  }
+  return `
+    <b>資料意義</b>：21 檔台灣主動型 ETF 經理人手上股數的單日變動，不是全台股市場的資金流。
+    公式：Δshares × 當日收盤價。
+    過濾門檻 |Δshares / prev_shares| ≥ ${thr.shares_pct}% 且當期最大權重 ≥ ${thr.weight_floor_pp}pp（濾微調）。
+    <br /><br />
+    <b>注意</b>：部分 ETF 揭露延遲於 ${fmtDate(d.as_of)}，未納入本日聚合：
+    <span class="mono">${lagText}</span>。
+    00981A 當日若有大額申購，會做 basket buy 把每檔持股被動加成（買方不是主觀決策）。
+  `;
+}
+
+async function refresh() {
+  const d = await loadScope(currentScope);
+  $('sub').innerHTML = renderSub(d, currentScope);
+  $('totals').innerHTML = renderTotals(d, currentScope);
+  $('note').innerHTML = renderNote(d, currentScope);
+  renderView(d, currentView, currentScope);
+}
+
+$('seg').addEventListener('click', async ev => {
+  const btn = ev.target.closest('button');
+  if (!btn) return;
+  document.querySelectorAll('#seg button').forEach(t => t.classList.toggle('active', t === btn));
+  currentScope = btn.dataset.scope;
+  location.hash = `${currentScope}/${currentView}`;
+  await refresh();
+});
+
+$('tabs').addEventListener('click', async ev => {
+  const btn = ev.target.closest('.tab');
+  if (!btn) return;
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t === btn));
+  currentView = btn.dataset.view;
+  location.hash = `${currentScope}/${currentView}`;
+  await refresh();
+});
+
+// Init from hash: #scope/view
+const hash = (location.hash || '#weekly/inflow').slice(1).split('/');
+if (hash[0] === 'weekly' || hash[0] === 'daily') currentScope = hash[0];
+if (['inflow', 'outflow', 'by_etf'].includes(hash[1])) currentView = hash[1];
+document.querySelectorAll('#seg button').forEach(t => t.classList.toggle('active', t.dataset.scope === currentScope));
+document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.view === currentView));
+refresh();
+
+$('footer').textContent = '';
+</script>
+</body>
+</html>
