@@ -214,6 +214,7 @@ def build(out_path: Path, monday: str, friday: str) -> dict:
     lagging = [e["etf"] for e in per_etf if e["end_date"] < monday]
 
     agg: dict[str, dict] = {}
+    name_votes: dict[str, dict[str, int]] = {}
     for ef in covered:
         etf = ef["etf"]
         for m in ef["moves"]:
@@ -222,6 +223,8 @@ def build(out_path: Path, monday: str, friday: str) -> dict:
                 "ntd": 0.0, "delta_shares": 0.0,
                 "etfs_buy": 0, "etfs_sell": 0, "etfs": [],
             })
+            votes = name_votes.setdefault(m["code"], {})
+            votes[m["name"]] = votes.get(m["name"], 0) + 1
             slot["ntd"] += m["ntd"]
             slot["delta_shares"] += m["delta_shares"]
             if m["ntd"] > 0:
@@ -232,6 +235,17 @@ def build(out_path: Path, monday: str, friday: str) -> dict:
                 "etf": etf, "ntd": m["ntd"],
                 "delta_shares": m["delta_shares"], "kind": m["kind"],
             })
+
+    # 同一檔股票各 ETF 給的名字可能不一樣（中英不同、全英、有/無「投控」尾），
+    # 挑「有中文字元 + 票數最高 + 較短」的當代表名。
+    def _has_cjk(s: str) -> bool:
+        return any("\u4e00" <= c <= "\u9fff" for c in s)
+    for code, votes in name_votes.items():
+        cjk = {n: c for n, c in votes.items() if _has_cjk(n)}
+        pool = cjk if cjk else votes
+        # 排序鍵：票數高優先，其次字串短優先（避免「日月光投資控股」勝「日月光投控」）
+        best = sorted(pool.items(), key=lambda kv: (-kv[1], len(kv[0])))[0][0]
+        agg[code]["name"] = best
 
     for slot in agg.values():
         slot["ntd"] = round(slot["ntd"])
