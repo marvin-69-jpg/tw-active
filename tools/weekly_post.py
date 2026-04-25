@@ -66,12 +66,6 @@ def generate_text(flow: dict) -> str:
     )
     lines.append("")
 
-    def etf_codes(stock: dict, kind: str) -> str:
-        codes = [e["etf"] for e in stock.get("etfs", []) if e.get("kind") in ("add", "new")] \
-            if kind == "buy" else \
-            [e["etf"] for e in stock.get("etfs", []) if e.get("kind") in ("reduce", "exit")]
-        return "、".join(codes) if codes else ""
-
     # ── 共識買進 ─────────────────────────────────────────────
     consensus = sorted(
         [s for s in inflow if s["etfs_buy"] >= CONSENSUS_BUY_MIN_FAMILIES],
@@ -82,9 +76,7 @@ def generate_text(flow: dict) -> str:
     if consensus:
         lines.append(f"{CONSENSUS_BUY_MIN_FAMILIES} 家以上共識買進：")
         for s in consensus:
-            codes = etf_codes(s, "buy")
-            codes_str = f"（{codes}）" if codes else f"（{s['etfs_buy']} 家）"
-            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} {codes_str}")
+            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} （{s['etfs_buy']} 家）")
         lines.append("")
 
     # ── 集中加碼（< 共識門檻、金額達門檻）───────────────────
@@ -101,9 +93,7 @@ def generate_text(flow: dict) -> str:
     if single_bets:
         lines.append("集中加碼：")
         for s in single_bets:
-            codes = etf_codes(s, "buy")
-            codes_str = f"（{codes}）" if codes else f"（{s['etfs_buy']} 家）"
-            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} {codes_str}")
+            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} （{s['etfs_buy']} 家）")
         lines.append("")
 
     # ── 共識賣 ───────────────────────────────────────────────
@@ -114,9 +104,7 @@ def generate_text(flow: dict) -> str:
     if consensus_sell:
         lines.append("共識賣：")
         for s in consensus_sell:
-            codes = etf_codes(s, "sell")
-            codes_str = f"（{codes}）" if codes else f"（{s['etfs_sell']} 家）"
-            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} {codes_str}")
+            lines.append(f"・{s['name']} {s['code']} {fmt_ntd(s['ntd'])} （{s['etfs_sell']} 家）")
     else:
         lines.append(
             f"共識賣：沒有，沒有任何一檔被 {CONSENSUS_SELL_MIN_FAMILIES} 家以上同時減碼。"
