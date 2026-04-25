@@ -89,6 +89,13 @@ ETF 跟 mutual fund 的核心差異之一是**揭露顆粒度與頻率**：
 
 **H4（活躍化 = front-running 暴露）**：高 portfolio turnover 的主動 ETF（active in form, Easley et al 2021），front-running cost 的 cumulative drag 越大
 - 資料：cmoney 月度持股時序算 turnover + 上面 H1 的 abnormal volume
+- **v1（2026-04-25, [`tools/cumulative_drag.py`](../../tools/cumulative_drag.py) / [docs](../../docs/tools/cumulative_drag.md)）**——把 H1 v2 的 events 按「年化加總、normalize by AUM」算 cumulative manager_drag = |Δshares| × max(r_T-1, 0)，window-aligned 到主動 ETF 的 11 個月窗口。
+- pooled active drag/AUM = **775 kshares / 億 / 年**
+- pooled passive drag/AUM = **382 kshares / 億 / 年**
+- **active / passive ratio = 2.03×** → **H4 weakly supported**
+- driver：active events/yr = 5810 vs passive 284（**20.5×**）；per-event drag 主動較小但被高頻 turnover 補回來
+- 但有兩個 caveats：(a) 2× 量級在樣本誤差內；(b) 0056 一檔 single-handedly 占 passive pooled drag ~70%，passive baseline 高度依賴單一樣本
+- **修正後敘事**：H1 翻盤後 H4 給回一些 bite——主動 ETF 累積 IP-leak cost 比被動高 2 倍，但量級遠小於 v2 之前期待的「壓倒性」差距。真正乾淨的測法是 same-stock matched pairs（H4'）
 
 **H5（揭露時點 micro-timing 影響）**：盤後（vs 盤前 vs T+1 早盤）揭露的投信，front-running window 大小不同 → effect size 不同
 - 需要先做 timestamp inventory（各家投信揭露時點）
@@ -98,6 +105,7 @@ ETF 跟 mutual fund 的核心差異之一是**揭露顆粒度與頻率**：
 - **2026-04-25** — 抓 Easley et al 2021 RoF（abstract）+ Brown-Davies-Ringgenberg 2020 RoF（abstract）+ Ben-David et al 2018 JoF（NBER w20071 全文）+ Haeberle 2022 CBLR（全文）。開此 mechanism page，把「揭露 vs IP 保護」trade-off 的法律 + 金融文獻地圖鋪好，並列出 5 個可量化 testable hypotheses
 - **2026-04-25** — 實作 H1 prototype（`tools/frontrunning.py` v0）。2057 events 跨 17 檔 TW-focused 主動 ETF，揭露日中位數 abnormal vol = 1.31，T → T+1 → T+2 衰減 pattern 清楚。新建倉效應強於加碼既有部位
 - **2026-04-25** — H1 v2 加被動 ETF 對照組（dump 0050/0056/006208/00692/00891 到 raw/cmoney/shares-passive/，frontrunning.py 加 `--with-passive-control` flag）。**反直覺結果**：passive pooled T median = 2.12 > active 1.31。揭露 → abnormal vol 是 generic ETF 機制，主動 ETF 反而較弱。H1 嚴格意義不成立，敘事 angle 從「主動 ETF 揭露 cost 更高」翻轉為「比 passive rebalance cost 較低」
+- **2026-04-25** — 實作 H4（`tools/cumulative_drag.py`）。把 H1 v2 events 改成「年化、AUM-normalize」accumulator：active drag/AUM = 775 vs passive 382 → ratio = 2.03×，driver 是 events/yr 高 20.5×。**H4 weakly supported**：主動 cumulative IP-leak cost 比被動高 2 倍，但量級遠小於 v1 翻盤前期待。0056 一檔主導 passive baseline，passive 樣本應再擴充。下一步精細化 = same-stock matched pairs（H4'）
 
 ## Related
 
