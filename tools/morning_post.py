@@ -137,8 +137,7 @@ def generate_text(flow: dict) -> str:
         pct_int = round(dominant_pct * 100)
         etf_code = dominant["etf"]
         lines.append(
-            f"主動 ETF 昨日淨流入 {net_str}，但 {pct_int}% 來自 {etf_code} 一家"
-            f"因申購在做 basket buy，要把這部分扣掉才看得到真動作。"
+            f"主動 ETF 昨日淨流入 {net_str}，{pct_int}% 來自 {etf_code} 一家 basket buy 申購。"
         )
     elif net >= 0:
         lines.append(
