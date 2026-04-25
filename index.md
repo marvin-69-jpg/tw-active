@@ -52,6 +52,7 @@
 ## Mechanisms
 
 - [[wiki/mechanisms/diseconomies-of-scale|規模遞減（Diseconomies of Scale）]]
+- [[wiki/mechanisms/closet-indexing|影子指數化 / Active Share]]
 
 ## Issuers
 
