@@ -71,6 +71,7 @@ ETF 跟 mutual fund 的核心差異之一是**揭露顆粒度與頻率**：
 **H1（front-running effect）**：主動 ETF top N holdings 的「揭露日 → 隔日 abnormal volume」顯著大於 0，且強度與 ETF 規模負相關
 - 資料：raw/cmoney/<code>/ + FinMind TaiwanStockPrice 日成交量
 - 對照：同期被動 ETF（0050、0056、00919）相同股票的成交量
+- **第一次實作（2026-04-25, [`tools/frontrunning.py`](../../tools/frontrunning.py) / [docs](../../docs/tools/frontrunning.md)）**——pooled 2057 events 揭露當日中位數 abnormal vol ratio = **1.31**（成交量比基準高 31%），T+1 = 1.24，T+2 = 1.18 顯示明顯 decay。新建倉效應更強（T median 1.42 vs 加碼既有部位 1.30）。**H1 在 pooled 層強支持**。H3 規模反比關係**混合**：00987A（30 億，最小）T_med = 2.51，00981A（2120 億，最大）T_med = 1.56——非單調但小規模 ETF 有更強訊號的傾向存在。對照組（被動 ETF）與反向因果分離留 v2
 
 **H2（Brown-Davies-Ringgenberg 2020 在台灣成立）**：主動 ETF 高 flow 後 5-10 日 reversal
 - 資料：ezmoney GetPCF DIFF_UNIT × P_UNIT（已存 reference memory）+ FinMind 個股價格
@@ -88,6 +89,7 @@ ETF 跟 mutual fund 的核心差異之一是**揭露顆粒度與頻率**：
 ## Timeline
 
 - **2026-04-25** — 抓 Easley et al 2021 RoF（abstract）+ Brown-Davies-Ringgenberg 2020 RoF（abstract）+ Ben-David et al 2018 JoF（NBER w20071 全文）+ Haeberle 2022 CBLR（全文）。開此 mechanism page，把「揭露 vs IP 保護」trade-off 的法律 + 金融文獻地圖鋪好，並列出 5 個可量化 testable hypotheses
+- **2026-04-25** — 實作 H1 prototype（`tools/frontrunning.py` v0）。2057 events 跨 17 檔 TW-focused 主動 ETF，揭露日中位數 abnormal vol = 1.31，T → T+1 → T+2 衰減 pattern 清楚。新建倉效應強於加碼既有部位。**H1 在 pooled 層強支持**，H3 規模反比 mixed 待 v2 加被動 ETF 對照組與反向因果分離
 
 ## Related
 
