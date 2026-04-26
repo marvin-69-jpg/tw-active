@@ -4,7 +4,7 @@
 
 ---
 
-## 用前一定先做的兩件事
+## 用前一定先做的三件事
 
 ```bash
 cd /home/node/tw-active
@@ -12,9 +12,16 @@ cd /home/node/tw-active
 tools/fetch_threads_archive.py
 # 2. grep 過去 7-14 天有沒有重複題材
 grep -E "<關鍵字1>|<關鍵字2>" reports/threads/archive.jsonl
+# 3. 翻一下素材區（topics/）有沒有現成題材或相關筆記
+cat topics/INDEX.md
 ```
 
 不要寫 7 天內已發過的相同主題。跨篇可串連，但題材要推進不要重複。
+
+題材來源：
+- **使用者丟進來的素材**：`topics/` 資料夾，每筆一個 md 檔，看 `topics/README.md` 與 `topics/INDEX.md`
+- **資料訊號**：`site/preview/flow.json`、`raw/cmoney/shares/` 經理人新動作
+- **wiki 缺口**：跨篇敘事要推進的延伸點
 
 ---
 
@@ -92,6 +99,8 @@ git diff reports/threads/archive.jsonl | tail
 ```
 
 archive 需要跟著更新，不然下一篇 grep 會漏掉今天剛發的。
+
+如果這篇來自 `topics/` 的某個素材，把該檔的 frontmatter `status` 改成 `published` 並寫入 `post_id`，同步更新 `topics/INDEX.md`。
 
 ---
 
